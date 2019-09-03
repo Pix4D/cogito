@@ -1,0 +1,96 @@
+meta:
+
+  gh-status_handlers: &gh-status-handlers
+    on_success:
+      put: gh-status
+      inputs: [conan-marcofoo.git]
+      params:
+        state: success
+        repo: conan-marcofoo.git
+    on_failure:
+      put: gh-status
+      inputs: [conan-marcofoo.git]
+      params:
+        state: failure
+        repo: conan-marcofoo.git
+    on_error:
+      put: gh-status
+      inputs: [conan-marcofoo.git]
+      params:
+        state: error
+        repo: conan-marcofoo.git
+
+  task-config: &task-config
+    config:
+      platform: linux
+      image_resource:
+        type: registry-image
+        source: { repository: alpine }
+      run:
+        path: /bin/sh
+        args:
+          - -c
+          - |
+            set -o errexit
+            set -x
+            echo "Running from inline task"
+            exit 0
+
+
+resource_types:
+
+- name: cogito
+  type: registry-image
+  check_every: 1h
+  source:
+    repository: docker.ci.pix4d.com/cogito
+    tag: latest
+    username: pix4d
+    password: ((docker_cloud_pix4d_password))
+
+resources:
+
+- name: gh-status
+  type: cogito
+  check_every: 24h
+  source:
+    log_level: debug
+    log_url: ((concourse_cognito_logs))
+    owner: pix4d
+    repo: conan-marcofoo
+    access_token: ((concourse_janus_access_token_repo_status))
+
+- name: conan-marcofoo.git
+  type: git
+  source:
+    uri: git@github.com:pix4d/conan-marcofoo.git
+    branch: ((branch))
+    private_key: ((concourse_janus_ssh_key))
+
+jobs:
+
+  - name: Autocat
+    <<: *gh-status-handlers
+    plan:
+      - get: conan-marcofoo.git
+        trigger: true
+      - put: gh-status
+        inputs: [conan-marcofoo.git]
+        params:
+          state: pending
+          repo: conan-marcofoo.git
+      - task: maybe-fail
+        <<: *task-config
+
+  - name: Motormouse
+    <<: *gh-status-handlers
+    plan:
+      - get: conan-marcofoo.git
+        trigger: true
+      - put: gh-status
+        inputs: [conan-marcofoo.git]
+        params:
+          state: pending
+          repo: conan-marcofoo.git
+      - task: maybe-fail
+        <<: *task-config
