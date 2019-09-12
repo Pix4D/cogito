@@ -27,8 +27,8 @@ var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	mandatoryParams = map[string]struct{}{
-		"repo":  struct{}{},
-		"state": struct{}{},
+		"input-repo": struct{}{},
+		"state":      struct{}{},
 	}
 
 	validStates = map[string]struct{}{
@@ -163,7 +163,7 @@ func (r *Resource) Out(
 		log.Errorf("out: %v", err)
 		return nil, nil, err
 	}
-	repodir, _ := params["repo"].(string)
+	repodir, _ := params["input-repo"].(string)
 	state, _ := params["state"].(string)
 
 	// All the resource `inputs:` are below inputDirectory (which is an absolute path).

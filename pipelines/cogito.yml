@@ -6,19 +6,19 @@ meta:
       inputs: [conan-marcofoo.git]
       params:
         state: success
-        repo: conan-marcofoo.git
+        input-repo: conan-marcofoo.git
     on_failure:
       put: gh-status
       inputs: [conan-marcofoo.git]
       params:
         state: failure
-        repo: conan-marcofoo.git
+        input-repo: conan-marcofoo.git
     on_error:
       put: gh-status
       inputs: [conan-marcofoo.git]
       params:
         state: error
-        repo: conan-marcofoo.git
+        input-repo: conan-marcofoo.git
 
   task-config: &task-config
     config:
@@ -78,7 +78,7 @@ jobs:
         inputs: [conan-marcofoo.git]
         params:
           state: pending
-          repo: conan-marcofoo.git
+          input-repo: conan-marcofoo.git
       - task: maybe-fail
         <<: *task-config
 
@@ -91,6 +91,6 @@ jobs:
         inputs: [conan-marcofoo.git]
         params:
           state: pending
-          repo: conan-marcofoo.git
+          input-repo: conan-marcofoo.git
       - task: maybe-fail
         <<: *task-config

@@ -44,19 +44,19 @@ jobs:
       inputs: [the-repo] # Useful optimization!
       params:
         state: success
-        repo: the-repo
+        input-repo: the-repo
     on_failure:
       put: gh-status
       inputs: [the-repo] # Useful optimization!
       params:
         state: failure
-        repo: the-repo
+        input-repo: the-repo
     on_error:
       put: gh-status
       inputs: [the-repo] # Useful optimization!
       params:
         state: error
-        repo: the-repo
+        input-repo: the-repo
     plan:
       - get: the-repo
         trigger: true
@@ -64,7 +64,7 @@ jobs:
         inputs: [the-repo] # Useful optimization!
         params:
           state: pending
-          repo: the-repo
+          input-repo: the-repo
       - task: maybe-fail
         config:
           platform: linux
@@ -109,7 +109,7 @@ Sets or updates the GitHub status for a given commit, following the [GitHub stat
 
 #### Required
 
-- `repo`: The `input:` corresponding to the repository for which you want to set the state (see the example above).
+- `input-repo`: The `input:` corresponding to the repository for which you want to set the state (see the example above).
 - `state`: The state to be set. One of `error`, `failure`, `pending`, `success`.
 
 ## GitHub OAuth token

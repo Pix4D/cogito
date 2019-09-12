@@ -1,12 +1,10 @@
 
 TODO:
 
-
-[ ] go back to params name `path` instead of `repo` ?
-[ ] cleanup commit history
-[ ] remove NOTEBOOK from git or sanitize it
-[ ] issue first PR
-
+[ ] When we start using this resource, pin it in all pipelines. Do not use latest because it is still in flux!
+[ ] When I switched from "repo" to "input-repo" I got a bug because I didn't change all instances of the "repo" key. Two possibilities:
+    1. change the strings to constants everywhere
+    2. return error if an expected key doesn't exist.
 [ ] Taskfile: A clean target would be useful for removing the built docker images.
 [ ] prepare to open source it :-)
 [ ] cleanup some more the dockerfile

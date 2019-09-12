@@ -55,7 +55,7 @@ func TestOut(t *testing.T) {
 	cfg := github.SkipTestIfNoEnvVars(t)
 
 	defaultSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
-	defaultParams := oc.Params{"repo": cfg.Repo, "state": "error"}
+	defaultParams := oc.Params{"input-repo": cfg.Repo, "state": "error"}
 	defaultMeta := oc.Metadata{oc.NameVal{Name: "state", Value: "error"}}
 
 	type in struct {
@@ -99,7 +99,7 @@ func TestOut(t *testing.T) {
 		},
 		{
 			"partially missing mandatory parameters",
-			in{defaultSource, oc.Params{"repo": cfg.Repo}, defaultEnv},
+			in{defaultSource, oc.Params{"input-repo": cfg.Repo}, defaultEnv},
 			want{nil, nil, &missingParamError{}},
 		},
 		{
@@ -109,14 +109,14 @@ func TestOut(t *testing.T) {
 		},
 		{
 			"invalid state parameter",
-			in{defaultSource, oc.Params{"repo": cfg.Repo, "state": "hello"}, defaultEnv},
+			in{defaultSource, oc.Params{"input-repo": cfg.Repo, "state": "hello"}, defaultEnv},
 			want{nil, nil, &invalidParamError{}},
 		},
 		{
 			"unknown parameter",
 			in{
 				defaultSource,
-				oc.Params{"repo": cfg.Repo, "state": "pending", "pizza": "margherita"},
+				oc.Params{"input-repo": cfg.Repo, "state": "pending", "pizza": "margherita"},
 				defaultEnv,
 			},
 			want{nil, nil, &unknownParamError{}},
@@ -131,12 +131,12 @@ func TestOut(t *testing.T) {
 			t.Fatal("Temp dir", err)
 		}
 		// Make a fake git repo to be the `input:` directory
-		dirPath := filepath.Join(inDir, cfg.Repo, ".git")
-		if err := os.MkdirAll(dirPath, 0770); err != nil {
-			t.Fatal("Repo dir", err)
+		InRepoPath := filepath.Join(inDir, cfg.Repo, ".git")
+		if err := os.MkdirAll(InRepoPath, 0770); err != nil {
+			t.Fatal("input-repo dir", err)
 		}
 		// Make fake files normally added by the git resource
-		RefPath := filepath.Join(dirPath, "ref")
+		RefPath := filepath.Join(InRepoPath, "ref")
 		sha := []byte(cfg.Sha + "\n")
 		if err := ioutil.WriteFile(RefPath, sha, 0660); err != nil {
 			t.Fatal("Ref file", err)
