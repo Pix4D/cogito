@@ -1,0 +1,31 @@
+# Install `task` from https://taskfile.dev
+# Run `task --list` to start.
+
+version: "2.6"
+
+vars:
+  TAG: '{{if env "TAG"}}{{env "TAG"}}{{else}}latest{{end}}'
+  DOCKER_REGISTRY: docker.ci.pix4d.com/cogito:{{.TAG}}
+
+tasks:
+  default:
+    deps: [test]
+    desc: Sensible defaults if you invoke `task` without arguments.
+  test:
+    desc: Run the tests.
+    cmds:
+      - go test ./...
+  build:
+    desc: Build the Docker image. Use the TAG environment variable if set.
+    cmds:
+      - docker build --build-arg VERSION --build-arg COMMIT --build-arg DATE -t {{.DOCKER_REGISTRY}} .
+    env:
+      VERSION: dev
+      DATE: '{{ now | date "2006-01-02" }}'
+      COMMIT:
+        sh: git log -n 1 --format=%h
+  publish:
+    deps: [build]
+    desc: Publish the Docker image.
+    cmds:
+      - docker push {{.DOCKER_REGISTRY}}
