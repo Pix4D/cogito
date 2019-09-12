@@ -170,7 +170,7 @@ The end-to-end tests (tests that interact with GitHub) are disabled by default b
 
 The reason why we require enviroment variables (as opposed to using a configuration file) to pass test configuration is twofold:
 
-- To enable any contributor to run his/her own tests without having to edit any file.
+- To enable any contributor to run their own tests without having to edit any file.
 - To securely store secrets!
 
 #### Secure handling of the GitHub OAuth token
@@ -230,7 +230,7 @@ The end-to-end tests have the following logic:
 If you want to run the tests from within your editor test runner, it is enough to use `envchain` to start the editor. For example:
 
 ```console
-envchain cogito code
+envchain cogito $EDITOR
 ```
 
 #### Caveat: GitHub API limits on the number of statuses per commit

@@ -7,7 +7,7 @@ TODO:
 [ ] remove NOTEBOOK from git or sanitize it
 [ ] issue first PR
 
-
+[ ] Taskfile: A clean target would be useful for removing the built docker images.
 [ ] prepare to open source it :-)
 [ ] cleanup some more the dockerfile
 [ ] in README explain that there is no public docker image
@@ -79,3 +79,11 @@ TODO:
     Decide if we do validation now or if we wait until a method is called.
     Having early validation is nice; on the other hand it would impact rate limiting by consuming
     one additional API request, so maybe it is not a wise idea.
+
+[ ] can I use an even smaller docker image? Can I use scratch ?
+
+[] A defect of go test, which wants to be too terse by default. What it should do in my opinion is yes to stay terse, but to print a summary line at the end with the number of skipped tests, so one can spot unexpected things. To actually see the skip message, you need to run the tests with the -v flag (verbose), but then you get a lot of stuff.
+   - is there a way to show the number of skipped tests in a summary line at the end ?
+   - Maybe I could add test-verbose to the Taskfile ?
+   - maybe I could use the https://github.com/gotestyourself/gotestsum ?
+

@@ -1,11 +1,3 @@
-# Sigh. Something in the dependencies wants the gcc compiler, I get:
-#   Step 9/12 : RUN go test -v ./...  &&     go install ./...
-#   ---> Running in b4a3217b40a4
-#   # runtime/cgo
-#   exec: "gcc": executable file not found in $PATH
-# FROM golang:1.13-alpine as builder
-
-# FROM golang:1.13 as builder
 FROM golang:1.13-alpine as builder
 
 ARG VERSION
@@ -21,14 +13,15 @@ WORKDIR /code
 
 #
 # Optimize downloading of dependencies only when they are needed.
+# This requires to _first_ copy only these two files, run `go mod download`,
+# and _then_ copy the rest of the source code.
 #
 COPY go.mod go.sum ./
 RUN go mod download
 
 #
-# Build
+# Build.
 #
-
 COPY . .
 
 RUN go test ./...  && \
@@ -38,11 +31,7 @@ RUN go test ./...  && \
 # The final image
 #
 
-# I think that to use `scratch` I need to put a shell there.
-# FROM scratch
-# See the Sigh above for alpine
-# This one is 5MB
-FROM alpine 
+FROM alpine
 
 # This one is 30MB, not that big at the end.
 # FROM busybox:glibc
