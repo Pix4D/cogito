@@ -155,12 +155,10 @@ func (r *Resource) Out(
 	log.Debugf("out: starting.")
 
 	if err := outValidateSources(source); err != nil {
-		log.Errorf("out: %v", err)
 		return nil, nil, err
 	}
 
 	if err := outValidateParams(params); err != nil {
-		log.Errorf("out: %v", err)
 		return nil, nil, err
 	}
 	repodir, _ := params["input-repo"].(string)
@@ -171,12 +169,10 @@ func (r *Resource) Out(
 	fpath := filepath.Join(inputDirectory, repodir, ".git/ref")
 	data, err := ioutil.ReadFile(fpath)
 	if err != nil {
-		log.Errorf("read ref file: %w", err)
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading git ref file %w", err)
 	}
 	ref, tag, err := parseGitRef(string(data))
 	if err != nil {
-		log.Errorf("parse ref file: %w", err)
 		return nil, nil, err
 	}
 	log.Debugf("parsed ref %q", ref)
