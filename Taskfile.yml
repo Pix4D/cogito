@@ -6,6 +6,11 @@ version: "2.6"
 vars:
   TAG: '{{if env "TAG"}}{{env "TAG"}}{{else}}latest{{end}}'
   DOCKER_REGISTRY: docker.ci.pix4d.com/cogito:{{.TAG}}
+  DATE: '{{ now | date "2006-01-02" }}'
+  COMMIT:
+    sh: git log -n 1 --format=%h
+  REPO: github.com/Pix4D/cogito
+  BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, date: {{.DATE}}"
 
 tasks:
   default:
@@ -18,12 +23,9 @@ tasks:
   build:
     desc: Build the Docker image. Use the TAG environment variable if set.
     cmds:
-      - docker build --build-arg VERSION --build-arg COMMIT --build-arg DATE -t {{.DOCKER_REGISTRY}} .
+      - docker build --build-arg BUILD_INFO -t {{.DOCKER_REGISTRY}} .
     env:
-      VERSION: dev
-      DATE: '{{ now | date "2006-01-02" }}'
-      COMMIT:
-        sh: git log -n 1 --format=%h
+      BUILD_INFO: "{{.BUILD_INFO}}"
   publish:
     deps: [build]
     desc: Publish the Docker image.
