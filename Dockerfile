@@ -1,8 +1,6 @@
 FROM golang:1.13-alpine as builder
 
-ARG VERSION
-ARG COMMIT
-ARG DATE
+ARG BUILD_INFO
 
 ENV GO111MODULE=on
 ENV GOPATH=/root/go
@@ -25,16 +23,13 @@ RUN go mod download
 COPY . .
 
 RUN go test ./...  && \
-    go install -ldflags "-X 'github.com/Pix4D/cogito/resource.version=$VERSION' -X 'github.com/Pix4D/cogito/resource.commit=$COMMIT' -X 'github.com/Pix4D/cogito/resource.date=$DATE'" ./...
+    go install -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" ./cmd/check ./cmd/in ./cmd/out
 
 #
 # The final image
 #
 
 FROM alpine
-
-# This one is 30MB, not that big at the end.
-# FROM busybox:glibc
 
 RUN apk --no-cache add ca-certificates
 

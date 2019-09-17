@@ -17,11 +17,7 @@ import (
 )
 
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
-var (
-	version = "unknown"
-	commit  = "unknown"
-	date    = "unknown"
-)
+var buildinfo = "unknown"
 
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
@@ -91,12 +87,12 @@ func (e *unknownParamError) Error() string {
 	return fmt.Sprintf("unknown parameter %q", e.Param)
 }
 
-// VersionString returns a human-readable version string.
+// BuildInfo returns human-readable build information (tag, git commit, date, ...).
 // This is useful to understand in the Concourse UI and logs which resource it is, since log
 // output in Concourse doesn't mention  the name of the resource (or task) generating it.
-func VersionString() string {
-	return "This is the Cogito GitHub status resource. " +
-		"Version: " + version + ", commit: " + commit + ", date: " + date + "."
+func BuildInfo() string {
+	return "This is the Cogito GitHub status resource. " + buildinfo
+
 }
 
 // Resource satisfies the ofcourse.Resource interface.
@@ -116,7 +112,7 @@ func (r *Resource) Check(
 
 	// Optional. If it doesn't exist or is not a string, we will not log.
 	logURL, _ := source["log_url"].(string)
-	hlog.Infof(logURL, VersionString())
+	hlog.Infof(logURL, BuildInfo())
 	hlog.Debugf(logURL, "check: starting")
 
 	// To make Concourse happy it is enough to return always the same version (but not an
@@ -135,7 +131,7 @@ func (r *Resource) In(
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Infof(VersionString())
+	log.Infof(BuildInfo())
 	log.Debugf("in: starting.")
 
 	// Since it is not clear if it makes sense to return a "real" version for this
@@ -151,16 +147,14 @@ func (r *Resource) Out(
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Infof(VersionString())
+	log.Infof(BuildInfo())
 	log.Debugf("out: starting.")
 
 	if err := outValidateSources(source); err != nil {
-		log.Errorf("out: %v", err)
 		return nil, nil, err
 	}
 
 	if err := outValidateParams(params); err != nil {
-		log.Errorf("out: %v", err)
 		return nil, nil, err
 	}
 	repodir, _ := params["input-repo"].(string)
@@ -171,12 +165,10 @@ func (r *Resource) Out(
 	fpath := filepath.Join(inputDirectory, repodir, ".git/ref")
 	data, err := ioutil.ReadFile(fpath)
 	if err != nil {
-		log.Errorf("read ref file: %w", err)
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("reading git ref file %w", err)
 	}
 	ref, tag, err := parseGitRef(string(data))
 	if err != nil {
-		log.Errorf("parse ref file: %w", err)
 		return nil, nil, err
 	}
 	log.Debugf("parsed ref %q", ref)
