@@ -1,6 +1,7 @@
 package resource
 
 import (
+	"errors"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -173,6 +174,32 @@ func TestOut(t *testing.T) {
 	}
 }
 
+func TestCollectInputDirs(t *testing.T) {
+	var testCases = []struct {
+		name    string
+		dir     string
+		wantErr error
+		wantN   int
+	}{
+		{"non existing base directory", "non-existing", os.ErrNotExist, 0},
+		{"empty directory", "testdata/empty-dir", nil, 0},
+		{"two directories and one file", "testdata/two-dirs", nil, 2},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			dirs, err := collectInputDirs(tc.dir)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("sut(%v): error: got %v; want %v", tc.dir, err, tc.wantErr)
+			}
+			gotN := len(dirs)
+			if gotN != tc.wantN {
+				t.Errorf("sut(%v): len(dirs): got %v; want %v", tc.dir, gotN, tc.wantN)
+			}
+		})
+	}
+}
+
 func TestParseGitRef(t *testing.T) {
 
 	var testCases = []struct {
@@ -182,7 +209,7 @@ func TestParseGitRef(t *testing.T) {
 		wantTag string
 		wantErr error
 	}{
-		{"only ref",
+		{"only ref present (no tag)",
 			"af6cd86e98eb1485f04d38b78d9532e916bbff02\n",
 			"af6cd86e98eb1485f04d38b78d9532e916bbff02",
 			"",

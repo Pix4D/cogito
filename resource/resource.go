@@ -89,7 +89,7 @@ func (e *unknownParamError) Error() string {
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
 // This is useful to understand in the Concourse UI and logs which resource it is, since log
-// output in Concourse doesn't mention  the name of the resource (or task) generating it.
+// output in Concourse doesn't mention the name of the resource (or task) generating it.
 func BuildInfo() string {
 	return "This is the Cogito GitHub status resource. " + buildinfo
 
@@ -141,7 +141,7 @@ func (r *Resource) In(
 
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.
 func (r *Resource) Out(
-	inputDirectory string,
+	inputDirectory string, // All the pipeline `inputs:` are below here.
 	source oc.Source,
 	params oc.Params,
 	env oc.Environment,
@@ -160,14 +160,22 @@ func (r *Resource) Out(
 	repodir, _ := params["input-repo"].(string)
 	state, _ := params["state"].(string)
 
-	// All the resource `inputs:` are below inputDirectory (which is an absolute path).
-
-	fpath := filepath.Join(inputDirectory, repodir, ".git/ref")
-	data, err := ioutil.ReadFile(fpath)
+	inputDirs, err := collectInputDirs(inputDirectory)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(inputDirs) != 1 {
+		err := fmt.Errorf(
+			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo XXX",
+			len(inputDirs), inputDirs)
+		return nil, nil, err
+	}
+	refPath := filepath.Join(inputDirectory, repodir, ".git/ref")
+	refBuf, err := ioutil.ReadFile(refPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading git ref file %w", err)
 	}
-	ref, tag, err := parseGitRef(string(data))
+	ref, tag, err := parseGitRef(string(refBuf))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,6 +253,21 @@ func outValidateParams(params oc.Params) error {
 	}
 
 	return nil
+}
+
+// Return a list of all directories below dir (non-recursive).
+func collectInputDirs(dir string) ([]string, error) {
+	entries, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("collecting directories in %v: %w", dir, err)
+	}
+	dirs := []string{}
+	for _, e := range entries {
+		if e.IsDir() {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	return dirs, nil
 }
 
 // Parse the contents of the file ".git/ref" (created by the concourse git resource) and return
