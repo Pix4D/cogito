@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/help"
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 	"github.com/google/go-cmp/cmp"
 )
@@ -195,6 +196,60 @@ func TestCollectInputDirs(t *testing.T) {
 			gotN := len(dirs)
 			if gotN != tc.wantN {
 				t.Errorf("sut(%v): len(dirs): got %v; want %v", tc.dir, gotN, tc.wantN)
+			}
+		})
+	}
+}
+
+func TestRepoDirMatches(t *testing.T) {
+	const owner = "Pix4D"
+	const repo = "conan-marcofoo"
+	type testCase struct {
+		name    string
+		dir     string
+		skipDir bool
+		owner   string
+		repo    string
+		wantErr error
+	}
+	testCases := []testCase{
+		{"non existing", "non-existing", true, "owner", "repo", os.ErrNotExist},
+		{"corrupted .git/config", "corrupted-git-config", false, "owner", "repo", errKeyNotFound},
+		{"repo with wrong remote", "repo-with-wrong-remote", false, owner, repo, errWrongRemote},
+		{"repo with good remote SSH", "repo-with-ssh-remote", false, owner, repo, nil},
+		{"repo with good remote HTTPS", "repo-with-https-remote", false, owner, repo, nil},
+	}
+
+	// Per-subtest setup and teardown.
+	setup := func(t *testing.T, tc testCase) (string, func(t *testing.T)) {
+		// Make a temp dir to be the resource work directory
+		inDir, err := ioutil.TempDir("", "cogito-test-")
+		if err != nil {
+			t.Fatal("Temp dir", err)
+		}
+		// Copy the testdata over
+		if !tc.skipDir {
+			err := help.CopyDir(help.DotRenamer, inDir, filepath.Join("testdata", tc.dir))
+			if err != nil {
+				t.Fatal("CopyDir:", err)
+			}
+		}
+
+		teardown := func(t *testing.T) {
+			defer os.RemoveAll(inDir)
+		}
+		return inDir, teardown
+	}
+
+	for _, tc := range testCases {
+		inDir, teardown := setup(t, tc)
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := repodirMatches(filepath.Join(inDir, tc.dir), tc.owner, tc.repo)
+			if !errors.Is(err, tc.wantErr) {
+				t.Errorf("sut(%v, %v, %v): error: got %v; want %v",
+					tc.dir, tc.owner, tc.repo, err, tc.wantErr)
 			}
 		})
 	}

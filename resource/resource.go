@@ -5,6 +5,7 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -12,12 +13,20 @@ import (
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/hlog"
+	"github.com/sasbury/mini"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 )
 
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
 var buildinfo = "unknown"
+
+var (
+	errKeyNotFound = errors.New("key not found")
+	errWrongRemote = errors.New("wrong git remote")
+
+	errInvalidURL = errors.New("invalid git URL")
+)
 
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
@@ -268,6 +277,38 @@ func collectInputDirs(dir string) ([]string, error) {
 		}
 	}
 	return dirs, nil
+}
+
+// Check if dir is a git repository with origin ghRepoURL
+func repodirMatches(dir, owner, repo string) error {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("parsing .git/config: abspath: %w", err)
+	}
+	cfg, err := mini.LoadConfiguration(filepath.Join(dir, ".git/config"))
+	if err != nil {
+		return fmt.Errorf("parsing .git/config: %w", err)
+	}
+
+	const section = `remote "origin"`
+	const key = "url"
+	remote := cfg.StringFromSection(section, key, "")
+	if remote == "" {
+		return fmt.Errorf(".git/config: key '%s/%s': %w", section, key, errKeyNotFound)
+	}
+	gu, err := parseGitPseudoURL(remote)
+	if err != nil {
+		return fmt.Errorf(".git/config: remote: %w", err)
+	}
+	left := []string{"github.com", owner, repo}
+	right := []string{gu.Host, gu.Owner, gu.Repo}
+	for i, l := range left {
+		r := right[i]
+		if strings.ToLower(l) != strings.ToLower(r) {
+			return fmt.Errorf("remote: %v: got: %q; want: %q: %w", remote, r, l, errWrongRemote)
+		}
+	}
+	return nil
 }
 
 type gitURL struct {
