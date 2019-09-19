@@ -270,6 +270,39 @@ func collectInputDirs(dir string) ([]string, error) {
 	return dirs, nil
 }
 
+type gitURL struct {
+	Scheme string // "ssh" or "https"
+	Host   string
+	Owner  string
+	Repo   string
+}
+
+// Two types of pseudo URLs:
+// git@github.com:Pix4D/cogito.git
+// https://github.com/vbauerster/mpb.git
+func parseGitPseudoURL(URL string) (gitURL, error) {
+	var path string
+	gu := gitURL{}
+	if strings.HasPrefix(URL, "git@") {
+		gu.Scheme = "ssh"
+		path = strings.Replace(URL[4:], ":", "/", 1)
+	} else if strings.HasPrefix(URL, "https://") {
+		gu.Scheme = "https"
+		path = URL[8:]
+	} else {
+		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
+	}
+	// github.com/vbauerster/mpb.git
+	tokens := strings.Split(path, "/")
+	if len(tokens) != 3 {
+		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)
+	}
+	gu.Host = tokens[0]
+	gu.Owner = tokens[1]
+	gu.Repo = strings.TrimSuffix(tokens[2], ".git")
+	return gu, nil
+}
+
 // Parse the contents of the file ".git/ref" (created by the concourse git resource) and return
 // the ref and the tag (if present).
 // Normally that file contains only the ref, but it will contain also the tag when the git

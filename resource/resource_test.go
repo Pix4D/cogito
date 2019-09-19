@@ -200,6 +200,32 @@ func TestCollectInputDirs(t *testing.T) {
 	}
 }
 
+func TestParseGitPseudoURL(t *testing.T) {
+	testCases := []struct {
+		name    string
+		inURL   string
+		wantGU  gitURL
+		wantErr error
+	}{
+		{"invalid URL", "hello", gitURL{}, errInvalidURL},
+		{"valid SSH URL", "git@github.com:Pix4D/cogito.git",
+			gitURL{"ssh", "github.com", "Pix4D", "cogito"}, nil},
+		{"valid HTTP URL", "https://github.com/Pix4D/cogito.git",
+			gitURL{"https", "github.com", "Pix4D", "cogito"}, nil},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gu, err := parseGitPseudoURL(tc.inURL)
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantGU, gu); diff != "" {
+				t.Errorf("gitURL: (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
 func TestParseGitRef(t *testing.T) {
 
 	var testCases = []struct {
