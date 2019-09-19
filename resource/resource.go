@@ -32,8 +32,7 @@ var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	mandatoryParams = map[string]struct{}{
-		"input-repo": struct{}{},
-		"state":      struct{}{},
+		"state": struct{}{},
 	}
 
 	validStates = map[string]struct{}{
@@ -166,8 +165,10 @@ func (r *Resource) Out(
 	if err := outValidateParams(params); err != nil {
 		return nil, nil, err
 	}
-	repodir, _ := params["input-repo"].(string)
 	state, _ := params["state"].(string)
+
+	owner, _ := source["owner"].(string)
+	repo, _ := source["repo"].(string)
 
 	inputDirs, err := collectInputDirs(inputDirectory)
 	if err != nil {
@@ -175,11 +176,17 @@ func (r *Resource) Out(
 	}
 	if len(inputDirs) != 1 {
 		err := fmt.Errorf(
-			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo XXX",
-			len(inputDirs), inputDirs)
+			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
+			len(inputDirs), inputDirs, owner, repo)
 		return nil, nil, err
 	}
-	refPath := filepath.Join(inputDirectory, repodir, ".git/ref")
+
+	repoDir := filepath.Join(inputDirectory, inputDirs[0])
+	if err := repodirMatches(repoDir, owner, repo); err != nil {
+		return nil, nil, err
+	}
+
+	refPath := filepath.Join(repoDir, ".git/ref")
 	refBuf, err := ioutil.ReadFile(refPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading git ref file %w", err)
@@ -193,8 +200,6 @@ func (r *Resource) Out(
 
 	// Finally, post the status to GitHub.
 	token, _ := source["access_token"].(string)
-	owner, _ := source["owner"].(string)
-	repo, _ := source["repo"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	context := pipeline + "/" + job

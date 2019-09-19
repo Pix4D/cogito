@@ -29,7 +29,7 @@ resource_types:
 resources:
 - name: gh-status
   type: cogito
-  check_every: 7d
+  check_every: 24h
   source:
     owner: ((your-github-user-or-organization))
     repo: ((your-repo-name))
@@ -91,7 +91,7 @@ jobs:
 
 ### Suggestions
 
-We suggest to set a very long interval for `check_interval`, for example 1 week, as shown in the example above. This helps reducing the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps reducing the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
 ## The `check` step
 

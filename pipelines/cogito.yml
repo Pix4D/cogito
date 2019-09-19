@@ -4,21 +4,15 @@ meta:
     on_success:
       put: gh-status
       inputs: [conan-marcofoo.git]
-      params:
-        state: success
-        input-repo: conan-marcofoo.git
+      params: {state: success}
     on_failure:
       put: gh-status
       inputs: [conan-marcofoo.git]
-      params:
-        state: failure
-        input-repo: conan-marcofoo.git
+      params: {state: failure}
     on_error:
       put: gh-status
       inputs: [conan-marcofoo.git]
-      params:
-        state: error
-        input-repo: conan-marcofoo.git
+      params: {state: error}
 
   task-config: &task-config
     config:
@@ -41,7 +35,7 @@ resource_types:
 
 - name: cogito
   type: registry-image
-  check_every: 1h
+  check_every: 24h
   source:
     repository: docker.ci.pix4d.com/cogito
     tag: latest
@@ -52,6 +46,7 @@ resources:
 
 - name: gh-status
   type: cogito
+  # Since check is a no-op, we check infrequently to reduce load on the system.
   check_every: 24h
   source:
     log_level: debug
@@ -76,9 +71,7 @@ jobs:
         trigger: true
       - put: gh-status
         inputs: [conan-marcofoo.git]
-        params:
-          state: pending
-          input-repo: conan-marcofoo.git
+        params: {state: pending}
       - task: maybe-fail
         <<: *task-config
 
@@ -89,8 +82,6 @@ jobs:
         trigger: true
       - put: gh-status
         inputs: [conan-marcofoo.git]
-        params:
-          state: pending
-          input-repo: conan-marcofoo.git
+        params: {state: pending}
       - task: maybe-fail
         <<: *task-config
