@@ -31,7 +31,7 @@ func IdentityRenamer(name string) string {
 // └── foo
 //     └── .git        <= dot renamed
 //         └── config
-func CopyDir(renamer func(string) string, dst, src string) error {
+func CopyDir(dst string, src string, renamer func(string) string) error {
 	for _, dir := range []string{dst, src} {
 		fi, err := os.Stat(dir)
 		if err != nil {
@@ -54,7 +54,7 @@ func CopyDir(renamer func(string) string, dst, src string) error {
 	}
 	for _, e := range srcEntries {
 		if e.IsDir() {
-			if err := CopyDir(renamer, tgtDir, filepath.Join(src, e.Name())); err != nil {
+			if err := CopyDir(tgtDir, filepath.Join(src, e.Name()), renamer); err != nil {
 				return err
 			}
 		} else {

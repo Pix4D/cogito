@@ -1,6 +1,6 @@
 # cogito
 
-Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update GitHub Status during a build. The name is an humble homage to [René Descartes].
+Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update GitHub Status during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
 
@@ -91,7 +91,7 @@ jobs:
 
 ### Suggestions
 
-We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps reducing the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
 ## The `check` step
 
@@ -123,9 +123,9 @@ on_success:
   params: {state: success}
 ```
 
-As all the other GitHub status resources, It requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the status.
+As all the other GitHub status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the status.
 
-It requires only one input to help you having an efficient pipeline. If the "put inputs" list is not set explicitly, Concourse by default will stream all inputs used by the job to this resource, which can have a big performance impact. From ["put inputs"] documentation:
+It requires only one input to help you have an efficient pipeline. If the "put inputs" list is not set explicitly, Concourse by default will stream all inputs used by the job to this resource, which can have a big performance impact. From ["put inputs"] documentation:
 
 > inputs: [string]
 >

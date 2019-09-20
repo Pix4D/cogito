@@ -324,8 +324,8 @@ type gitURL struct {
 }
 
 // Two types of pseudo URLs:
-// git@github.com:Pix4D/cogito.git
-// https://github.com/vbauerster/mpb.git
+//     git@github.com:Pix4D/cogito.git
+// https://github.com/Pix4D/cogito.git
 func parseGitPseudoURL(URL string) (gitURL, error) {
 	var path string
 	gu := gitURL{}
@@ -338,7 +338,7 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	} else {
 		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
 	}
-	// github.com/vbauerster/mpb.git
+	// github.com/Pix4D/cogito.git
 	tokens := strings.Split(path, "/")
 	if len(tokens) != 3 {
 		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)

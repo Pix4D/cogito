@@ -129,7 +129,7 @@ func TestOut(t *testing.T) {
 		}
 		// Copy the testdata over
 		const repo = "repo-with-ssh-remote"
-		err = help.CopyDir(help.DotRenamer, inDir, filepath.Join("testdata", repo))
+		err = help.CopyDir(inDir, filepath.Join("testdata", repo), help.DotRenamer)
 		if err != nil {
 			t.Fatal("CopyDir:", err)
 		}
@@ -226,7 +226,7 @@ func TestRepoDirMatches(t *testing.T) {
 		}
 		// Copy the testdata over
 		if !tc.skipDir {
-			err := help.CopyDir(help.DotRenamer, inDir, filepath.Join("testdata", tc.dir))
+			err := help.CopyDir(inDir, filepath.Join("testdata", tc.dir), help.DotRenamer)
 			if err != nil {
 				t.Fatal("CopyDir:", err)
 			}

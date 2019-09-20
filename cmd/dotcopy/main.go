@@ -16,6 +16,6 @@ func main() {
 	dst := os.Args[2]
 
 	fmt.Println("src:", src, "dst:", dst)
-	err := help.CopyDir(help.DotRenamer, dst, src)
+	err := help.CopyDir(dst, src, help.DotRenamer)
 	fmt.Println(err)
 }
