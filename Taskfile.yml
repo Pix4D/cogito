@@ -21,16 +21,21 @@ tasks:
   test:
     desc: Run the tests.
     cmds:
-      - go test ./...
+      # `-count 1` is the idiomatic way to always run the tests (do not use the test cache)
+      - go test -count 1 ./...
+  dotcopy:
+    dir: bin
+    cmds:
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/dotcopy
   build-local:
+    deps: [dotcopy]
     desc: Build on the local machine.
     dir: bin
-    vars:
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello/
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/check/
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/in/
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/out/
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/check
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/in
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
   build:
     desc: Build the Docker image. Use the TAG environment variable if set.
     cmds:

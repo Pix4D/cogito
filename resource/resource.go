@@ -5,6 +5,7 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/hlog"
+	"github.com/sasbury/mini"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 )
@@ -20,11 +22,17 @@ import (
 var buildinfo = "unknown"
 
 var (
+	errKeyNotFound = errors.New("key not found")
+	errWrongRemote = errors.New("wrong git remote")
+
+	errInvalidURL = errors.New("invalid git URL")
+)
+
+var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	mandatoryParams = map[string]struct{}{
-		"input-repo": struct{}{},
-		"state":      struct{}{},
+		"state": struct{}{},
 	}
 
 	validStates = map[string]struct{}{
@@ -89,7 +97,7 @@ func (e *unknownParamError) Error() string {
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
 // This is useful to understand in the Concourse UI and logs which resource it is, since log
-// output in Concourse doesn't mention  the name of the resource (or task) generating it.
+// output in Concourse doesn't mention the name of the resource (or task) generating it.
 func BuildInfo() string {
 	return "This is the Cogito GitHub status resource. " + buildinfo
 
@@ -141,7 +149,7 @@ func (r *Resource) In(
 
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.
 func (r *Resource) Out(
-	inputDirectory string,
+	inputDirectory string, // All the pipeline `inputs:` are below here.
 	source oc.Source,
 	params oc.Params,
 	env oc.Environment,
@@ -157,17 +165,33 @@ func (r *Resource) Out(
 	if err := outValidateParams(params); err != nil {
 		return nil, nil, err
 	}
-	repodir, _ := params["input-repo"].(string)
 	state, _ := params["state"].(string)
 
-	// All the resource `inputs:` are below inputDirectory (which is an absolute path).
+	owner, _ := source["owner"].(string)
+	repo, _ := source["repo"].(string)
 
-	fpath := filepath.Join(inputDirectory, repodir, ".git/ref")
-	data, err := ioutil.ReadFile(fpath)
+	inputDirs, err := collectInputDirs(inputDirectory)
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(inputDirs) != 1 {
+		err := fmt.Errorf(
+			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
+			len(inputDirs), inputDirs, owner, repo)
+		return nil, nil, err
+	}
+
+	repoDir := filepath.Join(inputDirectory, inputDirs[0])
+	if err := repodirMatches(repoDir, owner, repo); err != nil {
+		return nil, nil, err
+	}
+
+	refPath := filepath.Join(repoDir, ".git/ref")
+	refBuf, err := ioutil.ReadFile(refPath)
 	if err != nil {
 		return nil, nil, fmt.Errorf("reading git ref file %w", err)
 	}
-	ref, tag, err := parseGitRef(string(data))
+	ref, tag, err := parseGitRef(string(refBuf))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -176,8 +200,6 @@ func (r *Resource) Out(
 
 	// Finally, post the status to GitHub.
 	token, _ := source["access_token"].(string)
-	owner, _ := source["owner"].(string)
-	repo, _ := source["repo"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	context := pipeline + "/" + job
@@ -245,6 +267,86 @@ func outValidateParams(params oc.Params) error {
 	}
 
 	return nil
+}
+
+// Return a list of all directories below dir (non-recursive).
+func collectInputDirs(dir string) ([]string, error) {
+	entries, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("collecting directories in %v: %w", dir, err)
+	}
+	dirs := []string{}
+	for _, e := range entries {
+		if e.IsDir() {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	return dirs, nil
+}
+
+// Check if dir is a git repository with origin ghRepoURL
+func repodirMatches(dir, owner, repo string) error {
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return fmt.Errorf("parsing .git/config: abspath: %w", err)
+	}
+	cfg, err := mini.LoadConfiguration(filepath.Join(dir, ".git/config"))
+	if err != nil {
+		return fmt.Errorf("parsing .git/config: %w", err)
+	}
+
+	const section = `remote "origin"`
+	const key = "url"
+	remote := cfg.StringFromSection(section, key, "")
+	if remote == "" {
+		return fmt.Errorf(".git/config: key '%s/%s': %w", section, key, errKeyNotFound)
+	}
+	gu, err := parseGitPseudoURL(remote)
+	if err != nil {
+		return fmt.Errorf(".git/config: remote: %w", err)
+	}
+	left := []string{"github.com", owner, repo}
+	right := []string{gu.Host, gu.Owner, gu.Repo}
+	for i, l := range left {
+		r := right[i]
+		if strings.ToLower(l) != strings.ToLower(r) {
+			return fmt.Errorf("remote: %v: got: %q; want: %q: %w", remote, r, l, errWrongRemote)
+		}
+	}
+	return nil
+}
+
+type gitURL struct {
+	Scheme string // "ssh" or "https"
+	Host   string
+	Owner  string
+	Repo   string
+}
+
+// Two types of pseudo URLs:
+//     git@github.com:Pix4D/cogito.git
+// https://github.com/Pix4D/cogito.git
+func parseGitPseudoURL(URL string) (gitURL, error) {
+	var path string
+	gu := gitURL{}
+	if strings.HasPrefix(URL, "git@") {
+		gu.Scheme = "ssh"
+		path = strings.Replace(URL[4:], ":", "/", 1)
+	} else if strings.HasPrefix(URL, "https://") {
+		gu.Scheme = "https"
+		path = URL[8:]
+	} else {
+		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
+	}
+	// github.com/Pix4D/cogito.git
+	tokens := strings.Split(path, "/")
+	if len(tokens) != 3 {
+		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)
+	}
+	gu.Host = tokens[0]
+	gu.Owner = tokens[1]
+	gu.Repo = strings.TrimSuffix(tokens[2], ".git")
+	return gu, nil
 }
 
 // Parse the contents of the file ".git/ref" (created by the concourse git resource) and return

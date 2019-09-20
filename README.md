@@ -1,14 +1,18 @@
 # cogito
 
-Cogito (**Co**ncourse **git** status res**o**urce) is a Concourse resource to update GitHub Status during a build.
+Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update GitHub Status during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
 
 - As lightweight as possible (Docker Alpine image).
 - Extensive test suite.
+- Autodiscovery of configuration parameters.
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
 - Configurable logging for the three steps (check, in, out) to help throubleshooting.
 - Boilerplate code generated with https://github.com/cloudboss/ofcourse
+
+[Concourse resource]: https://concourse-ci.org/resources.html
+[René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
 
 ## Example
 
@@ -42,29 +46,21 @@ jobs:
     on_success:
       put: gh-status
       inputs: [the-repo] # Useful optimization!
-      params:
-        state: success
-        input-repo: the-repo
+      params: {state: success}
     on_failure:
       put: gh-status
       inputs: [the-repo] # Useful optimization!
-      params:
-        state: failure
-        input-repo: the-repo
+      params: {state: failure}
     on_error:
       put: gh-status
       inputs: [the-repo] # Useful optimization!
-      params:
-        state: error
-        input-repo: the-repo
+      params: {state: error}
     plan:
       - get: the-repo
         trigger: true
       - put: gh-status
         inputs: [the-repo] # Useful optimization!
-        params:
-          state: pending
-          input-repo: the-repo
+        params: {state: pending}
       - task: maybe-fail
         config:
           platform: linux
@@ -93,15 +89,19 @@ jobs:
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default `info`.
 - `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step.
 
+### Suggestions
+
+We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+
 ## The `check` step
 
 It is currently a no-op.
 
-## The `in` (corresponding to `get`) step
+## The `get` step
 
 It is currenty a no-op.
 
-## The `out` (corresponding to `put`) step
+## The `put` step
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
@@ -109,8 +109,31 @@ Sets or updates the GitHub status for a given commit, following the [GitHub stat
 
 #### Required
 
-- `input-repo`: The `input:` corresponding to the repository for which you want to set the state (see the example above).
 - `state`: The state to be set. One of `error`, `failure`, `pending`, `success`.
+
+### Note
+
+It requires one and only one ["put inputs"] to be specified, otherwhise it will error out. For example:
+
+```yaml
+on_success:
+  put: gh-status
+  # This is the name of the git resource corresponding to the GitHub repo to be updated.
+  inputs: [the-repo]
+  params: {state: success}
+```
+
+As all the other GitHub status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the status.
+
+It requires only one input to help you have an efficient pipeline. If the "put inputs" list is not set explicitly, Concourse by default will stream all inputs used by the job to this resource, which can have a big performance impact. From ["put inputs"] documentation:
+
+> inputs: [string]
+>
+> Optional. If specified, only the listed artifacts will be provided to the container. If not specified, all artifacts will be provided.
+
+To better understand from where `the-repo` comes from, see the full example at the beginning of this document.
+
+["put inputs"]: https://concourse-ci.org/put-step.html#put-step-inputs
 
 ## GitHub OAuth token
 
@@ -224,10 +247,10 @@ The end-to-end tests have the following logic:
 - If none of the environment variables are set, we skip the test.
 - If all of the environment variables are set, we run the test.
 - If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
-	
+
 #### Making the environment variables available to your editor
 
-If you want to run the tests from within your editor test runner, it is enough to use `envchain` to start the editor. For example:
+If you want to run the tests from within your editor test runner, it is enough to use `envchain` to start the editor:
 
 ```console
 envchain cogito $EDITOR
