@@ -49,8 +49,9 @@ resources:
   # Since check is a no-op, we check infrequently to reduce load on the system.
   check_every: 24h
   source:
-    log_level: debug
-    log_url: ((concourse_cognito_logs))
+    # Optional, for debugging only.
+    # log_level: debug
+    # log_url: ((concourse_cognito_logs))
     owner: pix4d
     repo: conan-marcofoo
     access_token: ((concourse_janus_access_token_repo_status))
