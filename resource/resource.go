@@ -140,7 +140,8 @@ func (r *Resource) In(
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
 	log.Infof(BuildInfo())
-	log.Debugf("in: starting.")
+	log.Debugf("in: start.")
+	defer log.Debugf("in: finish.")
 
 	// Since it is not clear if it makes sense to return a "real" version for this
 	// resource, we keep it simple and return the same version we have been called with.
@@ -156,7 +157,8 @@ func (r *Resource) Out(
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
 	log.Infof(BuildInfo())
-	log.Debugf("out: starting.")
+	log.Debugf("out: start.")
+	defer log.Debugf("out: finish.")
 
 	if err := outValidateSources(source); err != nil {
 		return nil, nil, err
@@ -212,12 +214,13 @@ func (r *Resource) Out(
 	target_url := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 		atc, team, pipeline, job, buildN)
 	description := "Build " + buildN
-	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v", state, owner, repo, ref, context, target_url)
+	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
+		state, owner, repo, ref, context, target_url)
 	err = status.Add(ref, state, target_url, description)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Debugf("State posted successfully")
+	log.Infof("State (%v) posted successfully", state)
 
 	metadata := oc.Metadata{}
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})

@@ -2,6 +2,7 @@ TODO:
 
 [ ] tag our first release! 0.1.0
 [ ] When we start using this resource, pin it in all pipelines. Do not use latest because it is still in flux!
+[ ] bring back better parametric e2e testing!
 [ ] cogito.yml sample pipeline: is there a trick to add a dependency between the two jobs without having to use S3 or equivalent ? Maybe a resource like semver, but without any external storage / external dependency ???
 [ ] README when referring to other sections, use anchors.
 [ ] When I switched from "repo" to "input-repo" I got a bug because I didn't change all instances of the "repo" key. Two possibilities:
