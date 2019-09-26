@@ -5,9 +5,16 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
+	"text/template"
 )
+
+// Passed to template.Execute()
+type TemplateData map[string]string
+
+type Renamer func(string) string
 
 // If name begins with "dot.", replace with ".". Otherwise leave it alone.
 func DotRenamer(name string) string {
@@ -19,6 +26,7 @@ func IdentityRenamer(name string) string {
 }
 
 // Recursive copy src directory below dst directory, renaming any directory with renamer.
+// If templatedata is not empty, will consider each file ending with ".template" as a Go template
 // It expects dst directory to exist.
 //
 // For example, if src directory is `foo`:
@@ -31,7 +39,7 @@ func IdentityRenamer(name string) string {
 // └── foo
 //     └── .git        <= dot renamed
 //         └── config
-func CopyDir(dst string, src string, renamer func(string) string) error {
+func CopyDir(dst string, src string, renamer Renamer, templatedata TemplateData) error {
 	for _, dir := range []string{dst, src} {
 		fi, err := os.Stat(dir)
 		if err != nil {
@@ -53,12 +61,17 @@ func CopyDir(dst string, src string, renamer func(string) string) error {
 		return err
 	}
 	for _, e := range srcEntries {
+		src := filepath.Join(src, e.Name())
 		if e.IsDir() {
-			if err := CopyDir(tgtDir, filepath.Join(src, e.Name()), renamer); err != nil {
+			if err := CopyDir(tgtDir, src, renamer, templatedata); err != nil {
 				return err
 			}
 		} else {
-			if err := copyFile(filepath.Join(tgtDir, e.Name()), filepath.Join(src, e.Name())); err != nil {
+			name := e.Name()
+			if len(templatedata) != 0 {
+				name = strings.TrimSuffix(name, ".template")
+			}
+			if err := copyFile(filepath.Join(tgtDir, name), src, templatedata); err != nil {
 				return err
 			}
 		}
@@ -67,7 +80,7 @@ func CopyDir(dst string, src string, renamer func(string) string) error {
 	return nil
 }
 
-func copyFile(dstPath, srcPath string) error {
+func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Errorf("opening src file: %w", err)
@@ -81,6 +94,21 @@ func copyFile(dstPath, srcPath string) error {
 	}
 	defer dstFile.Close()
 
-	_, err = io.Copy(dstFile, srcFile)
-	return err
+	if len(templatedata) == 0 {
+		_, err = io.Copy(dstFile, srcFile)
+		return err
+	}
+	buf, err := ioutil.ReadAll(srcFile)
+	if err != nil {
+		return err
+	}
+	tmpl, err := template.New(path.Base(srcPath)).Parse(string(buf))
+	if err != nil {
+		return fmt.Errorf("parsing template %v: %w", srcPath, err)
+	}
+	tmpl.Option("missingkey=error")
+	if err := tmpl.Execute(dstFile, templatedata); err != nil {
+		return fmt.Errorf("executing template %v with data %v: %w", srcPath, templatedata, err)
+	}
+	return nil
 }
