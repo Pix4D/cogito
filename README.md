@@ -1,6 +1,6 @@
 # cogito
 
-Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update GitHub Status during a build. The name is a humble homage to [René Descartes].
+Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update the GitHub status of a commit during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
 
@@ -13,6 +13,11 @@ Written in Go, it has the following characteristics:
 
 [Concourse resource]: https://concourse-ci.org/resources.html
 [René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
+
+## Development
+
+This document explains how to use this resource. See [DEVELOPMENT](./DEVELOPMENT.md) for how to build the Docker image, develop, test and contribute to this resource.
+
 
 ## Example
 
@@ -45,21 +50,21 @@ jobs:
   - name: Autocat
     on_success:
       put: gh-status
-      inputs: [the-repo] # Useful optimization!
+      inputs: [the-repo]
       params: {state: success}
     on_failure:
       put: gh-status
-      inputs: [the-repo] # Useful optimization!
+      inputs: [the-repo]
       params: {state: failure}
     on_error:
       put: gh-status
-      inputs: [the-repo] # Useful optimization!
+      inputs: [the-repo]
       params: {state: error}
     plan:
       - get: the-repo
         trigger: true
       - put: gh-status
-        inputs: [the-repo] # Useful optimization!
+        inputs: [the-repo]
         params: {state: pending}
       - task: maybe-fail
         config:
@@ -82,7 +87,7 @@ jobs:
 
 - `owner`: The GitHub user or organization.
 - `repo`: The GitHub repository name.
-- `access-token`: The OAuth access token. See section "GitHub OAuth token" below.
+- `access-token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
 
 ### Optional
 
@@ -93,15 +98,15 @@ jobs:
 
 We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
-## The `check` step
+## The check step
 
-It is currently a no-op.
+It is currently a no-op and will always return the same version, `dummy`.
 
-## The `get` step
+## The get step
 
 It is currenty a no-op.
 
-## The `put` step
+## The put step
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
@@ -125,7 +130,7 @@ on_success:
 
 As all the other GitHub status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the status.
 
-It requires only one input to help you have an efficient pipeline. If the "put inputs" list is not set explicitly, Concourse by default will stream all inputs used by the job to this resource, which can have a big performance impact. From ["put inputs"] documentation:
+It requires only one put input to help you have an efficient pipeline, since if the "put inputs" list is not set explicitly, Concourse will stream all inputs used by the job to this resource, which can have a big performance impact. From the ["put inputs"] documentation:
 
 > inputs: [string]
 >
@@ -143,7 +148,7 @@ Give to it the absolute minimum permissions to get the job done. This resource o
 
 NOTE: The token is security-sensitive. Treat it as you would treat a password. Do not encode it in the pipeline YAML and do not store it in a YAML file. Use one of the Concourse-supported credentials managers, see [Concourse credential managers].
 
-See also the section below `The end-to-end tests` for how to securely store the token to run the end-to-end tests.
+See also the section [The end-to-end tests](./DEVELOPMENT.md#the-end-to-end-tests) for how to securely store the token to run the end-to-end tests.
 
 ## Caveat: GitHub rate limiting
 
@@ -161,129 +166,10 @@ From [GitHub API v3]
 
 In case of rate limiting, the error message in the output of the `put` step will mention it.
 
-## Development
+## License
 
-### Prerequisites
+This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
 
-* golang, version >= 1.13
-* docker, version >= 19
-* task (https://taskfile.dev/), version >= 2.6
-
-### Using Task (replacement of make)
-
-Have a look at https://taskfile.dev/, then
-
-```
-task --list
-```
-
-### Running the default tests
-
-The Taskfile includes a `test` target, and tests are also run inside the Docker build.
-
-Run the default tests:
-
-```console
-task test
-```
-
-### The end-to-end (e2e) tests
-
-The end-to-end tests (tests that interact with GitHub) are disabled by default because they require the following out of band setup.
-
-The reason why we require enviroment variables (as opposed to using a configuration file) to pass test configuration is twofold:
-
-- To enable any contributor to run their own tests without having to edit any file.
-- To securely store secrets!
-
-#### Secure handling of the GitHub OAuth token
-
-We use the [envchain] tool, that stores secrets in the OS secure store (Keychain for macOS, D-Bus secret service (gnome-keyring) for Linux), associated to a _namespace_. It then makes available all secrets associated to the given _namespace_ as environment variables.
-
-Add the GitHub OAuth token:
-
-```console
-envchain --set cogito COGITO_TEST_OAUTH_TOKEN
-```
-
-#### Prepare the test repository
-
-1. In your GitHub account, create a test repository, say for example `cogito-test`.
-2. In the test repository, push at least one commit, on any branch you fancy. Take note of the 40 digits commit SHA (the API wants the full SHA).
-
-#### Add test repository information as environment variables
-
-```console
-envchain --set cogito COGITO_TEST_REPO_OWNER   # Your GitHub user or organization
-envchain --set cogito COGITO_TEST_REPO_NAME
-envchain --set cogito COGITO_TEST_COMMIT_SHA
-```
-
-#### Verify your setup
-
-```console
-envchain cogito env | grep COGITO_
-```
-
-should show the following environment variables, with the correct values:
-
-```
-COGITO_TEST_OAUTH_TOKEN
-COGITO_TEST_REPO_OWNER
-COGITO_TEST_REPO_NAME
-COGITO_TEST_COMMIT_SHA
-```
-
-#### Running the end-to-end tests
-
-We are finally ready to run also the end-to-end tests:
-
-```console
-envchain cogito task test
-```
-
-The end-to-end tests have the following logic:
-
-- If none of the environment variables are set, we skip the test.
-- If all of the environment variables are set, we run the test.
-- If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
-
-#### Making the environment variables available to your editor
-
-If you want to run the tests from within your editor test runner, it is enough to use `envchain` to start the editor:
-
-```console
-envchain cogito $EDITOR
-```
-
-#### Caveat: GitHub API limits on the number of statuses per commit
-
-From [GitHub status API], there is a limit of 1000 statuses per sha and context within a
-repository. Attempts to create more than 1000 statuses will result in a validation error.
-
-If this happens, just create another commit and update the `COGITO_TEST_COMMIT_SHA` environment variable.
-
-### Building and publishing the image
-
-The Taskfile includes targets for building and publishing the docker image.
-
-Build the Docker image and run the tests:
-
-```console
-task build
-```
-
-Build and push the Docker image:
-
-```console
-task publish
-```
-
-If present, the TAG environment variable with be used to tag the Docker image, for example
-
-```console
-env TAG=1.2.3 task publish
-```
 
 [GitHub status API]: https://developer.github.com/v3/repos/statuses/
 [GitHub API v3]: https://developer.github.com/v3/
