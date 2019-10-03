@@ -13,6 +13,9 @@ vars:
   REPO: github.com/Pix4D/cogito
   BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
+  GOTESTSUM:
+    sh: which gotestsum; true
+  TESTRUNNER: '{{if .GOTESTSUM}}{{.GOTESTSUM}}{{else}}go test{{end}}'
 
 tasks:
   default:
@@ -21,8 +24,7 @@ tasks:
   test:
     desc: Run the tests.
     cmds:
-      # `-count 1` is the idiomatic way to always run the tests (do not use the test cache)
-      - go test -count 1 ./...
+      - "{{.TESTRUNNER}} ./..."
   dotcopy:
     dir: bin
     cmds:

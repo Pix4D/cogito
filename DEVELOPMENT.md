@@ -2,9 +2,15 @@
 
 ## Prerequisites
 
+### Required
+
 * golang, version >= 1.13
 * docker, version >= 19
 * task (https://taskfile.dev/), version >= 2.6
+
+### Optional
+
+* [gotestsum](https://github.com/gotestyourself/gotestsum), for more human-friendly test output. If found in `$PATH`, it will be used in place of `go test`.
 
 ## Using Task (replacement of make)
 
@@ -52,7 +58,7 @@ envchain --set cogito COGITO_TEST_OAUTH_TOKEN
 
 ```console
 envchain --set cogito COGITO_TEST_REPO_OWNER   # Your GitHub user or organization
-envchain --set cogito COGITO_TEST_REPO_NAME
+envchain --set cogito COGITO_TEST_REPO_NAME    # The repo name (without the trailing .git)
 envchain --set cogito COGITO_TEST_COMMIT_SHA
 ```
 
