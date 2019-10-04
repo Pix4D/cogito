@@ -259,11 +259,13 @@ func TestParseGitPseudoURL(t *testing.T) {
 		wantGU  gitURL
 		wantErr error
 	}{
-		{"invalid URL", "hello", gitURL{}, errInvalidURL},
+		{"totally invalid URL", "hello", gitURL{}, errInvalidURL},
 		{"valid SSH URL", "git@github.com:Pix4D/cogito.git",
 			gitURL{"ssh", "github.com", "Pix4D", "cogito"}, nil},
+		{"invalid SSH URL", "git@github.com/Pix4D/cogito.git", gitURL{}, errInvalidURL},
 		{"valid HTTP URL", "https://github.com/Pix4D/cogito.git",
 			gitURL{"https", "github.com", "Pix4D", "cogito"}, nil},
+		{"invalid HTTP URL", "https://github.com:Pix4D/cogito.git", gitURL{}, errInvalidURL},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -287,7 +287,8 @@ func collectInputDirs(dir string) ([]string, error) {
 	return dirs, nil
 }
 
-// Check if dir is a git repository with origin ghRepoURL
+// Check if dir is a git repository, hosted on GitHub, of the form owner/repo, accessed over
+// HTTPS or SSH.
 func repodirMatches(dir, owner, repo string) error {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -334,7 +335,11 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	gu := gitURL{}
 	if strings.HasPrefix(URL, "git@") {
 		gu.Scheme = "ssh"
-		path = strings.Replace(URL[4:], ":", "/", 1)
+		path = URL[4:]
+		if strings.Count(path, ":") != 1 {
+			return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
+		}
+		path = strings.Replace(path, ":", "/", 1)
 	} else if strings.HasPrefix(URL, "https://") {
 		gu.Scheme = "https"
 		path = URL[8:]
