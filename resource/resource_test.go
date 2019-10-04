@@ -2,6 +2,7 @@ package resource
 
 import (
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -199,22 +200,21 @@ func TestCollectInputDirs(t *testing.T) {
 }
 
 func TestRepoDirMatches(t *testing.T) {
-	const owner = "Pix4D"
-	const repo = "conan-marcofoo"
+	const wantOwner = "smiling"
+	const wantRepo = "butterfly"
 	type testCase struct {
-		name    string
-		dir     string
-		skipDir bool
-		owner   string
-		repo    string
-		wantErr error
+		name      string
+		dir       string
+		inRepoURL string
+		wantErr   error
 	}
 	testCases := []testCase{
-		{"non existing", "non-existing", true, "owner", "repo", os.ErrNotExist},
-		{"corrupted .git/config", "corrupted-git-config", false, "owner", "repo", errKeyNotFound},
-		{"repo with wrong remote", "repo-with-wrong-remote", false, owner, repo, errWrongRemote},
-		{"repo with good remote SSH", "repo-with-ssh-remote", false, owner, repo, nil},
-		{"repo with good remote HTTPS", "repo-with-https-remote", false, owner, repo, nil},
+		{"dir is not a repo", "not-a-repo", "dummyurl", os.ErrNotExist},
+		{"bad .git/config", "repo-bad-git-config", "dummyurl", errKeyNotFound},
+		{"repo with wrong HTTPS remote", "a-repo", https_remote("owner", "repo"), errWrongRemote},
+		{"repo with wrong SSH remote", "a-repo", ssh_remote("owner", "repo"), errWrongRemote},
+		{"repo with good SSH remote", "a-repo", ssh_remote(wantOwner, wantRepo), nil},
+		{"repo with good HTTPS remote", "a-repo", https_remote(wantOwner, wantRepo), nil},
 	}
 
 	// Per-subtest setup and teardown.
@@ -224,12 +224,13 @@ func TestRepoDirMatches(t *testing.T) {
 		if err != nil {
 			t.Fatal("Temp dir", err)
 		}
+		tdata := make(help.TemplateData)
+		tdata["repo_url"] = tc.inRepoURL
+
 		// Copy the testdata over
-		if !tc.skipDir {
-			err := help.CopyDir(inDir, filepath.Join("testdata", tc.dir), help.DotRenamer)
-			if err != nil {
-				t.Fatal("CopyDir:", err)
-			}
+		err = help.CopyDir(inDir, filepath.Join("testdata", tc.dir), help.DotRenamer, tdata)
+		if err != nil {
+			t.Fatal("CopyDir:", err)
 		}
 
 		teardown := func(t *testing.T) {
@@ -243,13 +244,20 @@ func TestRepoDirMatches(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := repodirMatches(filepath.Join(inDir, tc.dir), tc.owner, tc.repo)
+			err := repodirMatches(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("sut(%v, %v, %v): error: got %v; want %v",
-					tc.dir, tc.owner, tc.repo, err, tc.wantErr)
+				t.Errorf("error: got %v; want %v", err, tc.wantErr)
 			}
 		})
 	}
+}
+
+func ssh_remote(owner, repo string) string {
+	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
+}
+
+func https_remote(owner, repo string) string {
+	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
 func TestParseGitPseudoURL(t *testing.T) {
