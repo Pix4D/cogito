@@ -18,17 +18,17 @@ import (
 var (
 	silentLog = oc.NewLogger(oc.SilentLevel)
 
-	defaultVersion  = oc.Version{"ref": "dummy"}
-	defaultversions = []oc.Version{defaultVersion}
-	defaultEnv      = oc.NewEnvironment(
+	defVersion  = oc.Version{"ref": "dummy"}
+	defVersions = []oc.Version{defVersion}
+	defEnv      = oc.NewEnvironment(
 		map[string]string{"ATC_EXTERNAL_URL": "https://cogito.invalid"})
 )
 
 func TestCheck(t *testing.T) {
 	r := Resource{}
-	versions, err := r.Check(oc.Source{}, oc.Version{}, defaultEnv, silentLog)
+	versions, err := r.Check(oc.Source{}, oc.Version{}, defEnv, silentLog)
 
-	if diff := cmp.Diff(defaultversions, versions); diff != "" {
+	if diff := cmp.Diff(defVersions, versions); diff != "" {
 		t.Errorf("version: (-want +got):\n%s", diff)
 	}
 	if err != nil {
@@ -39,9 +39,9 @@ func TestCheck(t *testing.T) {
 func TestIn(t *testing.T) {
 	r := Resource{}
 	version, metadata, err := r.In(
-		"/tmp", oc.Source{}, oc.Params{}, defaultVersion, defaultEnv, silentLog)
+		"/tmp", oc.Source{}, oc.Params{}, defVersion, defEnv, silentLog)
 
-	if diff := cmp.Diff(defaultVersion, version); diff != "" {
+	if diff := cmp.Diff(defVersion, version); diff != "" {
 		t.Errorf("version: (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
@@ -57,9 +57,9 @@ func TestIn(t *testing.T) {
 func TestOut(t *testing.T) {
 	cfg := github.SkipTestIfNoEnvVars(t)
 
-	defaultSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
-	defaultParams := oc.Params{"state": "error"}
-	defaultMeta := oc.Metadata{oc.NameVal{Name: "state", Value: "error"}}
+	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
+	defParams := oc.Params{"state": "error"}
+	defMeta := oc.Metadata{oc.NameVal{Name: "state", Value: "error"}}
 
 	type in struct {
 		source oc.Source
@@ -78,45 +78,39 @@ func TestOut(t *testing.T) {
 	}{
 		{
 			"valid mandatory sources",
-			in{defaultSource, defaultParams, defaultEnv},
-			want{defaultVersion, defaultMeta, nil},
+			in{defSource, defParams, defEnv},
+			want{defVersion, defMeta, nil},
 		},
 		{
 			"missing mandatory sources",
-			in{oc.Source{}, defaultParams, defaultEnv},
+			in{oc.Source{}, defParams, defEnv},
 			want{nil, nil, &missingSourceError{}},
 		},
 		{
 			"unknown source",
-			in{oc.Source{
-				"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
-				defaultParams,
-				defaultEnv},
+			in{oc.Source{"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
+				defParams, defEnv},
 			want{nil, nil, &unknownSourceError{}},
 		},
 
 		{
 			"valid mandatory parameters",
-			in{defaultSource, defaultParams, defaultEnv},
-			want{defaultVersion, defaultMeta, nil},
+			in{defSource, defParams, defEnv},
+			want{defVersion, defMeta, nil},
 		},
 		{
 			"completely missing mandatory parameters",
-			in{defaultSource, oc.Params{}, defaultEnv},
+			in{defSource, oc.Params{}, defEnv},
 			want{nil, nil, &missingParamError{}},
 		},
 		{
 			"invalid state parameter",
-			in{defaultSource, oc.Params{"state": "hello"}, defaultEnv},
+			in{defSource, oc.Params{"state": "hello"}, defEnv},
 			want{nil, nil, &invalidParamError{}},
 		},
 		{
 			"unknown parameter",
-			in{
-				defaultSource,
-				oc.Params{"state": "pending", "pizza": "margherita"},
-				defaultEnv,
-			},
+			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, &unknownParamError{}},
 		},
 	}
