@@ -60,6 +60,7 @@ func TestOut(t *testing.T) {
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
 	defMeta := oc.Metadata{oc.NameVal{Name: "state", Value: "error"}}
+	defDir := "a-repo"
 
 	type in struct {
 		source oc.Source
@@ -115,35 +116,9 @@ func TestOut(t *testing.T) {
 		},
 	}
 
-	// Per-subtest setup and teardown.
-	setup := func(t *testing.T) (string, func(t *testing.T)) {
-		// Make a temp dir to be the resource work directory
-		inDir, err := ioutil.TempDir("", "cogito-test-")
-		if err != nil {
-			t.Fatal("Temp dir", err)
-		}
-		// Copy the testdata over
-		const repo = "repo-with-ssh-remote"
-		err = help.CopyDir(inDir, filepath.Join("testdata", repo), help.DotRenamer, nil)
-		if err != nil {
-			t.Fatal("CopyDir:", err)
-		}
-		// Make fake file '.git/ref' normally added by the git resource
-		refPath := filepath.Join(inDir, repo, ".git/ref")
-		sha := []byte(cfg.Sha + "\n")
-		if err := ioutil.WriteFile(refPath, sha, 0660); err != nil {
-			t.Fatal("setup: writing ref file", err)
-		}
-
-		teardown := func(t *testing.T) {
-			defer os.RemoveAll(inDir)
-		}
-		return inDir, teardown
-	}
-
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t)
+			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha)
 			defer teardown(t)
 
 			r := Resource{}
@@ -211,30 +186,8 @@ func TestRepoDirMatches(t *testing.T) {
 		{"repo with good HTTPS remote", "a-repo", https_remote(wantOwner, wantRepo), nil},
 	}
 
-	// Per-subtest setup and teardown.
-	setup := func(t *testing.T, tc testCase) (string, func(t *testing.T)) {
-		// Make a temp dir to be the resource work directory
-		inDir, err := ioutil.TempDir("", "cogito-test-")
-		if err != nil {
-			t.Fatal("Temp dir", err)
-		}
-		tdata := make(help.TemplateData)
-		tdata["repo_url"] = tc.inRepoURL
-
-		// Copy the testdata over
-		err = help.CopyDir(inDir, filepath.Join("testdata", tc.dir), help.DotRenamer, tdata)
-		if err != nil {
-			t.Fatal("CopyDir:", err)
-		}
-
-		teardown := func(t *testing.T) {
-			defer os.RemoveAll(inDir)
-		}
-		return inDir, teardown
-	}
-
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc)
+		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, "dummySHA")
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
@@ -244,6 +197,29 @@ func TestRepoDirMatches(t *testing.T) {
 			}
 		})
 	}
+}
+
+// Per-subtest setup and teardown.
+func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *testing.T)) {
+	// Make a temp dir to be the resource work directory
+	inDir, err := ioutil.TempDir("", "cogito-test-")
+	if err != nil {
+		t.Fatal("Temp dir", err)
+	}
+	tdata := make(help.TemplateData)
+	tdata["repo_url"] = inRepoURL
+	tdata["commit_sha"] = inCommitSHA
+
+	// Copy the testdata over
+	err = help.CopyDir(inDir, filepath.Join("testdata", dir), help.DotRenamer, tdata)
+	if err != nil {
+		t.Fatal("CopyDir:", err)
+	}
+
+	teardown := func(t *testing.T) {
+		defer os.RemoveAll(inDir)
+	}
+	return inDir, teardown
 }
 
 func ssh_remote(owner, repo string) string {
