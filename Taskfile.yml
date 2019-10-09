@@ -25,12 +25,13 @@ tasks:
     desc: Run the tests.
     cmds:
       - "{{.TESTRUNNER}} ./..."
-  dotcopy:
+  copydir:
+    desc: Build copydir.
     dir: bin
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/dotcopy
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
   build-local:
-    deps: [dotcopy]
+    deps: [copydir]
     desc: Build on the local machine.
     dir: bin
     cmds:

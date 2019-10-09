@@ -16,7 +16,7 @@
 
 Have a look at https://taskfile.dev/, then
 
-```
+```console
 task --list
 ```
 
@@ -36,8 +36,8 @@ The end-to-end tests (tests that interact with GitHub) are disabled by default b
 
 The reason why we require enviroment variables (as opposed to using a configuration file) to pass test configuration is twofold:
 
-- To enable any contributor to run their own tests without having to edit any file.
-- To securely store secrets!
+* To enable any contributor to run their own tests without having to edit any file.
+* To securely store secrets!
 
 ### Secure handling of the GitHub OAuth token
 
@@ -70,7 +70,7 @@ envchain cogito env | grep COGITO_
 
 should show the following environment variables, with the correct values:
 
-```
+```text
 COGITO_TEST_OAUTH_TOKEN
 COGITO_TEST_REPO_OWNER
 COGITO_TEST_REPO_NAME
@@ -87,9 +87,9 @@ envchain cogito task test
 
 The end-to-end tests have the following logic:
 
-- If none of the environment variables are set, we skip the test.
-- If all of the environment variables are set, we run the test.
-- If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
+* If none of the environment variables are set, we skip the test.
+* If all of the environment variables are set, we run the test.
+* If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
 
 ### Making the environment variables available to your editor
 
@@ -130,7 +130,7 @@ env TAG=1.2.3 task publish
 
 ## Contributing
 
-Contributions following the minimalistic spirit of this library are welcome. 
+Contributions following the minimalistic spirit of this library are welcome.
 
 Please, before opening a PR, open a ticket to discuss your use case. This allows to better understand the _why_ of a new feature and not to waste your time (and mine) developing a feature that for some reason doesn't fit well with the spirit of the library or could be implemented differently.
 

@@ -1,3 +1,0 @@
-# This is not a real git repo; it is testdata!
-[remote "origin"]
-	url = https://github.com/non-existent/hello-I-dont-exist.git

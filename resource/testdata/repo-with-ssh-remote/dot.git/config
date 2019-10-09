@@ -1,3 +1,0 @@
-# This is not a real git repo; it is testdata!
-[remote "origin"]
-	url = git@github.com:Pix4D/conan-marcofoo.git
