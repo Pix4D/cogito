@@ -24,8 +24,8 @@ var buildinfo = "unknown"
 var (
 	errKeyNotFound = errors.New("key not found")
 	errWrongRemote = errors.New("wrong git remote")
-
-	errInvalidURL = errors.New("invalid git URL")
+	errInvalidURL  = errors.New("invalid git URL")
+	errInvalidHead = errors.New("invalid HEAD format")
 )
 
 var (
@@ -188,7 +188,7 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	ref, err := GitRef(repoDir)
+	ref, err := GitCommit(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -351,8 +351,8 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	return gu, nil
 }
 
-// GitRef looks into a git repository and extracts the commit SHA of the HEAD.
-func GitRef(repoPath string) (string, error) {
+// GitCommit looks into a git repository and extracts the commit SHA of the HEAD.
+func GitCommit(repoPath string) (string, error) {
 	dotGitPath := filepath.Join(repoPath, ".git")
 
 	headPath := filepath.Join(dotGitPath, "HEAD")
@@ -360,20 +360,33 @@ func GitRef(repoPath string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("reading HEAD: %w", err)
 	}
-	// head should be: "ref: refs/heads/BRANCH_NAME\n"
-	head := string(headBuf)
+
+	// The HEAD file can have two completely different contents:
+	// 1. if a branch checkout: "ref: refs/heads/BRANCH_NAME"
+	// 2. if a detached head : the commit SHA
+	// A detached head with Concourse happens in two cases:
+	// 1. if the git resource has a `tag_filter:`
+	// 2. if the git resource has a `version:`
+
+	head := strings.TrimSuffix(string(headBuf), "\n")
 	tokens := strings.Fields(head)
-	if len(tokens) != 2 {
-		return "", fmt.Errorf("parsing HEAD (%v): got len: %v; want 2", head, len(tokens))
+	var sha string
+	switch len(tokens) {
+	case 1:
+		// detached head
+		sha = head
+	case 2:
+		// branch checkout
+		shaRelPath := tokens[1]
+		shaPath := filepath.Join(dotGitPath, shaRelPath)
+		shaBuf, err := ioutil.ReadFile(shaPath)
+		if err != nil {
+			return "", fmt.Errorf("reading SHA file: %w", err)
+		}
+		sha = strings.TrimSuffix(string(shaBuf), "\n")
+	default:
+		return "", errInvalidHead
 	}
-	// Finally file refs/heads/BRANCH_NAME contains the SHA we are looking for.
-	shaRelPath := tokens[1]
-	shaPath := filepath.Join(dotGitPath, shaRelPath)
-	shaBuf, err := ioutil.ReadFile(shaPath)
-	if err != nil {
-		return "", fmt.Errorf("reading refs/heads/<branch-name>: %w", err)
-	}
-	sha := strings.TrimSuffix(string(shaBuf), "\n")
 
 	// Minimal validation that the file contents look like a 40-digit SHA.
 	const shaLen = 40

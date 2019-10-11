@@ -2,6 +2,18 @@ TODO:
 
 the tag_filter bug
 
+I think I misunderstood the error. I now think that the "message":"Not Found" reply refers
+to the repo name. Or maybe not. Because now the sha is correctly parsed.
+
+This is the Cogito GitHub status resource. Tag: latest, commit: 6499eb4, date: 2019-10-11
+out: start.
+parsed ref "f3597b953ce39cace945f9860b8d627658b75ea6"
+Posting state success, owner pix4d, repo: iconography, ref f3597b953ce39cace945f9860b8d627658b75ea6, context conan-builder-PCI-890-input-not-found/ds-icons, target_url https://builder.ci.pix4d.com/teams/developers/pipelines/conan-builder-PCI-890-input-not-found/jobs/ds-icons/builds/8
+out: finish.
+unexpected status (404).
+Details: {"message":"Not Found","documentation_url":"https://developer.github.com/v3/repos/statuses/#create-a-status"}
+
+
 [ ] search for commit_sha template key (used in ref.temmplate)
 [ ] change tests
 [ ] change implementation
@@ -33,6 +45,7 @@ rm -r ~/tmp/foo/* ; task copydir && ./bin/copydir resource/testdata/a-repo ~/tmp
 
 ---
 
+[ ] replace the error types that do not take parameters because they are not helping to diagnose
 [ ]	FIXME all statements of the form		if gotErr != tc.wantErr
     are wrong; they should be if !errors.Is()
 
