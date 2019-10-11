@@ -118,7 +118,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha)
+			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha, cfg.Sha)
 			defer teardown(t)
 
 			r := Resource{}
@@ -199,6 +199,39 @@ func TestRepoDirMatches(t *testing.T) {
 	}
 }
 
+func TestGitRef(t *testing.T) {
+	const wantRef = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+	type testCase struct {
+		name      string
+		dir       string
+		inRepoURL string
+		wantErr   error
+	}
+	testCases := []testCase{
+		{"missing HEAD", "not-a-repo", "dummy", os.ErrNotExist},
+		{"happy path", "a-repo", "dummy", nil},
+	}
+
+	for _, tc := range testCases {
+		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, wantRef)
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			gotRef, gotErr := GitRef(filepath.Join(inDir, tc.dir))
+
+			if !errors.Is(gotErr, tc.wantErr) {
+				t.Fatalf("err: got %v; want %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			if gotRef != wantRef {
+				t.Fatalf("ref: got %q; want %q", gotRef, wantRef)
+			}
+		})
+	}
+}
+
 // Per-subtest setup and teardown.
 func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *testing.T)) {
 	// Make a temp dir to be the resource work directory
@@ -209,6 +242,7 @@ func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *te
 	tdata := make(help.TemplateData)
 	tdata["repo_url"] = inRepoURL
 	tdata["commit_sha"] = inCommitSHA
+	tdata["branch_name"] = "fixme"
 
 	// Copy the testdata over
 	err = help.CopyDir(inDir, filepath.Join("testdata", dir), help.DotRenamer, tdata)

@@ -373,3 +373,36 @@ func parseGitRef(in string) (string, string, error) {
 	}
 	return ref, tag, nil
 }
+
+// GitRef looks into a git repository and extracts the commit SHA of the HEAD.
+func GitRef(repoPath string) (string, error) {
+	dotGitPath := filepath.Join(repoPath, ".git")
+
+	headPath := filepath.Join(dotGitPath, "HEAD")
+	headBuf, err := ioutil.ReadFile(headPath)
+	if err != nil {
+		return "", fmt.Errorf("reading HEAD: %w", err)
+	}
+	// head should be: "ref: refs/heads/BRANCH_NAME\n"
+	head := string(headBuf)
+	tokens := strings.Fields(head)
+	if len(tokens) != 2 {
+		return "", fmt.Errorf("parsing HEAD (%v): got len: %v; want 2", head, len(tokens))
+	}
+	// Finally file refs/heads/BRANCH_NAME contains the SHA we are looking for.
+	shaRelPath := tokens[1]
+	shaPath := filepath.Join(dotGitPath, shaRelPath)
+	shaBuf, err := ioutil.ReadFile(shaPath)
+	if err != nil {
+		return "", fmt.Errorf("reading refs/heads/<branch-name>: %w", err)
+	}
+	sha := strings.TrimSuffix(string(shaBuf), "\n")
+
+	// Minimal validation that the file contents look like a 40-digit SHA.
+	const shaLen = 40
+	if len(sha) != shaLen {
+		return "", fmt.Errorf("got a SHA len of %v; want %v", len(sha), shaLen)
+	}
+
+	return sha, nil
+}
