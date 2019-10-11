@@ -1,5 +1,44 @@
 TODO:
 
+the tag_filter bug
+
+[ ] search for commit_sha template key (used in ref.temmplate)
+[ ] change tests
+[ ] change implementation
+[ ] remove parseGitRef()
+[ ] remove TestParseGitRef()
+[ ] mhhh this requires changing all the tests that use the testdata :-(
+[ ] maybe it is better to change setup() to take a generic template map as parameter
+    the template keys that need to be passed are:
+    {{.repo_url}}
+    {{.commit_sha}}
+    {{.branch_name}}
+
+[X] remove testdata/a-repo/dot.git/ref.template
+[X] add dot.git/HEAD   (fixed file name)
+        cat .git/HEAD
+        ref: refs/heads/fix-git-tag-filter
+        ^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^
+           fixed             branch_name
+[X]   add dot.git/refs/heads/fix-git-tag-filter (variable file name :-()
+          ^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^
+           fixed dirs          branch-name
+        cat .git/refs/heads/fix-git-tag-filter
+        5f0462e38635bfdb3aef7cf2c20d8a7997f02c87
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            template key commit_sha
+
+[X] How do I create the variable file name at CopyDir() time ???
+rm -r ~/tmp/foo/* ; task copydir && ./bin/copydir resource/testdata/a-repo ~/tmp/foo --dot --template branch_name=the-branch repo_url=https://github.com/wow/splash.git commit_sha=123  && tree -a ~/tmp/foo
+
+---
+
+[ ]	FIXME all statements of the form		if gotErr != tc.wantErr
+    are wrong; they should be if !errors.Is()
+
+[ ]	CopyDir: FIXME longstanding bug: we apply template processing always, also if the file doesn't have the .template suffix!
+] refactor helper.CopyDir() to be more composable in the transformers.
+
 [ ] MOST IMPORTANT parametric is fine, but I would like a way to use the testdata also when not running the e2e tests. Is it possible? Let's see:
     [ ] key names should be the same as the documented environment variables, but lowercase to hint that a potential transformation is happening:
     COGITO_TEST_REPO_OWNER -> {{.cogito_test_repo_owner}}
