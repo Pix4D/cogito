@@ -188,17 +188,11 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	refPath := filepath.Join(repoDir, ".git/ref")
-	refBuf, err := ioutil.ReadFile(refPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading git ref file %w", err)
-	}
-	ref, tag, err := parseGitRef(string(refBuf))
+	ref, err := GitRef(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
 	log.Debugf("parsed ref %q", ref)
-	log.Debugf("parsed tag %q", tag)
 
 	// Finally, post the status to GitHub.
 	token, _ := source["access_token"].(string)
@@ -355,23 +349,6 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	gu.Owner = tokens[1]
 	gu.Repo = strings.TrimSuffix(tokens[2], ".git")
 	return gu, nil
-}
-
-// Parse the contents of the file ".git/ref" (created by the concourse git resource) and return
-// the ref and the tag (if present).
-// Normally that file contains only the ref, but it will contain also the tag when the git
-// resource is using tag_filter.
-func parseGitRef(in string) (string, string, error) {
-	if len(in) == 0 {
-		return "", "", fmt.Errorf("parseGitRef: empty input")
-	}
-	tokens := strings.Split(in, "\n")
-	ref := tokens[0]
-	tag := ""
-	if len(tokens) > 1 {
-		tag = tokens[1]
-	}
-	return ref, tag, nil
 }
 
 // GitRef looks into a git repository and extracts the commit SHA of the HEAD.

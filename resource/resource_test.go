@@ -242,7 +242,7 @@ func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *te
 	tdata := make(help.TemplateData)
 	tdata["repo_url"] = inRepoURL
 	tdata["commit_sha"] = inCommitSHA
-	tdata["branch_name"] = "fixme"
+	tdata["branch_name"] = "a-branch"
 
 	// Copy the testdata over
 	err = help.CopyDir(inDir, filepath.Join("testdata", dir), help.DotRenamer, tdata)
@@ -287,39 +287,6 @@ func TestParseGitPseudoURL(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.wantGU, gu); diff != "" {
 				t.Errorf("gitURL: (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestParseGitRef(t *testing.T) {
-
-	var testCases = []struct {
-		name    string
-		in      string
-		wantRef string
-		wantTag string
-		wantErr error
-	}{
-		{"only ref present (no tag)",
-			"af6cd86e98eb1485f04d38b78d9532e916bbff02\n",
-			"af6cd86e98eb1485f04d38b78d9532e916bbff02",
-			"",
-			nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			gotRef, gotTag, gotErr := parseGitRef(tc.in)
-			if gotErr != tc.wantErr {
-				t.Errorf("err: got %v; want %v", gotErr, tc.wantErr)
-			}
-			if gotRef != tc.wantRef {
-				t.Errorf("ref: got %q; want %q", gotRef, tc.wantRef)
-			}
-			if gotTag != tc.wantTag {
-				t.Errorf("tag: got %q; want %q", gotTag, tc.wantTag)
 			}
 		})
 	}
