@@ -1,6 +1,7 @@
 package help
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -25,9 +26,15 @@ func IdentityRenamer(name string) string {
 	return name
 }
 
-// Recursive copy src directory below dst directory, renaming any directory with renamer.
-// If templatedata is not empty, will consider each file ending with ".template" as a Go template
-// It expects dst directory to exist.
+// Recursive copy src directory below dst directory, with optional transformations.
+// It performs the following transformations:
+// - Renames any directory with renamer.
+// - If templatedata is not empty, will consider each file ending with ".template" as a Go
+//   template.
+// - If a file name contains basic Go template formatting (eg: `foo-{{.bar}}.template`), the
+//   file will be renamed accordingly.
+//
+// It will fail if the dst directory doesn't exist.
 //
 // For example, if src directory is `foo`:
 // foo
@@ -39,7 +46,7 @@ func IdentityRenamer(name string) string {
 // └── foo
 //     └── .git        <= dot renamed
 //         └── config
-func CopyDir(dst string, src string, renamer Renamer, templatedata TemplateData) error {
+func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateData) error {
 	for _, dir := range []string{dst, src} {
 		fi, err := os.Stat(dir)
 		if err != nil {
@@ -50,7 +57,7 @@ func CopyDir(dst string, src string, renamer Renamer, templatedata TemplateData)
 		}
 	}
 
-	renamedDir := renamer(filepath.Base(src))
+	renamedDir := dirRenamer(filepath.Base(src))
 	tgtDir := filepath.Join(dst, renamedDir)
 	if err := os.MkdirAll(tgtDir, 0770); err != nil {
 		return fmt.Errorf("making src dir: %w", err)
@@ -63,13 +70,27 @@ func CopyDir(dst string, src string, renamer Renamer, templatedata TemplateData)
 	for _, e := range srcEntries {
 		src := filepath.Join(src, e.Name())
 		if e.IsDir() {
-			if err := CopyDir(tgtDir, src, renamer, templatedata); err != nil {
+			if err := CopyDir(tgtDir, src, dirRenamer, templatedata); err != nil {
 				return err
 			}
 		} else {
 			name := e.Name()
 			if len(templatedata) != 0 {
+				// FIXME longstanding bug: we apply template processing always, also if the file
+				// doesn't have the .template suffix!
 				name = strings.TrimSuffix(name, ".template")
+				// Subject the file name itself to template expansion
+				tmpl, err := template.New("file-name").Parse(name)
+				if err != nil {
+					return fmt.Errorf("parsing file name as template %v: %w", src, err)
+				}
+				tmpl.Option("missingkey=error")
+				buf := &bytes.Buffer{}
+				if err := tmpl.Execute(buf, templatedata); err != nil {
+					return fmt.Errorf("executing template file name %v with data %v: %w",
+						src, templatedata, err)
+				}
+				name = buf.String()
 			}
 			if err := copyFile(filepath.Join(tgtDir, name), src, templatedata); err != nil {
 				return err
