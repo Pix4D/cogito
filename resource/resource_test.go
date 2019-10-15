@@ -9,10 +9,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/help"
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/help"
 )
 
 var (
@@ -141,7 +142,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha, cfg.Sha)
+			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}

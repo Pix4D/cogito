@@ -400,7 +400,7 @@ func GitCommit(repoPath string) (string, error) {
 	// Minimal validation that the file contents look like a 40-digit SHA.
 	const shaLen = 40
 	if len(sha) != shaLen {
-		return "", fmt.Errorf("got a SHA len of %v; want %v", len(sha), shaLen)
+		return "", fmt.Errorf("SHA: %v: got len of %v; want %v", sha, len(sha), shaLen)
 	}
 
 	return sha, nil

@@ -77,6 +77,17 @@ COGITO_TEST_REPO_NAME
 COGITO_TEST_COMMIT_SHA
 ```
 
+### Optional read-only repository
+
+There are some failure modes that are testable only with an additional repository, for which the user that issues the OAuth token must have read-only access to it.
+
+To run the corresponding tests, you need to export the following environment variables:
+
+```text
+COGITO_TEST_READ_ONLY_REPO_NAME
+COGITO_TEST_READ_ONLY_COMMIT_SHA
+```
+
 ### Running the end-to-end tests
 
 We are finally ready to run also the end-to-end tests:

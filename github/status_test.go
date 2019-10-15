@@ -1,24 +1,159 @@
 package github_test
 
 import (
+	"errors"
+	"net/http"
+	"reflect"
+	"strings"
 	"testing"
+	"time"
 
-	"github.com/Pix4D/cogito/github"
+	gh "github.com/Pix4D/cogito/github"
 )
 
-// We skip this test by default (more about end-to-end tests in README).
 func TestGitHubStatusE2E(t *testing.T) {
-	cfg := github.SkipTestIfNoEnvVars(t)
-
+	cfg := gh.SkipTestIfNoEnvVars(t)
 	context := "cogito/test"
-	status := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
 	target_url := "https://cogito.invalid/builds/job/42"
-	desc := "This is the description"
-	state := "pending"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
 
-	err := status.Add(cfg.Sha, state, target_url, desc)
+	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	err := status.Add(cfg.SHA, state, target_url, desc)
 
 	if err != nil {
 		t.Fatalf("wanted: no error, got: %v.", err)
+	}
+}
+
+func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
+	cfg := gh.SkipTestIfNoEnvVars(t)
+	readOnlyRepo := cfg.ReadOnlyRepo
+	readOnlySHA := cfg.ReadOnlySHA
+	if len(readOnlyRepo) == 0 || len(readOnlySHA) == 0 {
+		t.Skip("Skipping, see DEVELOPMENT for how to enable")
+	}
+	context := "dummy"
+	target_url := "dummy"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
+
+	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, readOnlyRepo, context)
+
+	if err := status.CanReadRepo(); err != nil {
+		t.Fatalf("wanted: no error, got: %v.", err)
+	}
+
+	err := status.Add(readOnlySHA, state, target_url, desc)
+
+	var statusErr *gh.StatusError
+	wantStatusCode := http.StatusNotFound
+	if errors.As(err, &statusErr) {
+		if statusErr.StatusCode != wantStatusCode {
+			t.Fatalf("status code: got %v; want %v\n%v",
+				http.StatusText(statusErr.StatusCode), http.StatusText(wantStatusCode), err)
+		}
+		// As ugly as it is, I have to read into the error message :-(
+		const wantDiagnose = "The user with this token doesn't have write access to the repo"
+		if !strings.Contains(statusErr.Error(), wantDiagnose) {
+			t.Fatalf("Error message (%v) does not contain expected diagnosis (%v)",
+				statusErr.Error(), wantDiagnose)
+		}
+	} else {
+		t.Fatalf("got %v; want *gh.StatusError", reflect.TypeOf(err))
+	}
+}
+
+func TestUnderstandGitHubStatusFailures(t *testing.T) {
+	cfg := gh.SkipTestIfNoEnvVars(t)
+
+	var testCases = []struct {
+		name       string
+		token      string
+		owner      string
+		repo       string
+		sha        string
+		wantStatus int
+	}{
+		{"bad token -> Unauthorized",
+			"bad-token", cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnauthorized},
+		{"non existing repo -> Not Found",
+			cfg.Token, cfg.Owner, "non-existing-really", "dummy-sha", http.StatusNotFound},
+		{"bad SHA -> Unprocessable Entity",
+			cfg.Token, cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnprocessableEntity},
+		{"tag instead of SHA -> Unprocessable Entity",
+			cfg.Token, cfg.Owner, cfg.Repo, "v0.0.2", http.StatusUnprocessableEntity},
+		{"non existing SHA -> Unprocessable Entity",
+			cfg.Token, cfg.Owner, cfg.Repo, "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822", http.StatusUnprocessableEntity},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := gh.NewStatus(gh.API, tc.token, tc.owner, tc.repo, "dummy")
+			err := status.Add(tc.sha, "dummy", "dummy", "dummy")
+
+			var statusErr *gh.StatusError
+			if errors.As(err, &statusErr) {
+				if statusErr.StatusCode != tc.wantStatus {
+					t.Fatalf("status code: got %v (%v); want %v (%v)\n%v",
+						statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
+						tc.wantStatus, http.StatusText(tc.wantStatus), err)
+				}
+			} else {
+				t.Fatalf("got %v; want *gh.StatusError", reflect.TypeOf(err))
+			}
+		})
+	}
+}
+
+func TestStatusValidate(t *testing.T) {
+	cfg := gh.SkipTestIfNoEnvVars(t)
+
+	var testCases = []struct {
+		name       string
+		token      string
+		owner      string
+		repo       string
+		wantStatus int
+	}{
+		{"bad token -> Unauthorized",
+			"bad-token", cfg.Owner, cfg.Repo, http.StatusUnauthorized},
+		{"non existing repo -> Not Found",
+			cfg.Token, cfg.Owner, "non-existing-really", http.StatusNotFound},
+	}
+
+	t.Run("happy path for public repo", func(t *testing.T) {
+		status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
+
+		if err := status.CanReadRepo(); err != nil {
+			t.Fatal("got error:", err)
+		}
+	})
+
+	// t.Run("happy path for private repo", func(t *testing.T) {
+	// 	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, "iconography", "dummy")
+
+	// 	if err := status.Validate(); err != nil {
+	// 		t.Fatal("got error:", err)
+	// 	}
+	// })
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			status := gh.NewStatus(gh.API, tc.token, tc.owner, tc.repo, "dummy")
+
+			err := status.CanReadRepo()
+
+			var statusErr *gh.StatusError
+			if errors.As(err, &statusErr) {
+				if statusErr.StatusCode != tc.wantStatus {
+					t.Fatalf("status code: got %v (%v); want %v (%v)\nerror: %v",
+						statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
+						tc.wantStatus, http.StatusText(tc.wantStatus), err)
+				}
+			} else {
+				t.Fatalf("got %v; want gh.StatusError", reflect.TypeOf(err))
+			}
+		})
 	}
 }
