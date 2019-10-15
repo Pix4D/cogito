@@ -8,7 +8,7 @@ Written in Go, it has the following characteristics:
 - Extensive test suite.
 - Autodiscovery of configuration parameters.
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
-- Configurable logging for the three steps (check, in, out) to help throubleshooting.
+- Configurable logging for the three steps (check, in, out) to help troubleshooting.
 - Boilerplate code generated with https://github.com/cloudboss/ofcourse
 
 [Concourse resource]: https://concourse-ci.org/resources.html
@@ -104,7 +104,7 @@ It is currently a no-op and will always return the same version, `dummy`.
 
 ## The get step
 
-It is currenty a no-op.
+It is currently a no-op.
 
 ## The put step
 
@@ -118,7 +118,7 @@ Sets or updates the GitHub status for a given commit, following the [GitHub stat
 
 ### Note
 
-It requires one and only one ["put inputs"] to be specified, otherwhise it will error out. For example:
+It requires one and only one ["put inputs"] to be specified, otherwise it will error out. For example:
 
 ```yaml
 on_success:
