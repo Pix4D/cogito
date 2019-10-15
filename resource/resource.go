@@ -207,7 +207,7 @@ func (r *Resource) Out(
 	token, _ := source["access_token"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
-	context := pipeline + "/" + job
+	context := job
 	status := github.NewStatus(github.API, token, owner, repo, context)
 
 	atc := env.Get("ATC_EXTERNAL_URL")
