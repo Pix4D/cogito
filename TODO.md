@@ -1,5 +1,57 @@
 TODO:
 
+the tag_filter bug
+
+I think I misunderstood the error. I now think that the "message":"Not Found" reply refers
+to the repo name. Or maybe not. Because now the sha is correctly parsed.
+
+This is the Cogito GitHub status resource. Tag: latest, commit: 6499eb4, date: 2019-10-11
+out: start.
+parsed ref "f3597b953ce39cace945f9860b8d627658b75ea6"
+Posting state success, owner pix4d, repo: iconography, ref f3597b953ce39cace945f9860b8d627658b75ea6, context conan-builder-PCI-890-input-not-found/ds-icons, target_url https://builder.ci.pix4d.com/teams/developers/pipelines/conan-builder-PCI-890-input-not-found/jobs/ds-icons/builds/8
+out: finish.
+unexpected status (404).
+Details: {"message":"Not Found","documentation_url":"https://developer.github.com/v3/repos/statuses/#create-a-status"}
+
+
+[ ] search for commit_sha template key (used in ref.temmplate)
+[ ] change tests
+[ ] change implementation
+[ ] remove parseGitRef()
+[ ] remove TestParseGitRef()
+[ ] mhhh this requires changing all the tests that use the testdata :-(
+[ ] maybe it is better to change setup() to take a generic template map as parameter
+    the template keys that need to be passed are:
+    {{.repo_url}}
+    {{.commit_sha}}
+    {{.branch_name}}
+
+[X] remove testdata/a-repo/dot.git/ref.template
+[X] add dot.git/HEAD   (fixed file name)
+        cat .git/HEAD
+        ref: refs/heads/fix-git-tag-filter
+        ^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^
+           fixed             branch_name
+[X]   add dot.git/refs/heads/fix-git-tag-filter (variable file name :-()
+          ^^^^^^^^^^^^^^^^^^ ^^^^^^^^^^^^^^^^^^
+           fixed dirs          branch-name
+        cat .git/refs/heads/fix-git-tag-filter
+        5f0462e38635bfdb3aef7cf2c20d8a7997f02c87
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+            template key commit_sha
+
+[X] How do I create the variable file name at CopyDir() time ???
+rm -r ~/tmp/foo/* ; task copydir && ./bin/copydir resource/testdata/a-repo ~/tmp/foo --dot --template branch_name=the-branch repo_url=https://github.com/wow/splash.git commit_sha=123  && tree -a ~/tmp/foo
+
+---
+
+[ ] replace the error types that do not take parameters because they are not helping to diagnose
+[ ]	FIXME all statements of the form		if gotErr != tc.wantErr
+    are wrong; they should be if !errors.Is()
+
+[ ]	CopyDir: FIXME longstanding bug: we apply template processing always, also if the file doesn't have the .template suffix!
+] refactor helper.CopyDir() to be more composable in the transformers.
+
 [ ] MOST IMPORTANT parametric is fine, but I would like a way to use the testdata also when not running the e2e tests. Is it possible? Let's see:
     [ ] key names should be the same as the documented environment variables, but lowercase to hint that a potential transformation is happening:
     COGITO_TEST_REPO_OWNER -> {{.cogito_test_repo_owner}}

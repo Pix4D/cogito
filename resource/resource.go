@@ -24,8 +24,8 @@ var buildinfo = "unknown"
 var (
 	errKeyNotFound = errors.New("key not found")
 	errWrongRemote = errors.New("wrong git remote")
-
-	errInvalidURL = errors.New("invalid git URL")
+	errInvalidURL  = errors.New("invalid git URL")
+	errInvalidHead = errors.New("invalid HEAD format")
 )
 
 var (
@@ -188,17 +188,11 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	refPath := filepath.Join(repoDir, ".git/ref")
-	refBuf, err := ioutil.ReadFile(refPath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading git ref file %w", err)
-	}
-	ref, tag, err := parseGitRef(string(refBuf))
+	ref, err := GitCommit(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
 	log.Debugf("parsed ref %q", ref)
-	log.Debugf("parsed tag %q", tag)
 
 	// Finally, post the status to GitHub.
 	token, _ := source["access_token"].(string)
@@ -357,19 +351,48 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	return gu, nil
 }
 
-// Parse the contents of the file ".git/ref" (created by the concourse git resource) and return
-// the ref and the tag (if present).
-// Normally that file contains only the ref, but it will contain also the tag when the git
-// resource is using tag_filter.
-func parseGitRef(in string) (string, string, error) {
-	if len(in) == 0 {
-		return "", "", fmt.Errorf("parseGitRef: empty input")
+// GitCommit looks into a git repository and extracts the commit SHA of the HEAD.
+func GitCommit(repoPath string) (string, error) {
+	dotGitPath := filepath.Join(repoPath, ".git")
+
+	headPath := filepath.Join(dotGitPath, "HEAD")
+	headBuf, err := ioutil.ReadFile(headPath)
+	if err != nil {
+		return "", fmt.Errorf("reading HEAD: %w", err)
 	}
-	tokens := strings.Split(in, "\n")
-	ref := tokens[0]
-	tag := ""
-	if len(tokens) > 1 {
-		tag = tokens[1]
+
+	// The HEAD file can have two completely different contents:
+	// 1. if a branch checkout: "ref: refs/heads/BRANCH_NAME"
+	// 2. if a detached head : the commit SHA
+	// A detached head with Concourse happens in two cases:
+	// 1. if the git resource has a `tag_filter:`
+	// 2. if the git resource has a `version:`
+
+	head := strings.TrimSuffix(string(headBuf), "\n")
+	tokens := strings.Fields(head)
+	var sha string
+	switch len(tokens) {
+	case 1:
+		// detached head
+		sha = head
+	case 2:
+		// branch checkout
+		shaRelPath := tokens[1]
+		shaPath := filepath.Join(dotGitPath, shaRelPath)
+		shaBuf, err := ioutil.ReadFile(shaPath)
+		if err != nil {
+			return "", fmt.Errorf("reading SHA file: %w", err)
+		}
+		sha = strings.TrimSuffix(string(shaBuf), "\n")
+	default:
+		return "", errInvalidHead
 	}
-	return ref, tag, nil
+
+	// Minimal validation that the file contents look like a 40-digit SHA.
+	const shaLen = 40
+	if len(sha) != shaLen {
+		return "", fmt.Errorf("got a SHA len of %v; want %v", len(sha), shaLen)
+	}
+
+	return sha, nil
 }

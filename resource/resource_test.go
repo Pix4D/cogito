@@ -118,7 +118,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha)
+			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha, cfg.Sha)
 			defer teardown(t)
 
 			r := Resource{}
@@ -187,7 +187,7 @@ func TestRepoDirMatches(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, "dummySHA")
+		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, "dummySHA", "dummyHead")
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
@@ -199,8 +199,51 @@ func TestRepoDirMatches(t *testing.T) {
 	}
 }
 
+func TestGitCommit(t *testing.T) {
+	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+	const defHead = "ref: refs/heads/a-branch-FIXME"
+	type testCase struct {
+		name      string
+		dir       string
+		inRepoURL string
+		inHead    string
+		wantErr   error
+	}
+	testCases := []testCase{
+		{"missing HEAD", "not-a-repo", "dummy", "dummy", os.ErrNotExist},
+		{"happy path for branch checkout", "a-repo", "dummy", defHead, nil},
+		{"happy path for detached HEAD checkout", "a-repo", "dummy", wantSHA, nil},
+		{"invalid format for HEAD", "a-repo", "dummyURL", "this is a bad head", errInvalidHead},
+	}
+
+	for _, tc := range testCases {
+		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, wantSHA, tc.inHead)
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			gotRef, gotErr := GitCommit(filepath.Join(inDir, tc.dir))
+
+			if !errors.Is(gotErr, tc.wantErr) {
+				t.Fatalf("err: got %v; want %v", gotErr, tc.wantErr)
+			}
+			if gotErr != nil {
+				return
+			}
+			if gotRef != wantSHA {
+				t.Fatalf("ref: got %q; want %q", gotRef, wantSHA)
+			}
+		})
+	}
+}
+
 // Per-subtest setup and teardown.
-func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *testing.T)) {
+func setup(
+	t *testing.T,
+	dir string,
+	inRepoURL string,
+	inCommitSHA string,
+	inHead string,
+) (string, func(t *testing.T)) {
 	// Make a temp dir to be the resource work directory
 	inDir, err := ioutil.TempDir("", "cogito-test-")
 	if err != nil {
@@ -209,6 +252,8 @@ func setup(t *testing.T, dir, inRepoURL, inCommitSHA string) (string, func(t *te
 	tdata := make(help.TemplateData)
 	tdata["repo_url"] = inRepoURL
 	tdata["commit_sha"] = inCommitSHA
+	tdata["head"] = inHead
+	tdata["branch_name"] = "a-branch-FIXME"
 
 	// Copy the testdata over
 	err = help.CopyDir(inDir, filepath.Join("testdata", dir), help.DotRenamer, tdata)
@@ -253,39 +298,6 @@ func TestParseGitPseudoURL(t *testing.T) {
 			}
 			if diff := cmp.Diff(tc.wantGU, gu); diff != "" {
 				t.Errorf("gitURL: (-want +got):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestParseGitRef(t *testing.T) {
-
-	var testCases = []struct {
-		name    string
-		in      string
-		wantRef string
-		wantTag string
-		wantErr error
-	}{
-		{"only ref present (no tag)",
-			"af6cd86e98eb1485f04d38b78d9532e916bbff02\n",
-			"af6cd86e98eb1485f04d38b78d9532e916bbff02",
-			"",
-			nil,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			gotRef, gotTag, gotErr := parseGitRef(tc.in)
-			if gotErr != tc.wantErr {
-				t.Errorf("err: got %v; want %v", gotErr, tc.wantErr)
-			}
-			if gotRef != tc.wantRef {
-				t.Errorf("ref: got %q; want %q", gotRef, tc.wantRef)
-			}
-			if gotTag != tc.wantTag {
-				t.Errorf("tag: got %q; want %q", gotTag, tc.wantTag)
 			}
 		})
 	}
