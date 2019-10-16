@@ -3,15 +3,15 @@ meta:
   gh-status_handlers: &gh-status-handlers
     on_success:
       put: gh-status
-      inputs: [conan-marcofoo.git]
+      inputs: [cogito-test-read-write.git]
       params: {state: success}
     on_failure:
       put: gh-status
-      inputs: [conan-marcofoo.git]
+      inputs: [cogito-test-read-write.git]
       params: {state: failure}
     on_error:
       put: gh-status
-      inputs: [conan-marcofoo.git]
+      inputs: [cogito-test-read-write.git]
       params: {state: error}
 
   task-config: &task-config
@@ -38,7 +38,7 @@ resource_types:
   check_every: 24h
   source:
     repository: docker.ci.pix4d.com/cogito
-    tag: latest
+    tag: ((tag))
     username: pix4d
     password: ((docker_cloud_pix4d_password))
 
@@ -53,13 +53,13 @@ resources:
     # log_level: debug
     # log_url: ((concourse_cognito_logs))
     owner: pix4d
-    repo: conan-marcofoo
+    repo: cogito-test-read-write
     access_token: ((concourse_janus_access_token_repo_status))
 
-- name: conan-marcofoo.git
+- name: cogito-test-read-write.git
   type: git
   source:
-    uri: git@github.com:pix4d/conan-marcofoo.git
+    uri: git@github.com:pix4d/cogito-test-read-write.git
     branch: ((branch))
     private_key: ((concourse_janus_ssh_key))
 
@@ -68,10 +68,10 @@ jobs:
   - name: Autocat
     <<: *gh-status-handlers
     plan:
-      - get: conan-marcofoo.git
+      - get: cogito-test-read-write.git
         trigger: true
       - put: gh-status
-        inputs: [conan-marcofoo.git]
+        inputs: [cogito-test-read-write.git]
         params: {state: pending}
       - task: maybe-fail
         <<: *task-config
@@ -79,10 +79,10 @@ jobs:
   - name: Motormouse
     <<: *gh-status-handlers
     plan:
-      - get: conan-marcofoo.git
+      - get: cogito-test-read-write.git
         trigger: true
       - put: gh-status
-        inputs: [conan-marcofoo.git]
+        inputs: [cogito-test-read-write.git]
         params: {state: pending}
       - task: maybe-fail
         <<: *task-config

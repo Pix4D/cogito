@@ -40,6 +40,8 @@ type status struct {
 // Parameter token is the personal OAuth token of a user that has write access to the repo. It
 // only needs the repo:status scope.
 // Parameter context is what created the status, for example "JOBNAME", or "PIPELINENAME/JOBNAME".
+// Be careful when using PIPELINENAME: if that name is ephemeral, it will make it impossible to
+// use GitHub repository branch protection rules.
 // See also:
 // * https://developer.github.com/v3/repos/statuses/
 // * README file

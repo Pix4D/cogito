@@ -22,7 +22,9 @@ var (
 	defVersion  = oc.Version{"ref": "dummy"}
 	defVersions = []oc.Version{defVersion}
 	defEnv      = oc.NewEnvironment(
-		map[string]string{"ATC_EXTERNAL_URL": "https://cogito.invalid"})
+		map[string]string{
+			"ATC_EXTERNAL_URL": "https://cogito.invalid",
+			"BUILD_JOB_NAME":   "a-job"})
 )
 
 func TestCheck(t *testing.T) {
