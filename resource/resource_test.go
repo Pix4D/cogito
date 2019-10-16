@@ -9,10 +9,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/help"
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 	"github.com/google/go-cmp/cmp"
+
+	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/help"
 )
 
 var (
@@ -25,30 +26,53 @@ var (
 )
 
 func TestCheck(t *testing.T) {
-	r := Resource{}
-	versions, err := r.Check(oc.Source{}, oc.Version{}, defEnv, silentLog)
+	cfg := github.SkipTestIfNoEnvVars(t)
 
-	if diff := cmp.Diff(defVersions, versions); diff != "" {
-		t.Errorf("version: (-want +got):\n%s", diff)
+	var testCases = []struct {
+		name         string
+		inSource     oc.Source
+		wantVersions []oc.Version
+		wantErr      error
+	}{
+		{"happy path",
+			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
+			defVersions, nil},
 	}
-	if err != nil {
-		t.Errorf("err: got %v; want %v", err, nil)
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := Resource{}
+
+			versions, err := r.Check(tc.inSource, oc.Version{}, defEnv, silentLog)
+
+			gotErrType := reflect.TypeOf(err)
+			wantErrType := reflect.TypeOf(tc.wantErr)
+			if gotErrType != wantErrType {
+				t.Fatalf("err: got %v (%v);\nwant %v (%v)",
+					gotErrType, err, wantErrType, tc.wantErr)
+			}
+
+			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
+				t.Fatalf("version: (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
 func TestIn(t *testing.T) {
 	r := Resource{}
-	version, metadata, err := r.In(
-		"/tmp", oc.Source{}, oc.Params{}, defVersion, defEnv, silentLog)
+	defSource := oc.Source{"access_token": "dummy", "owner": "dummy", "repo": "dummy"}
 
+	version, metadata, err := r.In("/tmp", defSource, oc.Params{}, defVersion, defEnv, silentLog)
+
+	if err != nil {
+		t.Fatalf("err: got %v; want %v", err, nil)
+	}
 	if diff := cmp.Diff(defVersion, version); diff != "" {
 		t.Errorf("version: (-want +got):\n%s", diff)
 	}
 	if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
 		t.Errorf("metadata: (-want +got):\n%s", diff)
-	}
-	if err != nil {
-		t.Errorf("err: got %v; want %v", err, nil)
 	}
 }
 
@@ -118,7 +142,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.Sha, cfg.Sha)
+			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}

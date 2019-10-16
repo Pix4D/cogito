@@ -121,7 +121,12 @@ func (r *Resource) Check(
 	// Optional. If it doesn't exist or is not a string, we will not log.
 	logURL, _ := source["log_url"].(string)
 	hlog.Infof(logURL, BuildInfo())
-	hlog.Debugf(logURL, "check: starting")
+	hlog.Debugf(logURL, "check: start")
+	defer hlog.Debugf(logURL, "check: finish")
+
+	if err := validateSources(source); err != nil {
+		return nil, err
+	}
 
 	// To make Concourse happy it is enough to return always the same version (but not an
 	// empty version!) Since it is not clear if it makes sense to return a "real" version for
@@ -143,6 +148,10 @@ func (r *Resource) In(
 	log.Debugf("in: start.")
 	defer log.Debugf("in: finish.")
 
+	if err := validateSources(source); err != nil {
+		return nil, nil, err
+	}
+
 	// Since it is not clear if it makes sense to return a "real" version for this
 	// resource, we keep it simple and return the same version we have been called with.
 	return version, oc.Metadata{}, nil
@@ -160,7 +169,7 @@ func (r *Resource) Out(
 	log.Debugf("out: start.")
 	defer log.Debugf("out: finish.")
 
-	if err := outValidateSources(source); err != nil {
+	if err := validateSources(source); err != nil {
 		return nil, nil, err
 	}
 
@@ -222,7 +231,7 @@ func (r *Resource) Out(
 	return dummyVersion, metadata, nil
 }
 
-func outValidateSources(source oc.Source) error {
+func validateSources(source oc.Source) error {
 	// Any missing source?
 	for wantS := range mandatorySources {
 		if _, ok := source[wantS].(string); !ok {
@@ -391,7 +400,7 @@ func GitCommit(repoPath string) (string, error) {
 	// Minimal validation that the file contents look like a 40-digit SHA.
 	const shaLen = 40
 	if len(sha) != shaLen {
-		return "", fmt.Errorf("got a SHA len of %v; want %v", len(sha), shaLen)
+		return "", fmt.Errorf("SHA: %v: got len of %v; want %v", sha, len(sha), shaLen)
 	}
 
 	return sha, nil
