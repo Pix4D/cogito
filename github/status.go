@@ -150,7 +150,7 @@ func disambiguateError(s status) string {
 			return ": The repo doesn't exist."
 		}
 	}
-	return ": Could not disambinguate this error."
+	return ": Could not disambiguate this error."
 }
 
 // CanReadRepo validates if the token has read access to the repo.

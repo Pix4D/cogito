@@ -122,21 +122,13 @@ func TestStatusValidate(t *testing.T) {
 			cfg.Token, cfg.Owner, "non-existing-really", http.StatusNotFound},
 	}
 
-	t.Run("happy path for public repo", func(t *testing.T) {
+	t.Run("happy path", func(t *testing.T) {
 		status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
 
 		if err := status.CanReadRepo(); err != nil {
 			t.Fatal("got error:", err)
 		}
 	})
-
-	// t.Run("happy path for private repo", func(t *testing.T) {
-	// 	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, "iconography", "dummy")
-
-	// 	if err := status.Validate(); err != nil {
-	// 		t.Fatal("got error:", err)
-	// 	}
-	// })
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
