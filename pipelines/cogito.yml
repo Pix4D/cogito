@@ -38,7 +38,7 @@ resource_types:
   check_every: 24h
   source:
     repository: docker.ci.pix4d.com/cogito
-    tag: latest
+    tag: ((tag))
     username: pix4d
     password: ((docker_cloud_pix4d_password))
 
