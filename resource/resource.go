@@ -153,7 +153,11 @@ func (r *Resource) In(
 	}
 
 	// Since it is not clear if it makes sense to return a "real" version for this
-	// resource, we keep it simple and return the same version we have been called with.
+	// resource, we keep it simple and return the same version we have been called with, ensuring
+	// we never return a nul version.
+	if len(version) == 0 {
+		version = dummyVersion
+	}
 	return version, oc.Metadata{}, nil
 }
 

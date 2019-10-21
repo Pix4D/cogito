@@ -13,6 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cogito is now open source.
 - The cogito.yml sample pipeline is fully parametric.
 
+## [v0.2.1] - 2019-10-22
+
+### Fixed
+
+- Always return a non-null version also for a get step. This is unlikely to have caused any problem, but better safer than sorry.
+
 ## [v0.2.0] - 2019-10-16
 
 ### Fixed
