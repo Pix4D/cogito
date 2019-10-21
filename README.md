@@ -8,20 +8,20 @@ Written in Go, it has the following characteristics:
 - Extensive test suite.
 - Autodiscovery of configuration parameters.
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
+- Helpful error messages when something goes wrong with the GitHub API.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
-- Boilerplate code generated with https://github.com/cloudboss/ofcourse
+- Boilerplate code generated with [ofcourse](https://github.com/cloudboss/ofcourse)
 
 [Concourse resource]: https://concourse-ci.org/resources.html
 [René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
 
-## Development
+## Contributing and Development
 
-This document explains how to use this resource. See [DEVELOPMENT](./DEVELOPMENT.md) for how to build the Docker image, develop, test and contribute to this resource.
-
+This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTING.md) for how to build the Docker image, develop, test and contribute to this resource.
 
 ## Example
 
-See also `pipelines/cogito.yml` for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
+See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
 
 ```yaml
 resource_types:
@@ -47,7 +47,7 @@ resources:
     branch: ((branch))
 
 jobs:
-  - name: Autocat
+  - name: autocat
     on_success:
       put: gh-status
       inputs: [the-repo]
@@ -148,7 +148,7 @@ Give to it the absolute minimum permissions to get the job done. This resource o
 
 NOTE: The token is security-sensitive. Treat it as you would treat a password. Do not encode it in the pipeline YAML and do not store it in a YAML file. Use one of the Concourse-supported credentials managers, see [Concourse credential managers].
 
-See also the section [The end-to-end tests](./DEVELOPMENT.md#the-end-to-end-tests) for how to securely store the token to run the end-to-end tests.
+See also the section [The end-to-end tests](./CONTRIBUTING.md#the-end-to-end-tests) for how to securely store the token to run the end-to-end tests.
 
 ## Caveat: GitHub rate limiting
 
@@ -169,7 +169,6 @@ In case of rate limiting, the error message in the output of the `put` step will
 ## License
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
-
 
 [GitHub status API]: https://developer.github.com/v3/repos/statuses/
 [GitHub API v3]: https://developer.github.com/v3/

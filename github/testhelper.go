@@ -27,11 +27,11 @@ func SkipTestIfNoEnvVars(t *testing.T) TestCfgE2E {
 
 	// If none of the environment variables are set, we skip the test.
 	if len(token) == 0 && len(owner) == 0 && len(repo) == 0 && len(SHA) == 0 {
-		t.Skip("Skipping end-to-end test. See DEVELOPEMENT for how to enable.")
+		t.Skip("Skipping end-to-end test. See CONTRIBUTING for how to enable.")
 	}
 	// If some of the environment variables are set and some not, we fail the test.
 	if len(token) == 0 || len(owner) == 0 || len(repo) == 0 || len(SHA) == 0 {
-		t.Fatal("Some end-to-end env vars are set and some not. See DEVELOPMENT for how to fix.")
+		t.Fatal("Some end-to-end env vars are set and some not. See CONTRIBUTING for how to fix.")
 	}
 
 	// These are optional because require additional setup

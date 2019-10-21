@@ -31,7 +31,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	readOnlyRepo := cfg.ReadOnlyRepo
 	readOnlySHA := cfg.ReadOnlySHA
 	if len(readOnlyRepo) == 0 || len(readOnlySHA) == 0 {
-		t.Skip("Skipping, see DEVELOPMENT for how to enable")
+		t.Skip("Skipping, see CONTRIBUTING for how to enable")
 	}
 	context := "dummy"
 	target_url := "dummy"
