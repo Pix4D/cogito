@@ -19,13 +19,8 @@ TODO:
     that the tests are using mocks instead than e2e
     [ ] fix the fact that I am using url = {{.repo_url}} instead of the individual variables,
         because this makes it possible to use only 1 file template to handle both SSH and HTTPS
-
-    [ ] to completely enable mock I also need to restructure / split the tests
     [ ] i need to carefully ask the question what am I testing? Am I testing cogito Out or am I testing GitHub status API? Or am I testing the full integration?
     [ ] still need a simple, not error-prone way to make the difference between e2e and not. Maybe I could reconsider making it more explicit by putting the e2e in a separate test executable, maybe with compilation guards? I don't know
-
-[ ] use text/template, not html/template!
-[ ] open ticket on github.com/alexflint/go-arg, cannot use positional arguments after a slice, and conventional `--` to stop parsing is not respected?
 
 [ ] Add fake version for github tests, using httptest.NewServer as in hmsg
 [ ] Add fake version for resource tests, using httptest.NewServer as in hmsg
@@ -54,7 +49,6 @@ TODO:
 [ ] better docker experience
     [ ] adding the go ldflags to the dockerfile as I did is wrong; now I rebuild way too often because docker detects that variables such as build time or commit hash have changed and decides to reinstall the packages!!! Fix this.
 
-[ ] replace all our usages of the other resources with this one
 [ ] probably I can replace reflect.TypeOf(err) with the new errors.Is()
 [ ] remove or update hmsg
 [ ] is there a newline or not in the gitref, when a tag is present?

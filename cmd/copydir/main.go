@@ -18,7 +18,7 @@ func main() {
 		Dst      string   `arg:"positional,required,help:destination directory"`
 	}
 	arg.MustParse(&args)
-	templateData, err := makeTemplatelData(args.Template)
+	templateData, err := makeTemplateData(args.Template)
 	if err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
@@ -41,7 +41,7 @@ func main() {
 }
 
 // Take a list of strings of the form "key=value" and convert them to map entries.
-func makeTemplatelData(keyvals []string) (help.TemplateData, error) {
+func makeTemplateData(keyvals []string) (help.TemplateData, error) {
 	data := help.TemplateData{}
 	for _, keyval := range keyvals {
 		pos := strings.Index(keyval, "=")

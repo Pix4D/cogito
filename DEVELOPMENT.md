@@ -34,7 +34,7 @@ task test
 
 The end-to-end tests (tests that interact with GitHub) are disabled by default because they require the following out of band setup.
 
-The reason why we require enviroment variables (as opposed to using a configuration file) to pass test configuration is twofold:
+The reason why we require environment variables (as opposed to using a configuration file) to pass test configuration is twofold:
 
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
@@ -110,13 +110,6 @@ If you want to run the tests from within your editor test runner, it is enough t
 envchain cogito $EDITOR
 ```
 
-### Caveat: GitHub API limits on the number of statuses per commit
-
-From [GitHub status API], there is a limit of 1000 statuses per sha and context within a
-repository. Attempts to create more than 1000 statuses will result in a validation error.
-
-If this happens, just create another commit and update the `COGITO_TEST_COMMIT_SHA` environment variable.
-
 ## Building and publishing the image
 
 The Taskfile includes targets for building and publishing the docker image.
@@ -137,6 +130,27 @@ If present, the TAG environment variable with be used to tag the Docker image, f
 
 ```console
 env TAG=1.2.3 task publish
+```
+
+## Suggestions for quick iterations during development
+
+These suggestions apply to the development of any Concourse resource.
+
+After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image is to use the `fly check-resource-type` command. It is faster and less resource-hungry than using a short `check_interval` setting in the pipeline.
+
+For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `Autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
+
+```console
+task publish &&
+fly -t devs check-resource-type -r cogito-test/cogito &&
+sleep 5 &&
+fly -t devs trigger-job -j cogito-test/Autocat -w
+```
+
+On each `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
+
+```text
+This is the Cogito GitHub status resource. Tag: latest, commit: 91f64c0, date: 2019-10-09
 ```
 
 ## Contributing
