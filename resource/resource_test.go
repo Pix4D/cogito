@@ -33,19 +33,23 @@ func TestCheck(t *testing.T) {
 	var testCases = []struct {
 		name         string
 		inSource     oc.Source
+		inVersion    oc.Version
 		wantVersions []oc.Version
 		wantErr      error
 	}{
 		{"happy path",
 			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			defVersions, nil},
+			defVersion, defVersions, nil},
+		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
+			oc.Version{}, defVersions, nil},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			r := Resource{}
 
-			versions, err := r.Check(tc.inSource, oc.Version{}, defEnv, silentLog)
+			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.wantErr)
@@ -62,19 +66,33 @@ func TestCheck(t *testing.T) {
 }
 
 func TestIn(t *testing.T) {
-	r := Resource{}
 	defSource := oc.Source{"access_token": "dummy", "owner": "dummy", "repo": "dummy"}
 
-	version, metadata, err := r.In("/tmp", defSource, oc.Params{}, defVersion, defEnv, silentLog)
+	var testCases = []struct {
+		name      string
+		inVersion oc.Version
+	}{
+		{"happy path", defVersion},
+		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+			oc.Version{}},
+	}
 
-	if err != nil {
-		t.Fatalf("err: got %v; want %v", err, nil)
-	}
-	if diff := cmp.Diff(defVersion, version); diff != "" {
-		t.Errorf("version: (-want +got):\n%s", diff)
-	}
-	if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
-		t.Errorf("metadata: (-want +got):\n%s", diff)
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := Resource{}
+
+			version, metadata, err := r.In("/tmp", defSource, oc.Params{}, tc.inVersion, defEnv, silentLog)
+
+			if err != nil {
+				t.Fatalf("err: got %v; want %v", err, nil)
+			}
+			if diff := cmp.Diff(defVersion, version); diff != "" {
+				t.Errorf("version: (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
+				t.Errorf("metadata: (-want +got):\n%s", diff)
+			}
+		})
 	}
 }
 
@@ -139,6 +157,10 @@ func TestOut(t *testing.T) {
 			"unknown parameter",
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, &unknownParamError{}},
+		},
+		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+			in{defSource, defParams, defEnv},
+			want{defVersion, defMeta, nil},
 		},
 	}
 
