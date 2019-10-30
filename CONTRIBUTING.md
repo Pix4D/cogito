@@ -4,7 +4,7 @@
 
 Contributions following the minimalistic spirit of this project are welcome.
 
-Please, before opening a PR, open a ticket to discuss your use case. This allows to better understand the _why_ of a new feature and not to waste your time (and mine) developing a feature that for some reason doesn't fit well with the spirit of the library or could be implemented differently.
+Please, before opening a PR, open a ticket to discuss your use case. This allows to better understand the _why_ of a new feature and not to waste your time (and mine) developing a feature that for some reason doesn't fit well with the spirit of the library or could be implemented differently. This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
 
 I care about code quality, readability and tests, so please follow the current style and provide adequate test coverage. In case of doubts about how to tackle testing something, feel free to ask.
 
@@ -47,6 +47,11 @@ We require environment variables (as opposed to using a configuration file) to p
 
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
+
+## Default test repositories
+
+* https://github.com/Pix4D/cogito-test-read-write
+* https://github.com/Pix4D/cogito-test-read-only
 
 ### Secure handling of the GitHub OAuth token
 
@@ -129,7 +134,7 @@ Build the Docker image and run the tests:
 task build
 ```
 
-Build and push the Docker image:
+Build and push the Docker image, using `BRANCHNAME-latest` as tag:
 
 ```console
 task publish
@@ -140,6 +145,18 @@ If present, the TAG environment variable with be used to tag the Docker image, f
 ```console
 env TAG=1.2.3 task publish
 ```
+
+FIXME
+I would like something that tags both with the release and with latest, and that picks this information from the git tag actually. WHat would be a workflow?
+
+tag with BRANCH-latest
+do the tests, iterate some more BRANCH-latest maybe
+reach decision to release
+merge to master
+git tag with semver
+docker tag from semver and latest
+?
+
 
 ## Suggestions for quick iterations during development
 

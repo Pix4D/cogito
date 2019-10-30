@@ -35,9 +35,9 @@ resource_types:
 
 - name: cogito
   type: registry-image
-  check_every: 24h
+  check_every: 1h
   source:
-    repository: ((docker-registry))/cogito
+    repository: pix4d/cogito
     tag: ((tag))
     # Credentials needed only if private registry
     username: ((docker-username))
@@ -48,7 +48,7 @@ resources:
 - name: gh-status
   type: cogito
   # Since check is a no-op, we check infrequently to reduce load on the system.
-  check_every: 24h
+  check_every: 1h
   source:
     # Optional, for debugging only.
     # log_level: debug

@@ -1,5 +1,20 @@
 TODO:
 
+[X] make repo public
+[X] dockerhub create repo
+[X] update readme with link to dockerhub
+[X] travis credentials
+[X] travis build status
+[X] minimal travis build (no push)
+[X] dockerignore
+[ ] test credentials, real tests
+    - cred1...
+
+[ ] taskfile
+[ ] dockerfile
+[ ] dockerhub credentials
+
+[ ] add a way to require e2e tests to run and fail if no env vars found
 
 [ ] replace the error types that do not take parameters because they are not helping to diagnose
 [ ]	FIXME all statements of the form		if gotErr != tc.wantErr
