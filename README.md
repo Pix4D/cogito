@@ -1,5 +1,7 @@
 # cogito
 
+[![Travis Build Status](https://travis-ci.org/Pix4D/cogito.svg?branch=master)](https://travis-ci.org/Pix4D/cogito)
+
 Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update the GitHub status of a commit during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
@@ -19,6 +21,18 @@ Written in Go, it has the following characteristics:
 
 This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTING.md) for how to build the Docker image, develop, test and contribute to this resource.
 
+## Semver, releases and Docker images
+
+This project follows [Semantic Versioning](https://semver.org/) and has a [CHANGELOG](./CHANGELOG).
+
+**WARNING** According to semver, no backwards compatibility is guaranteed as long as the major version is 0.
+
+Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.PATCH` (note the `v` prefix). The corresponding Docker image has tag `MAJOR.MINOR.PATCH` and is available from [DockerHub](https://cloud.docker.com/u/pix4d/repository/docker/pix4d/cogito).
+
+The Docker tag `latest` points to the latest release.
+
+A development branch might have an associated tag `BRANCHNAME-latest`. Do not rely on them.
+
 ## Example
 
 See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
@@ -27,14 +41,14 @@ See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and f
 resource_types:
 - name: cogito
   type: registry-image
-  check_every: 24h
+  check_every: 1h
   source:
-    repository: ((your-docker-registry))/cogito
+    repository: pix4d/cogito
 
 resources:
 - name: gh-status
   type: cogito
-  check_every: 24h
+  check_every: 1h
   source:
     owner: ((your-github-user-or-organization))
     repo: ((your-repo-name))
@@ -96,7 +110,7 @@ jobs:
 
 ### Suggestions
 
-We suggest to set a very long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+We suggest to set a very long interval for `check_interval`, for example 1 hour, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
 ## The check step
 
