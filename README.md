@@ -33,7 +33,7 @@ Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.P
 
 You can pin the resource to a specific release tag `MAJOR.MINOR.PATCH`.
 
-If you omit the pinning, you will be following the Docker tag `latest`, which for this resource always points to the  latest release, not to the tip of master. As such, it should be safe to follow.
+If you omit the pinning, you will be following the Docker tag `latest`, which for this resource always points to the  latest release, not to the tip of master. This should normally be fine, but can still break in case of change of major version!
 
 ## Example
 

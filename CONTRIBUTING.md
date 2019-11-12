@@ -106,7 +106,7 @@ Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`)
 ```console
 $ cd the-repo
 $ travis encrypt --add -i
-Detected repository as marco-m/travis-go-dockerhub, is this correct? |yes|
+Detected repository as pix4d/cogito, is this correct? |yes|
 Reading from stdin, press Ctrl+D when done
 DOCKER_TOKEN="YOUR_TOKEN"  <= this is a real secret
 THE_SECRET="42"            <= this shows how to pass additional secrets; see the tests
@@ -198,7 +198,7 @@ The Taskfile includes targets for building and publishing the docker image.
 **WARNING**: If you are working on a commit that has a tag, using the CI script will also have an effect on the published Docker image tag. Double-check what you are doing.
 
 ```console
-$ ci/travis.sh
+$ envchain cogito ci/travis.sh
 ```
 
 ### Step-by-step
