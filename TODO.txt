@@ -16,13 +16,18 @@ TODO:
 [X] push images (with latest) to travis
 [X] update README, CONTRIBUTING, look for FIXME, TODO, WRITEME
 
-[ ] merge PR to master
-[ ] test new image with tag `master`
+[X] merge PR to master
+[X] update CHANGELOG
+[X] test new image with tag `master`
+[ ] issue tag v0.3.0
 [ ] update our pipelines to use dockerhub and latest
 [ ] upgrade generate.py to use latest
-[ ] issue tag v0.3.0
 [ ] make post on discourse
 [ ] make PR for dutyfree ?
+
+[ ] BUG: the tag is not passed correctly any more:
+
+    This is the Cogito GitHub status resource. Tag: <no value>, commit: e2d790c, build date: 2019-11-14
 
 [ ] use task inside dockerfile taskfile
 [ ] temporary: leave a way to build locally and push to our private registry. Maybe use a Concourse pipeline to mirror, as suggested by Alessandro.

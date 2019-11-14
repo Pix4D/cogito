@@ -67,7 +67,7 @@ envchain --set cogito COGITO_TEST_OAUTH_TOKEN
 
 **NOTE**: You need to follow this section only if you want to fork this repository; if you only want to provide a PR you don't strictly need this part (although in this case you will have to push by hand the docker image to use in your tests, so maybe it is time well spent anyway :-).
 
-Do now use your DockerHub password, instead create a dedicated access token, see documentation at [dockerhub access tokens](https://docs.docker.com/docker-hub/access-tokens/). This allows to:
+Do not use your DockerHub password, instead create a dedicated access token, see documentation at [dockerhub access tokens](https://docs.docker.com/docker-hub/access-tokens/). This allows to:
 
 1. Reduce exposure (principle of least privilege), since a token has less capabilities than an account password.
 2. Enable auditing of token usage.
