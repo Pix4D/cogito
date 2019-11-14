@@ -39,9 +39,6 @@ resource_types:
   source:
     repository: pix4d/cogito
     tag: ((tag))
-    # Credentials needed only if private registry
-    username: ((docker-username))
-    password: ((docker-password))
 
 resources:
 

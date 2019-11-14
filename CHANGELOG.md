@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- ...
+
+## [v0.3.0] - 2019-11-14
+
 ### Changed
 
 - Cogito is now open source.
+- Docker images available at https://hub.docker.com/r/pix4d/cogito
 - The cogito.yml sample pipeline is fully parametric.
 - Renamed DEVELOPMENT file to CONTRIBUTING.
 
@@ -54,3 +59,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.1.0]: https://github.com/Pix4D/cogito/releases/tag/v0.1.0
 [v0.2.0]: https://github.com/Pix4D/cogito/releases/tag/v0.2.0
 [v0.2.1]: https://github.com/Pix4D/cogito/releases/tag/v0.2.1
+[v0.3.0]: https://github.com/Pix4D/cogito/releases/tag/v0.3.0
