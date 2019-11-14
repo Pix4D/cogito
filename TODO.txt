@@ -7,12 +7,26 @@ TODO:
 [X] travis build status
 [X] minimal travis build (no push)
 [X] dockerignore
-[ ] test credentials, real tests
-    - cred1...
+[X] test credentials, real tests
+[X] build image on travis
+[X] dockerhub credentials
+    [X] DOCKER_USERNAME
+    [X] DOCKER_ORG
+    [X] DOCKER_TOKEN
+[X] push images (with latest) to travis
+[X] update README, CONTRIBUTING, look for FIXME, TODO, WRITEME
 
-[ ] taskfile
-[ ] dockerfile
-[ ] dockerhub credentials
+[ ] merge PR to master
+[ ] test new image with tag `master`
+[ ] update our pipelines to use dockerhub and latest
+[ ] upgrade generate.py to use latest
+[ ] issue tag v0.3.0
+[ ] make post on discourse
+[ ] make PR for dutyfree ?
+
+[ ] use task inside dockerfile taskfile
+[ ] temporary: leave a way to build locally and push to our private registry. Maybe use a Concourse pipeline to mirror, as suggested by Alessandro.
+[ ] protect running task-publish, it should run only if in CI probably
 
 [ ] add a way to require e2e tests to run and fail if no env vars found
 

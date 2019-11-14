@@ -7,12 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-
 ### Changed
 
 - Cogito is now open source.
 - The cogito.yml sample pipeline is fully parametric.
 - Renamed DEVELOPMENT file to CONTRIBUTING.
+
+### Added
+
+- Build and release via Travis.
+- Extensive documentation.
 
 ## [v0.2.1] - 2019-10-22
 

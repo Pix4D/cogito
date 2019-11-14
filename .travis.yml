@@ -11,15 +11,15 @@ env:
   global:
     - GO111MODULE=on
     - PATH=bin:$PATH
-    - DOCKER_USERNAME=pix4d
+    - DOCKER_USERNAME=mmoltenipix4d
+    - DOCKER_ORG=pix4d
     - COGITO_TEST_REPO_OWNER=pix4d
     - COGITO_TEST_REPO_NAME=cogito-test-read-write
     - COGITO_TEST_COMMIT_SHA=32e4b4f91bb8de500f6a7aa2011f93c3f322381c
     - COGITO_TEST_READ_ONLY_REPO_NAME=cogito-test-read-only
     - COGITO_TEST_READ_ONLY_COMMIT_SHA=a792bdb993c1caba10f94e051085b5183b1c674b
-    # secure contains the following keys:
-    # COGITO_TEST_OAUTH_TOKEN=
     - secure: "r4N4fmCd9OePpjVhqK8I/3IP0iMpytad6amt30tqB/LSdahY+q3CUhYDOBj2EhIQBSIrw9MqFf2qo2kAKazjSnB6LVhq3mYbTKOveM7AcI9ZB7ZcchZ8sQ63kGr0be2739Y8z4lU/H2k14G1f8wR2bqMPK01zxkeXGrQdndZrzacMWqwjzcy0wG7Cod6vCa9GBx48XibaysAJ2Si3DOLc+xncEjbjF4L72i0RXE9qH5H/febet1xzHMScXRV/D0PEz7z5I2YCspzxLtBByc2LOeZj/0oic9qYdTZyEb1PAB5jtNdrZICK4tiXw9wWkmpNr6thddfEHmtMvbD08nD3M51SCkbhmHrbqq6rt12U6TPkQbOL/KuTCyhGJW3WxTaX++a4O6TFfr0pCgpx1RZ0PnY3qDEaBRGxDFya4/pPVK8KJd3un0Y++rGWNK1Yc3Ib2IoyzKohKUnFS5PIitZiEgvonNng3oytzMIP1KikSv/oUJkLtpmSez2TN52EH4ELNzZNPkviJy2d+btkTK11WiQ+x1ZqkbRnYDeIpZZNITe+xvoy96VuqqZz9s3PUXC8nn9u48uBq0M+Ga/clEdcxlnvLS7hC1hyPQ+FGnDPzgwnJGf1sRgC7yehowPJMuQ4cs0mOdo0dTPhP2cSYtvUXTXQYnl71lxIx8Lrh9fx+0="
+    - secure: "Hlic8LbpDn5/HiJRp1QLLWQ67mhed0a462CuxNotQBu54bNS1bSR0o4JIzZeTuS+zfFnSkXy915tm/wdtA2WnhL9y9QXtxPo3Ji9OUhnDA/3COYKNnHzWMwSkfcXj3bIHF3gpuZq8mdn7GYXAbtCaqeHmPhNtemKy8ktVqgYNz+C5NItbSxvxRZZ1ddjebZE1aEu1uyvrJC7htL+0mJTIiv09WIFiqSd8+e6mSSS1VdXYMbB8jcW4nyY0T9GeB+t8zA9Pc2wqRCflgJXkfuP4K5D8ebjqs7KNrE4hhEseRC/h10b7vtRcKmaJeFnkra8/Fj7xGiZIE6Hhi5CQMCGYPEZ1ir2j5y6XNUbSoIWet+EM8DIzgtWnK9sSA+P0c1Y31OxVay6zGlYHaQ0X97GsRL6WJgGfbCeDBol2lerJkjGfRtkC5WVsEE7YZ2pT95lPiD8s7UOYLm8EIhjDREZ25C9VNdolbW6iEkdDHPx2dHoxi64j3KO5+kmiTkffIhoA6G7hN//osK5K6kDdEFtaocLTyOtTwFWbwAX0Q6yLx+CA0Xs7Zk/aoGTmhzTGZk+3GQYPqctSTmYqto4rz1z3JUbedhP+C3yKu7UBdNh5OWXaqAtl/ltrrl1Q4sw9ItEeG5IIii2u8aNBURWcBgDDE0fepS070P05BdzOWVav9k="
 
 services:
   - docker
@@ -29,10 +29,10 @@ install:
   - which task
   - task --version
 
-script:
-  # This is to fail fast, see https://github.com/travis-ci/travis-ci/issues/1066
-  # :-(
-  - task test || exit 1
-  # - task docker-build || exit 1
-  # - task docker-smoke || exit 1
-  # - task docker-push || exit 1
+# NOTE
+# Travis `script` is bundled into a custom shell script behind our back and keeps running also
+# if a step fails. To fail fast, we need to keep the logic in a separate script.
+# See
+# - https://github.com/travis-ci/travis-ci/issues/1066
+# - https://docs.travis-ci.com/user/job-lifecycle/#customizing-the-build-phase
+script: ci/travis.sh

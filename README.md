@@ -25,13 +25,15 @@ This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTI
 
 This project follows [Semantic Versioning](https://semver.org/) and has a [CHANGELOG](./CHANGELOG).
 
-**WARNING** According to semver, no backwards compatibility is guaranteed as long as the major version is 0.
+**NOTE** Following semver, no backwards compatibility is guaranteed as long as the major version is 0.
 
-Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.PATCH` (note the `v` prefix). The corresponding Docker image has tag `MAJOR.MINOR.PATCH` and is available from [DockerHub](https://cloud.docker.com/u/pix4d/repository/docker/pix4d/cogito).
+Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.PATCH` (note the `v` prefix). The corresponding Docker image has tag `MAJOR.MINOR.PATCH` and is available from [DockerHub](https://hub.docker.com/r/pix4d/cogito).
 
-The Docker tag `latest` points to the latest release.
+### Which Docker tag to use?
 
-A development branch might have an associated tag `BRANCHNAME-latest`. Do not rely on them.
+You can pin the resource to a specific release tag `MAJOR.MINOR.PATCH`.
+
+If you omit the pinning, you will be following the Docker tag `latest`, which for this resource always points to the  latest release, not to the tip of master. This should normally be fine, but can still break in case of change of major version!
 
 ## Example
 
@@ -110,17 +112,17 @@ jobs:
 
 ### Suggestions
 
-We suggest to set a very long interval for `check_interval`, for example 1 hour, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+We suggest to set a long interval for `check_interval`, for example 1 hour, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
 ## The check step
 
 It is currently a no-op and will always return the same version, `dummy`.
 
-## The get step
+## The get/in step
 
 It is currently a no-op.
 
-## The put step
+## The put/out step
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
