@@ -101,11 +101,11 @@ Note that this feature, for security reasons, does NOT make secure environment v
 
 The [travis encryption-keys] documentation contains also pointers to the `travis` CLI. For macOS, `brew install travis` just works.
 
-Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`) because it would leave the secrets in the shell history. Instead, run the tool in interactive mode with the `-i` flag:
+Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`) because it would leave the secrets in the shell history. Instead, run the tool in interactive mode with the `--interactive` flag:
 
 ```console
 $ cd the-repo
-$ travis encrypt --add -i
+$ travis encrypt --add --interactive
 Detected repository as pix4d/cogito, is this correct? |yes|
 Reading from stdin, press Ctrl+D when done
 DOCKER_TOKEN="YOUR_TOKEN"  <= this is a real secret
