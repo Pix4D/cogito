@@ -180,7 +180,7 @@ func (s status) CanReadRepo() error {
 	respBody, _ := ioutil.ReadAll(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		return &StatusError{req.Method + " " + req.RequestURI, resp.StatusCode, string(respBody)}
+		return &StatusError{req.Method + " " + url, resp.StatusCode, string(respBody)}
 	}
 	return nil
 }

@@ -41,7 +41,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, readOnlyRepo, context)
 
 	if err := status.CanReadRepo(); err != nil {
-		t.Fatalf("wanted: no error, got: %v.", err)
+		t.Fatalf("\n    got: %v\n    want: no error", err)
 	}
 
 	err := status.Add(readOnlySHA, state, target_url, desc)
@@ -126,7 +126,7 @@ func TestStatusValidate(t *testing.T) {
 		status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
 
 		if err := status.CanReadRepo(); err != nil {
-			t.Fatal("got error:", err)
+			t.Fatalf("got: %v; want: no error", err)
 		}
 	})
 
