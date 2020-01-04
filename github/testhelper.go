@@ -6,12 +6,10 @@ import (
 )
 
 type TestCfgE2E struct {
-	Token        string
-	Owner        string
-	Repo         string
-	SHA          string
-	ReadOnlyRepo string
-	ReadOnlySHA  string
+	Token string
+	Owner string
+	Repo  string
+	SHA   string
 }
 
 // SkipTestIfNoEnvVars is used to decide wether to run an end-to-end test or not.
@@ -34,9 +32,5 @@ func SkipTestIfNoEnvVars(t *testing.T) TestCfgE2E {
 		t.Fatal("Some end-to-end env vars are set and some not. See CONTRIBUTING for how to fix.")
 	}
 
-	// These are optional because require additional setup
-	readOnlyRepo := os.Getenv("COGITO_TEST_READ_ONLY_REPO_NAME")
-	readOnlySHA := os.Getenv("COGITO_TEST_READ_ONLY_COMMIT_SHA")
-
-	return TestCfgE2E{token, owner, repo, SHA, readOnlyRepo, readOnlySHA}
+	return TestCfgE2E{token, owner, repo, SHA}
 }
