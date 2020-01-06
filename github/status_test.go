@@ -28,20 +28,18 @@ func TestGitHubStatusE2E(t *testing.T) {
 
 func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	cfg := gh.SkipTestIfNoEnvVars(t)
-	readOnlyRepo := cfg.ReadOnlyRepo
-	readOnlySHA := cfg.ReadOnlySHA
-	if len(readOnlyRepo) == 0 || len(readOnlySHA) == 0 {
-		t.Skip("Skipping, see CONTRIBUTING for how to enable")
-	}
-	context := "dummy"
-	target_url := "dummy"
+	const readOnlyOwner = "octocat"
+	const readOnlyRepo = "Spoon-Knife"
+	const readOnlySHA = "d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9"
+	const context = "dummy"
+	const target_url = "dummy"
 	desc := time.Now().Format("15:04:05")
-	state := "success"
+	const state = "success"
 
-	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, readOnlyRepo, context)
+	status := gh.NewStatus(gh.API, cfg.Token, readOnlyOwner, readOnlyRepo, context)
 
 	if err := status.CanReadRepo(); err != nil {
-		t.Fatalf("wanted: no error, got: %v.", err)
+		t.Fatalf("\ngot:  %v\nwant: no error", err)
 	}
 
 	err := status.Add(readOnlySHA, state, target_url, desc)
@@ -50,8 +48,10 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	wantStatusCode := http.StatusNotFound
 	if errors.As(err, &statusErr) {
 		if statusErr.StatusCode != wantStatusCode {
-			t.Fatalf("status code: got %v; want %v\n%v",
-				http.StatusText(statusErr.StatusCode), http.StatusText(wantStatusCode), err)
+			t.Fatalf("\ngot:  %v %v\nwant: %v %v\ndetails: %v",
+				statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
+				wantStatusCode, http.StatusText(wantStatusCode),
+				err)
 		}
 		// As ugly as it is, I have to read into the error message :-(
 		const wantDiagnose = "The user with this token doesn't have write access to the repo"
@@ -126,7 +126,7 @@ func TestStatusValidate(t *testing.T) {
 		status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
 
 		if err := status.CanReadRepo(); err != nil {
-			t.Fatal("got error:", err)
+			t.Fatalf("got: %v; want: no error", err)
 		}
 	})
 

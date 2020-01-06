@@ -101,11 +101,11 @@ Note that this feature, for security reasons, does NOT make secure environment v
 
 The [travis encryption-keys] documentation contains also pointers to the `travis` CLI. For macOS, `brew install travis` just works.
 
-Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`) because it would leave the secrets in the shell history. Instead, run the tool in interactive mode with the `-i` flag:
+Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`) because it would leave the secrets in the shell history. Instead, run the tool in interactive mode with the `--interactive` flag:
 
 ```console
 $ cd the-repo
-$ travis encrypt --add -i
+$ travis encrypt --add --interactive
 Detected repository as pix4d/cogito, is this correct? |yes|
 Reading from stdin, press Ctrl+D when done
 DOCKER_TOKEN="YOUR_TOKEN"  <= this is a real secret
@@ -156,16 +156,13 @@ DOCKER_USERNAME
 DOCKER_ORG
 ```
 
-### Optional read-only repository
+### Read-only repository tests
 
-There are some failure modes that are testable only with an additional repository, for which the user that issues the OAuth token must have read-only access to it.
+There are some failure modes that are testable only with a repository for which the user that issues the OAuth token has read-only access to it.
 
-To run the corresponding tests, you need to export the following environment variables:
+Any public repository of a organization to which the user doesn't belong to satisfies this requirement.
 
-```text
-COGITO_TEST_READ_ONLY_REPO_NAME
-COGITO_TEST_READ_ONLY_COMMIT_SHA
-```
+In the tests, we use one of the repositories belonging to `octocat`.
 
 ### Running the end-to-end tests
 

@@ -16,12 +16,19 @@ vars:
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
     sh: which gotestsum; true
-  TESTRUNNER: "{{if .GOTESTSUM}}{{.GOTESTSUM}}{{else}}go test{{end}}"
+  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}}{{else}}go test{{end}}"
 
 tasks:
   default:
     deps: [test]
     desc: Sensible defaults if you invoke `task` without arguments.
+  ci-init:
+    desc: Useful only when running under CI
+    cmds:
+      - cmd: go get gotest.tools/gotestsum
+      - cmd: echo
+        silent: true
+      - cmd: go mod download
   test:
     desc: Run the tests.
     cmds:

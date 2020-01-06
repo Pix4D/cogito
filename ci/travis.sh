@@ -19,6 +19,7 @@ run() {
     echo "${fgGreen}SUCCESS: $* ${txReset}"
 }
 
+run task ci-init
 run task test
 run task docker-build
 run task docker-smoke
