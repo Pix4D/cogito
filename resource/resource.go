@@ -48,8 +48,9 @@ var (
 	}
 
 	optionalSources = map[string]struct{}{
-		"log_level": {},
-		"log_url":   {},
+		"log_level":         {},
+		"log_url":           {},
+		"context_namespace": {},
 	}
 )
 
@@ -211,6 +212,10 @@ func (r *Resource) Out(
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	context := job
+	if ns, _ := source["context_namespace"].(string); ns != "" {
+		context = fmt.Sprintf("%s/%s", ns, context)
+	}
+
 	status := github.NewStatus(github.API, token, owner, repo, context)
 
 	atc := env.Get("ATC_EXTERNAL_URL")
