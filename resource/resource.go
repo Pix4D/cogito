@@ -4,10 +4,13 @@
 package resource
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
@@ -230,9 +233,20 @@ func (r *Resource) Out(
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
+	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
+
 	// https://ci.example.com/teams/developers/pipelines/cognito/jobs/hello/builds/25
 	targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 		atc, team, pipeline, job, buildN)
+
+	if instanceVars != "" {
+		instanceUrl, err := buildInstanceVarsURL(instanceVars)
+		if err != nil {
+			return nil, nil, err
+		}
+		target_url = fmt.Sprintf("%s?%s", target_url, instanceUrl)
+	}
+
 	description := "Build " + buildN
 	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
 		state, owner, repo, ref, context, targetURL)
@@ -423,4 +437,19 @@ func GitCommit(repoPath string) (string, error) {
 	}
 
 	return sha, nil
+}
+
+func buildInstanceVarsURL(instanceVarStr string) (string, error) {
+	var varsMap map[string]interface{}
+	err := json.Unmarshal([]byte(instanceVarStr), &varsMap)
+	if err != nil {
+		return "", err
+	}
+	var vars []string
+	for k, v := range varsMap {
+		vars = append(vars, fmt.Sprintf("vars.%s=\"%s\"",
+			url.QueryEscape(k), url.QueryEscape(v.(string))))
+	}
+	sort.Strings(vars)
+	return strings.Join(vars, "&"), nil
 }

@@ -469,3 +469,25 @@ func TestParseGitPseudoURL(t *testing.T) {
 		})
 	}
 }
+
+func TestInstanceVarsUrl(t *testing.T) {
+	type testCase struct {
+		name            string
+		instanceVarsStr string
+		want            string
+	}
+	testCases := []testCase{
+		{"Simple", `{ "app": "test1", "branch": "bar" }`, `vars.app="test1"&vars.branch="bar"`},
+		{"UrlEncodedValue", `{ "app": "test2", "branch": "release/beta" }`, `vars.app="test2"&vars.branch="release%2Fbeta"`},
+		{"UrlEncodedKeyValue", `{ "app/3": "test", "branch": "release/beta" }`, `vars.app%2F3="test"&vars.branch="release%2Fbeta"`},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r, _ := buildInstanceVarsURL(tc.instanceVarsStr)
+			if !cmp.Equal(r, tc.want) {
+				t.Errorf("error: got %v; want %v", r, tc.want)
+			}
+		})
+	}
+}
