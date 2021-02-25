@@ -350,6 +350,9 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	} else if strings.HasPrefix(URL, "https://") {
 		gu.Scheme = "https"
 		path = URL[8:]
+	} else if strings.HasPrefix(URL, "http://") {
+		gu.Scheme = "http"
+		path = URL[7:]
 	} else {
 		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
 	}
