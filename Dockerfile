@@ -1,8 +1,7 @@
-FROM golang:1.13-alpine as builder
+FROM golang:1.16-alpine as builder
 
 ARG BUILD_INFO
 
-ENV GO111MODULE=on
 ENV GOPATH=/root/go
 
 RUN apk --no-cache add build-base
@@ -23,7 +22,11 @@ RUN go mod download
 COPY . .
 
 RUN go test ./...  && \
-    go install -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" ./cmd/check ./cmd/in ./cmd/out
+    go install \
+        -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" \
+        ./cmd/check \
+        ./cmd/in \
+        ./cmd/out
 
 #
 # The final image

@@ -1,6 +1,6 @@
 module github.com/Pix4D/cogito
 
-go 1.13
+go 1.16
 
 require (
 	github.com/alexflint/go-arg v1.1.0

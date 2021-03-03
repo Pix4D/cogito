@@ -12,8 +12,8 @@ I care about code quality, readability and tests, so please follow the current s
 
 ### Required
 
-* golang, version >= 1.13
-* docker, version >= 19
+* Go, version >= 1.16
+* Docker, version >= 20
 * [Task], version >= 3.2
 
 ### Optional
