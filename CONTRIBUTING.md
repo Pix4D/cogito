@@ -14,7 +14,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 * golang, version >= 1.13
 * docker, version >= 19
-* [Task], version >= 2.7
+* [Task], version >= 3.2
 
 ### Optional
 
@@ -23,7 +23,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 ## Using Task (replacement of make)
 
-Have a look at [Task], then
+Have a look at the [task documentation][Task], then run:
 
 ```console
 task --list

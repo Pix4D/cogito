@@ -1,8 +1,7 @@
 # Install `task` from https://taskfile.dev
 # Run `task --list` to start.
 
-version: "2.6"
-expansions: 3
+version: "3"
 
 env:
   DOCKER_IMAGE: cogito
@@ -15,7 +14,7 @@ vars:
   BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
-    sh: which gotestsum; true
+    sh: "echo $(which gotestsum 2> /dev/null)"
   TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}}{{else}}go test{{end}}"
 
 tasks:
@@ -23,7 +22,7 @@ tasks:
     deps: [test]
     desc: Sensible defaults if you invoke `task` without arguments.
   ci-init:
-    desc: Useful only when running under CI
+    desc: Useful only when running under CI.
     cmds:
       - cmd: go get gotest.tools/gotestsum
       - cmd: echo
