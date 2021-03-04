@@ -15,7 +15,7 @@ vars:
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
     sh: "echo $(which gotestsum 2> /dev/null)"
-  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}}{{else}}go test{{end}}"
+  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
 
 tasks:
   default:
@@ -31,11 +31,11 @@ tasks:
   test:
     desc: Run the tests.
     cmds:
-      - "{{.TESTRUNNER}} ./..."
+      - "{{.TESTRUNNER}} -count=1 ./..."
   test-e2e:
     desc: Run also the e2e tests.
     cmds:
-      - "{{.TESTRUNNER}} ./..."
+      - "{{.TESTRUNNER}} -count=1 ./..."
     env:
       COGITO_TEST_COMMIT_SHA:
         sh: gopass show cogito/test_commit_sha
