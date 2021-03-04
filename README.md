@@ -12,7 +12,7 @@ Written in Go, it has the following characteristics:
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
 - Helpful error messages when something goes wrong with the GitHub API.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
-- Boilerplate code generated with [ofcourse](https://github.com/cloudboss/ofcourse)
+- Boilerplate code generated with [ofcourse](https://github.com/cloudboss/ofcourse).
 
 [Concourse resource]: https://concourse-ci.org/resources.html
 [René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
@@ -107,8 +107,8 @@ jobs:
 
 ### Optional
 
-- `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default `info`.
-- `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step.
+- `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
+- `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
 ### Suggestions
 
@@ -134,7 +134,7 @@ Sets or updates the GitHub status for a given commit, following the [GitHub stat
 
 ### Note
 
-It requires one and only one ["put inputs"] to be specified, otherwise it will error out. For example:
+The put step requires one and only one ["put inputs"] to be specified, otherwise it will error out. For example:
 
 ```yaml
 on_success:
