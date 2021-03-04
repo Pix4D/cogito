@@ -32,6 +32,23 @@ tasks:
     desc: Run the tests.
     cmds:
       - "{{.TESTRUNNER}} ./..."
+  test-e2e:
+    desc: Run also the e2e tests.
+    cmds:
+      - "{{.TESTRUNNER}} ./..."
+    env:
+      COGITO_TEST_COMMIT_SHA:
+        sh: gopass show cogito/test_commit_sha
+      COGITO_TEST_OAUTH_TOKEN:
+        sh: gopass show cogito/test_oauth_token
+      COGITO_TEST_READ_ONLY_COMMIT_SHA:
+        sh: gopass show cogito/test_read_only_commit_sha
+      COGITO_TEST_READ_ONLY_REPO_NAME:
+        sh: gopass show cogito/test_read_only_repo_name
+      COGITO_TEST_REPO_NAME:
+        sh: gopass show cogito/test_repo_name
+      COGITO_TEST_REPO_OWNER:
+        sh: gopass show cogito/test_repo_owner
   copydir:
     desc: Build copydir.
     dir: bin
@@ -64,6 +81,11 @@ tasks:
     cmds:
       - echo "Logging in to DockerHub"
       - docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN 2> /dev/null
+    env:
+      DOCKER_TOKEN:
+        sh: gopass show cogito/docker_token
+      DOCKER_USERNAME:
+        sh: gopass show cogito/docker_username
   docker-push:
     deps: [docker-login]
     cmds:
@@ -77,6 +99,8 @@ tasks:
             docker push $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_LATEST
         fi
     env:
+      DOCKER_ORG:
+        sh: gopass show cogito/docker_org
       DOCKER_TAG:
         sh: ci/git-ref-to-docker-tag.sh
       DOCKER_LATEST:

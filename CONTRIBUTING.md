@@ -18,7 +18,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 ### Optional
 
-* [envchain] to securely store secrets for end-to-end tests.
+* [gopass] to securely store secrets for end-to-end tests.
 * [gotestsum], for more human-friendly test output. If found in `$PATH`, it will be used in place of `go test`.
 
 ## Using Task (replacement of make)
@@ -55,12 +55,12 @@ We require environment variables (as opposed to using a configuration file) to p
 
 ### Secure handling of the GitHub OAuth token
 
-We use the [envchain] tool, that stores secrets in the OS secure store (Keychain for macOS, D-Bus secret service (gnome-keyring) for Linux), associated to a _namespace_. It then makes available all secrets associated to the given _namespace_ as environment variables.
+We use the [gopass] tool, that stores secrets in the file system using GPG. We then make the secrets available as environment variables in [Taskfile.yml](Taskfile.yml).
 
 Add the GitHub OAuth token:
 
 ```console
-envchain --set cogito COGITO_TEST_OAUTH_TOKEN
+$ gopass insert cogito/test_oauth_token
 ```
 
 ### Secure handling of the DockerHub token
@@ -83,10 +83,10 @@ Add the GitHub configuration:
 
 ```text
 # This is used for docker login
-$ envchain --set cogito DOCKER_USERNAME
+$ gopass insert cogito/docker_username
 # This is used to tag the image; in case of doubt use the same value of DOCKER_USERNAME
-$ envchain --set cogito DOCKER_ORG
-$ envchain --set cogito DOCKER_TOKEN
+$ gopass insert cogito/docker_org
+$ gopass insert cogito/docker_token
 ```
 
 See next section (Travis secrets setup) for how to configure this secret with Travis.
@@ -122,38 +122,30 @@ Add the output string to the `env` dictionary of the `.travis.yml` file.
 ### Add test repository information as environment variables
 
 ```console
-envchain --set cogito COGITO_TEST_REPO_OWNER   # Your GitHub user or organization
-envchain --set cogito COGITO_TEST_REPO_NAME    # The repo name (without the trailing .git)
-envchain --set cogito COGITO_TEST_COMMIT_SHA
+$ gopass insert cogito/test_repo_owner    # Your GitHub user or organization
+$ gopass insert cogito/test_repo_name     # The repo name (without the trailing .git)
+$ gopass insert cogito/test_commit_sha
 ```
 
 #### Verify your setup
 
 ```text
-envchain cogito env | grep COGITO_
+$ gopass ls cogito
 ```
 
-should show the following environment variables, with the correct values:
+should show:
 
 ```text
-COGITO_TEST_OAUTH_TOKEN
-COGITO_TEST_REPO_OWNER
-COGITO_TEST_REPO_NAME
-COGITO_TEST_COMMIT_SHA
-```
-
-And
-
-```text
-envchain cogito env | grep DOCKER_
-```
-
-should show the following environment variables, with the correct values:
-
-```text
-DOCKER_TOKEN
-DOCKER_USERNAME
-DOCKER_ORG
+cogito/
+├── docker_org
+├── docker_token
+├── docker_username
+├── test_commit_sha
+├── test_oauth_token
+├── test_read_only_commit_sha
+├── test_read_only_repo_name
+├── test_repo_name
+└── test_repo_owner
 ```
 
 ### Read-only repository tests
@@ -169,7 +161,7 @@ In the tests, we use one of the repositories belonging to `octocat`.
 We are finally ready to run also the end-to-end tests:
 
 ```console
-envchain cogito task test
+cogito task test
 ```
 
 The end-to-end tests have the following logic:
@@ -178,14 +170,6 @@ The end-to-end tests have the following logic:
 * If all of the environment variables are set, we run the test.
 * If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
 
-### Making the environment variables available to your editor
-
-If you want to run the tests from within your editor test runner, it is enough to use `envchain` to start the editor:
-
-```console
-envchain cogito $EDITOR
-```
-
 ## Building and publishing the image
 
 The Taskfile includes targets for building and publishing the docker image.
@@ -193,6 +177,8 @@ The Taskfile includes targets for building and publishing the docker image.
 ### All-in-one, using the same script as CI
 
 **WARNING**: If you are working on a commit that has a tag, using the CI script will also have an effect on the published Docker image tag. Double-check what you are doing.
+
+FIXME: with the move from envchain to gopass, I need to think how to fix this.
 
 ```console
 $ envchain cogito ci/travis.sh
@@ -205,25 +191,25 @@ Simply have a look at the contents of `ci/travis.sh` and run each step there man
 Run the tests
 
 ```text
-envchain cogito task test
+task test
 ```
 
 Build the Docker image
 
 ```text
-envchain cogito task docker-build
+task docker-build
 ```
 
 Run simple smoke test of the image
 
 ```text
-envchain cogito task docker-smoke
+task docker-smoke
 ```
 
 Push the Docker image. This will always generate a Docker image with a tag corresponding to the branch name. If the tip of the branch has a git tag (for example `v1.2.3`), this will also generate a Docker image with that tag (for example `1.2.3`).
 
 ```text
-envchain cogito task docker-psuh
+task docker-push
 ```
 
 ## Suggestions for quick iterations during development
@@ -235,8 +221,8 @@ After the local tests are passing, the quickest way to test in a pipeline the fr
 For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
 
 ```text
-envchain cogito task docker-build &&
-envchain cogito task docker-push &&
+task docker-build &&
+task docker-push &&
 fly -t devs check-resource-type -r cogito-test/cogito &&
 sleep 5 &&
 fly -t devs trigger-job -j cogito-test/autocat -w
@@ -254,5 +240,5 @@ This code is licensed according to the MIT license (see file [LICENSE](./LICENSE
 
 [Task]: https://taskfile.dev/
 [gotestsum]: https://github.com/gotestyourself/gotestsum
-[envchain]: https://github.com/sorah/envchain
+[gopass]: https://github.com/gopasspw/gopass
 [travis encryption-keys]: https://docs.travis-ci.com/user/encryption-keys/
