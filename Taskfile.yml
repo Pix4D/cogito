@@ -11,6 +11,8 @@ vars:
   COMMIT:
     sh: git log -n 1 --format=%h
   REPO: github.com/Pix4D/cogito
+  TAG:
+    sh: ci/git-ref-to-docker-tag.sh
   BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
@@ -73,6 +75,8 @@ tasks:
     desc: Simple smoke test of the Docker image.
     cmds:
       - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/check
+      - echo
+      - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/in dummy
       - echo
     vars:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
