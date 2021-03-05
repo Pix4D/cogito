@@ -17,11 +17,11 @@ Written in Go, it has the following characteristics:
 [Concourse resource]: https://concourse-ci.org/resources.html
 [René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
 
-## Contributing and Development
+# Contributing and Development
 
 This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTING.md) for how to build the Docker image, develop, test and contribute to this resource.
 
-## Semver, releases and Docker images
+# Semver, releases and Docker images
 
 This project follows [Semantic Versioning](https://semver.org/) and has a [CHANGELOG](./CHANGELOG).
 
@@ -29,13 +29,13 @@ This project follows [Semantic Versioning](https://semver.org/) and has a [CHANG
 
 Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.PATCH` (note the `v` prefix). The corresponding Docker image has tag `MAJOR.MINOR.PATCH` and is available from [DockerHub](https://hub.docker.com/r/pix4d/cogito).
 
-### Which Docker tag to use?
+## Which Docker tag to use?
 
 You can pin the resource to a specific release tag `MAJOR.MINOR.PATCH`.
 
 If you omit the pinning, you will be following the Docker tag `latest`, which for this resource always points to the  latest release, not to the tip of master. This should normally be fine, but can still break in case of change of major version!
 
-## Example
+# Example
 
 See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
 
@@ -97,42 +97,48 @@ jobs:
                 echo "Hello world!"
 ```
 
-## Source Configuration
+# Effects on GitHub
 
-### Required
+With reference to the [GitHub status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
+
+![Screenshot of GitHub UI](gh-ui-decorated.png)
+
+# Source Configuration
+
+## Required
 
 - `owner`: The GitHub user or organization.
 - `repo`: The GitHub repository name.
 - `access-token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
 
-### Optional
+## Optional
 
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
-### Suggestions
+## Suggestions
 
 We suggest to set a long interval for `check_interval`, for example 1 hour, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
-## The check step
+# The check step
 
 It is currently a no-op and will always return the same version, `dummy`.
 
-## The get/in step
+# The get step
 
 It is currently a no-op.
 
-## The put/out step
+# The put step
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
-### Parameters
+## Parameters
 
-#### Required
+### Required
 
 - `state`: The state to be set. One of `error`, `failure`, `pending`, `success`.
 
-### Note
+## Note
 
 The put step requires one and only one ["put inputs"] to be specified, otherwise it will error out. For example:
 
@@ -156,7 +162,7 @@ To better understand from where `the-repo` comes from, see the full example at t
 
 ["put inputs"]: https://concourse-ci.org/put-step.html#put-step-inputs
 
-## GitHub OAuth token
+# GitHub OAuth token
 
 Follow the instructions at [GitHub personal access token] to create a personal access token.
 
@@ -166,7 +172,7 @@ NOTE: The token is security-sensitive. Treat it as you would treat a password. D
 
 See also the section [The end-to-end tests](./CONTRIBUTING.md#the-end-to-end-tests) for how to securely store the token to run the end-to-end tests.
 
-## Caveat: GitHub rate limiting
+# Caveat: GitHub rate limiting
 
 From [GitHub API v3]
 
@@ -182,7 +188,7 @@ From [GitHub API v3]
 
 In case of rate limiting, the error message in the output of the `put` step will mention it.
 
-## License
+# License
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
 
@@ -191,5 +197,3 @@ This code is licensed according to the MIT license (see file [LICENSE](./LICENSE
 [GitHub personal access token]: https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line
 
 [Concourse credential managers]: https://concourse-ci.org/creds.html.
-
-[envchain]: https://github.com/sorah/envchain
