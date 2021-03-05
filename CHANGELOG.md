@@ -5,11 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.5.0] - 2021-03-XX
+## UNRELEASED [v0.5.0] - 2021-03-XX
 
 ### Changed
 
-- tests: where it makes sense, removed the need to perform E2E tests. For the `resource` package, total coverage stayed the same, but the non-E2E coverage went from 53% to 89%.
+- tests: where it makes sense, remove the need to perform E2E tests. For the `resource` package, total coverage stayed the same, but the non-E2E coverage went from 53% to 89%.
+
+### Added
+
+- Optional source configuration `context_prefix`, that will be prepended to the context. See [Effects on GitHub](README.md#effects-on-github) of the README.
+  Thanks @tgolsson for the discussion (#24) and for the initial implementation (#25). Thanks @eitah for a similar discussion (#23).
+
 
 ## [v0.4.0] - 2021-03-05
 
@@ -84,3 +90,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.2.1]: https://github.com/Pix4D/cogito/releases/tag/v0.2.1
 [v0.3.0]: https://github.com/Pix4D/cogito/releases/tag/v0.3.0
 [v0.4.0]: https://github.com/Pix4D/cogito/releases/tag/v0.4.0
+[v0.5.0]: https://github.com/Pix4D/cogito/releases/tag/v0.5.0

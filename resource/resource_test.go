@@ -1,8 +1,10 @@
 package resource
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -110,16 +112,6 @@ func TestIn(t *testing.T) {
 
 func TestOut(t *testing.T) {
 	cfg := help.FakeTestCfg
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintln(w, "Anything goes...")
-	}))
-	savedAPI := github.API
-	github.API = ts.URL
-	defer func() {
-		ts.Close()
-		github.API = savedAPI
-	}()
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
@@ -134,6 +126,7 @@ func TestOut(t *testing.T) {
 	type want struct {
 		version  oc.Version
 		metadata oc.Metadata
+		body     map[string]string
 		err      error
 	}
 	var testCases = []struct {
@@ -143,36 +136,53 @@ func TestOut(t *testing.T) {
 	}{
 		{"valid mandatory sources",
 			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil},
+			want{defVersion, defMeta, nil, nil},
 		},
 		{"missing mandatory sources",
 			in{oc.Source{}, defParams, defEnv},
-			want{nil, nil, &missingSourceError{}},
+			want{nil, nil, nil, &missingSourceError{}},
 		},
 		{"unknown source",
 			in{oc.Source{"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
 				defParams, defEnv},
-			want{nil, nil, &unknownSourceError{}},
+			want{nil, nil, nil, &unknownSourceError{}},
 		},
 		{"valid mandatory parameters",
 			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil},
+			want{defVersion, defMeta, nil, nil},
 		},
 		{"completely missing mandatory parameters",
 			in{defSource, oc.Params{}, defEnv},
-			want{nil, nil, &missingParamError{}},
+			want{nil, nil, nil, &missingParamError{}},
 		},
 		{"invalid state parameter",
 			in{defSource, oc.Params{"state": "hello"}, defEnv},
-			want{nil, nil, &invalidParamError{}},
+			want{nil, nil, nil, &invalidParamError{}},
 		},
 		{"unknown parameter",
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
-			want{nil, nil, &unknownParamError{}},
+			want{nil, nil, nil, &unknownParamError{}},
 		},
 		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil},
+			want{defVersion, defMeta, nil, nil},
+		},
+		{"source: optional: context_prefix",
+			in{
+				oc.Source{
+					"access_token":   cfg.Token,
+					"owner":          cfg.Owner,
+					"repo":           cfg.Repo,
+					"context_prefix": "cocco"},
+				defParams,
+				defEnv,
+			},
+			want{
+				defVersion,
+				defMeta,
+				map[string]string{"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME")},
+				nil,
+			},
 		},
 	}
 
@@ -180,6 +190,31 @@ func TestOut(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
+
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusCreated)
+				fmt.Fprintln(w, "Anything goes...")
+
+				if tc.want.body != nil {
+					buf, _ := io.ReadAll(r.Body)
+					var bm map[string]string
+					if err := json.Unmarshal(buf, &bm); err != nil {
+						t.Fatalf("parsing JSON body: %v", err)
+					}
+					for k, v := range tc.want.body {
+						if bm[k] != v {
+							t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+						}
+					}
+				}
+
+			}))
+			savedAPI := github.API
+			github.API = ts.URL
+			defer func() {
+				ts.Close()
+				github.API = savedAPI
+			}()
 
 			r := Resource{}
 			version, metadata, err := r.Out(

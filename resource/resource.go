@@ -48,9 +48,9 @@ var (
 	}
 
 	optionalSources = map[string]struct{}{
-		"log_level":         {},
-		"log_url":           {},
-		"context_namespace": {},
+		"log_level":      {},
+		"log_url":        {},
+		"context_prefix": {},
 	}
 )
 
@@ -212,8 +212,8 @@ func (r *Resource) Out(
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	context := job
-	if ns, _ := source["context_namespace"].(string); ns != "" {
-		context = fmt.Sprintf("%s/%s", ns, context)
+	if prefix, _ := source["context_prefix"].(string); prefix != "" {
+		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
 	status := github.NewStatus(github.API, token, owner, repo, context)

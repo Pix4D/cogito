@@ -113,6 +113,7 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 ## Optional
 
+- `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name` Default: empty (that is, the context will be: `job_name`).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
