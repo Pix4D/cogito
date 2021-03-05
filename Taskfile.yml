@@ -65,7 +65,18 @@ tasks:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/in
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
+  docker-login:
+    silent: true
+    cmds:
+      - echo "Logging in to DockerHub"
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN 2> /dev/null
+    env:
+      DOCKER_TOKEN:
+        sh: echo ${DOCKER_TOKEN:-$(gopass show cogito/docker_token)}
+      DOCKER_USERNAME:
+        sh: echo ${DOCKER_USERNAME:-$(gopass show cogito/docker_username)}
   docker-build:
+    deps: [docker-login]
     desc: Build the Docker image.
     cmds:
       - docker build --build-arg BUILD_INFO --tag $DOCKER_IMAGE .
@@ -80,16 +91,6 @@ tasks:
       - echo
     vars:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
-  docker-login:
-    silent: true
-    cmds:
-      - echo "Logging in to DockerHub"
-      - docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN 2> /dev/null
-    env:
-      DOCKER_TOKEN:
-        sh: gopass show cogito/docker_token
-      DOCKER_USERNAME:
-        sh: gopass show cogito/docker_username
   docker-push:
     deps: [docker-login]
     cmds:
@@ -104,7 +105,7 @@ tasks:
         fi
     env:
       DOCKER_ORG:
-        sh: gopass show cogito/docker_org
+        sh: echo ${DOCKER_ORG:-$(gopass show cogito/docker_org)}
       DOCKER_TAG:
         sh: ci/git-ref-to-docker-tag.sh
       DOCKER_LATEST:
