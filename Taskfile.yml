@@ -1,8 +1,7 @@
 # Install `task` from https://taskfile.dev
 # Run `task --list` to start.
 
-version: "2.6"
-expansions: 3
+version: "3"
 
 env:
   DOCKER_IMAGE: cogito
@@ -12,18 +11,20 @@ vars:
   COMMIT:
     sh: git log -n 1 --format=%h
   REPO: github.com/Pix4D/cogito
+  TAG:
+    sh: ci/git-ref-to-docker-tag.sh
   BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
-    sh: which gotestsum; true
-  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}}{{else}}go test{{end}}"
+    sh: "echo $(which gotestsum 2> /dev/null)"
+  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
 
 tasks:
   default:
     deps: [test]
     desc: Sensible defaults if you invoke `task` without arguments.
   ci-init:
-    desc: Useful only when running under CI
+    desc: Useful only when running under CI.
     cmds:
       - cmd: go get gotest.tools/gotestsum
       - cmd: echo
@@ -32,7 +33,24 @@ tasks:
   test:
     desc: Run the tests.
     cmds:
-      - "{{.TESTRUNNER}} ./..."
+      - "{{.TESTRUNNER}} -count=1 ./..."
+  test-e2e:
+    desc: Run also the e2e tests.
+    cmds:
+      - "{{.TESTRUNNER}} -count=1 ./..."
+    env:
+      COGITO_TEST_COMMIT_SHA:
+        sh: gopass show cogito/test_commit_sha
+      COGITO_TEST_OAUTH_TOKEN:
+        sh: gopass show cogito/test_oauth_token
+      COGITO_TEST_READ_ONLY_COMMIT_SHA:
+        sh: gopass show cogito/test_read_only_commit_sha
+      COGITO_TEST_READ_ONLY_REPO_NAME:
+        sh: gopass show cogito/test_read_only_repo_name
+      COGITO_TEST_REPO_NAME:
+        sh: gopass show cogito/test_repo_name
+      COGITO_TEST_REPO_OWNER:
+        sh: gopass show cogito/test_repo_owner
   copydir:
     desc: Build copydir.
     dir: bin
@@ -58,6 +76,8 @@ tasks:
     cmds:
       - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/check
       - echo
+      - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/in dummy
+      - echo
     vars:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
   docker-login:
@@ -65,6 +85,11 @@ tasks:
     cmds:
       - echo "Logging in to DockerHub"
       - docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN 2> /dev/null
+    env:
+      DOCKER_TOKEN:
+        sh: gopass show cogito/docker_token
+      DOCKER_USERNAME:
+        sh: gopass show cogito/docker_username
   docker-push:
     deps: [docker-login]
     cmds:
@@ -78,6 +103,8 @@ tasks:
             docker push $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_LATEST
         fi
     env:
+      DOCKER_ORG:
+        sh: gopass show cogito/docker_org
       DOCKER_TAG:
         sh: ci/git-ref-to-docker-tag.sh
       DOCKER_LATEST:

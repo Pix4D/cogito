@@ -57,10 +57,12 @@ resources:
 - name: repo.git
   type: git
   source:
-    uri: git@github.com:((github-owner))/((repo-name)).git
+    # If repo is public:
+    uri: https://github.com/((github-owner))/((repo-name)).git
+    # If repo is private:
+    #uri: git@github.com:((github-owner))/((repo-name)).git
+    #private_key: ((ssh-key))
     branch: ((branch))
-    # Private key is needed only for SSH access
-    private_key: ((ssh-key))
 
 jobs:
 
