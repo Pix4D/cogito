@@ -5,20 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased] [v0.4.0] - 2021-03-XX
+## [v0.4.0] - 2021-03-05
+
+### Fixed
+
+- Now the output correctly identifies the Docker tag:
+  ```
+  This is the Cogito GitHub status resource.
+  Tag: update-tooling, commit: 5dbf3c4296, build date: 2021-03-04
+  ```
 
 ### Changed
 
 - Go 1.16
 - Task > 3
 - Moved from `envchain` to `gopass` to store secrets for E2E tests (see file `CONTRIBUTING.md`).
+- Documentation enhancements.
 
-### Fixed
+### Added
 
-- Now the output correctly identifies the Docker tag:
-  ```
-  This is the Cogito GitHub status resource. Tag: update-tooling, commit: 5dbf3c4296, build date: 2021-03-04
-  ```
+- document how Cogito uses the GitHub API.
 
 ## [v0.3.0] - 2019-11-14
 
