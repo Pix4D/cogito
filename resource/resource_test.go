@@ -39,10 +39,20 @@ func TestCheck(t *testing.T) {
 	}{
 		{"happy path",
 			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			defVersion, defVersions, nil},
+			defVersion,
+			defVersions,
+			nil},
 		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			oc.Version{}, defVersions, nil},
+			oc.Version{},
+			defVersions,
+			nil},
+		{"missing mandatory sources",
+			oc.Source{},
+			defVersion,
+			nil,
+			&missingSourceError{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -166,7 +176,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}
@@ -228,10 +238,10 @@ func TestRepoDirMatches(t *testing.T) {
 	testCases := []testCase{
 		{"dir is not a repo", "not-a-repo", "dummyurl", os.ErrNotExist},
 		{"bad .git/config", "repo-bad-git-config", "dummyurl", errKeyNotFound},
-		{"repo with wrong HTTPS remote", "a-repo", https_remote("owner", "repo"), errWrongRemote},
-		{"repo with wrong SSH remote", "a-repo", ssh_remote("owner", "repo"), errWrongRemote},
-		{"repo with good SSH remote", "a-repo", ssh_remote(wantOwner, wantRepo), nil},
-		{"repo with good HTTPS remote", "a-repo", https_remote(wantOwner, wantRepo), nil},
+		{"repo with wrong HTTPS remote", "a-repo", httpsRemote("owner", "repo"), errWrongRemote},
+		{"repo with wrong SSH remote", "a-repo", sshRemote("owner", "repo"), errWrongRemote},
+		{"repo with good SSH remote", "a-repo", sshRemote(wantOwner, wantRepo), nil},
+		{"repo with good HTTPS remote", "a-repo", httpsRemote(wantOwner, wantRepo), nil},
 	}
 
 	for _, tc := range testCases {
@@ -315,11 +325,11 @@ func setup(
 	return inDir, teardown
 }
 
-func ssh_remote(owner, repo string) string {
+func sshRemote(owner, repo string) string {
 	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
 }
 
-func https_remote(owner, repo string) string {
+func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
