@@ -33,11 +33,13 @@ tasks:
   test:
     desc: Run the tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 ./..."
+      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
+      - go tool cover -html=coverage.out -o coverage.html
   test-e2e:
     desc: Run also the e2e tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 ./..."
+      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
+      - go tool cover -html=coverage.out -o coverage.html
     env:
       COGITO_TEST_COMMIT_SHA:
         sh: gopass show cogito/test_commit_sha
