@@ -1,45 +1,43 @@
 # Contributing and developing
 
-## Contributing
-
 Contributions following the minimalist spirit of this project are welcome.
 
 Please, before opening a PR, open a ticket to discuss your use case. This allows to better understand the _why_ of a new feature and not to waste your time (and mine) developing a feature that for some reason doesn't fit well with the spirit of the library or could be implemented differently. This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
 
 I care about code quality, readability and tests, so please follow the current style and provide adequate test coverage. In case of doubts about how to tackle testing something, feel free to ask.
 
-## Development Prerequisites
+# Development Prerequisites
 
-### Required
+## Required
 
 * Go, version >= 1.16
 * Docker, version >= 20
 * [Task], version >= 3.2
 
-### Optional
+## Optional
 
 * [gopass] to securely store secrets for end-to-end tests.
 * [gotestsum], for more human-friendly test output. If found in `$PATH`, it will be used in place of `go test`.
 
-## Using Task (replacement of make)
+# Using Task (replacement of make)
 
 Have a look at the [task documentation][Task], then run:
 
 ```console
-task --list
+$ task --list
 ```
 
-## Running the default tests
+# Running the default tests
 
 The Taskfile includes a `test` target, and tests are also run inside the Docker build.
 
 Run the default tests:
 
 ```console
-task test
+$ task test
 ```
 
-## The end-to-end tests
+# The end-to-end tests
 
 The end-to-end tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
 
@@ -48,12 +46,12 @@ We require environment variables (as opposed to using a configuration file) to p
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
 
-### Default test repositories
+## Default test repositories
 
 * https://github.com/Pix4D/cogito-test-read-write
 * https://github.com/Pix4D/cogito-test-read-only
 
-### Secure handling of the GitHub OAuth token
+## Secure handling of the GitHub OAuth token
 
 We use the [gopass] tool, that stores secrets in the file system using GPG. We then make the secrets available as environment variables in [Taskfile.yml](Taskfile.yml).
 
@@ -63,7 +61,7 @@ Add the GitHub OAuth token:
 $ gopass insert cogito/test_oauth_token
 ```
 
-### Secure handling of the DockerHub token
+## Secure handling of the DockerHub token
 
 **NOTE**: You need to follow this section only if you want to fork this repository; if you only want to provide a PR you don't strictly need this part (although in this case you will have to push by hand the docker image to use in your tests, so maybe it is time well spent anyway :-).
 
@@ -81,17 +79,15 @@ From an API point of view, the token can be used with `docker login` as if it wa
 
 Add the GitHub configuration:
 
-```text
-# This is used for docker login
+```console
 $ gopass insert cogito/docker_username
-# This is used to tag the image; in case of doubt use the same value of DOCKER_USERNAME
 $ gopass insert cogito/docker_org
 $ gopass insert cogito/docker_token
 ```
 
 See next section (Travis secrets setup) for how to configure this secret with Travis.
 
-### Travis secrets setup
+## Travis secrets setup
 
 Please read the reference documentation [travis encryption-keys] before continuing.
 
@@ -114,22 +110,22 @@ THE_SECRET="42"            <= this shows how to pass additional secrets; see the
 
 Add the output string to the `env` dictionary of the `.travis.yml` file.
 
-### Prepare the test repository
+## Prepare the test repository
 
 1. In your GitHub account, create a test repository, say for example `cogito-test`.
 2. In the test repository, push at least one commit, on any branch you fancy. Take note of the 40 digits commit SHA (the API wants the full SHA).
 
-### Add test repository information as environment variables
+## Add test repository information as environment variables
 
 ```console
-$ gopass insert cogito/test_repo_owner    # Your GitHub user or organization
-$ gopass insert cogito/test_repo_name     # The repo name (without the trailing .git)
+$ gopass insert cogito/test_repo_owner # Your GitHub user or organization
+$ gopass insert cogito/test_repo_name  # The repo name (without the trailing .git)
 $ gopass insert cogito/test_commit_sha
 ```
 
-#### Verify your setup
+### Verify your setup
 
-```text
+```console
 $ gopass ls cogito
 ```
 
@@ -148,7 +144,7 @@ cogito/
 └── test_repo_owner
 ```
 
-### Read-only repository tests
+## Read-only repository tests
 
 There are some failure modes that are testable only with a repository for which the user that issues the OAuth token has read-only access to it.
 
@@ -156,12 +152,12 @@ Any public repository of a organization to which the user doesn't belong to sati
 
 In the tests, we use one of the repositories belonging to `octocat`.
 
-### Running the end-to-end tests
+## Running the end-to-end tests
 
 We are finally ready to run also the end-to-end tests:
 
 ```console
-cogito task test
+$ task test
 ```
 
 The end-to-end tests have the following logic:
@@ -170,11 +166,11 @@ The end-to-end tests have the following logic:
 * If all of the environment variables are set, we run the test.
 * If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
 
-## Building and publishing the image
+# Building and publishing the image
 
 The Taskfile includes targets for building and publishing the docker image.
 
-### All-in-one, using the same script as CI
+## All-in-one, using the same script as CI
 
 **WARNING**: If you are working on a commit that has a tag, using the CI script will also have an effect on the published Docker image tag. Double-check what you are doing.
 
@@ -184,35 +180,35 @@ FIXME: with the move from envchain to gopass, I need to think how to fix this.
 $ envchain cogito ci/travis.sh
 ```
 
-### Step-by-step
+## Step-by-step
 
 Simply have a look at the contents of `ci/travis.sh` and run each step there manually.
 
 Run the tests
 
-```text
-task test
+```console
+$ task test
 ```
 
 Build the Docker image
 
-```text
-task docker-build
+```console
+$ task docker-build
 ```
 
 Run simple smoke test of the image
 
-```text
-task docker-smoke
+```console
+$ task docker-smoke
 ```
 
 Push the Docker image. This will always generate a Docker image with a tag corresponding to the branch name. If the tip of the branch has a git tag (for example `v1.2.3`), this will also generate a Docker image with that tag (for example `1.2.3`).
 
-```text
-task docker-push
+```console
+$ task docker-push
 ```
 
-## Suggestions for quick iterations during development
+# Suggestions for quick iterations during development
 
 These suggestions apply to the development of any Concourse resource.
 
@@ -220,12 +216,12 @@ After the local tests are passing, the quickest way to test in a pipeline the fr
 
 For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
 
-```text
-task docker-build &&
-task docker-push &&
-fly -t devs check-resource-type -r cogito-test/cogito &&
-sleep 5 &&
-fly -t devs trigger-job -j cogito-test/autocat -w
+```console
+$ task docker-build &&
+  task docker-push &&
+  fly -t devs check-resource-type -r cogito-test/cogito &&
+  sleep 5 &&
+  fly -t devs trigger-job -j cogito-test/autocat -w
 ```
 
 On each `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
@@ -234,7 +230,7 @@ On each `put` and `get` step, the cogito resource will print its version, git co
 This is the Cogito GitHub status resource. Tag: latest, commit: 91f64c0, date: 2019-10-09
 ```
 
-## License
+# License
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
 
