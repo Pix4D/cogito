@@ -28,7 +28,7 @@ var (
 )
 
 func TestCheck(t *testing.T) {
-	cfg := github.SkipTestIfNoEnvVars(t)
+	cfg := github.FakeTestCfg
 
 	var testCases = []struct {
 		name         string
