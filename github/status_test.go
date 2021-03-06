@@ -2,7 +2,9 @@ package github_test
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"strings"
 	"testing"
@@ -10,6 +12,27 @@ import (
 
 	gh "github.com/Pix4D/cogito/github"
 )
+
+func TestGitHubStatusUseMockAPI(t *testing.T) {
+	cfg := gh.FakeTestCfg
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintln(w, "Anything goes...")
+	}))
+	defer ts.Close()
+
+	context := "cogito/test"
+	targetURL := "https://cogito.invalid/builds/job/42"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
+
+	status := gh.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+	err := status.Add(cfg.SHA, state, targetURL, desc)
+
+	if err != nil {
+		t.Fatalf("\ngot:  %v\nwant: no error", err)
+	}
+}
 
 func TestGitHubStatusE2E(t *testing.T) {
 	cfg := gh.SkipTestIfNoEnvVars(t)

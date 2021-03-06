@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -106,10 +108,18 @@ func TestIn(t *testing.T) {
 	}
 }
 
-// For the time being this is an end-to-end test only. Will add a fake version soon.
-// See README for how to enable end-to-end tests.
 func TestOut(t *testing.T) {
-	cfg := github.SkipTestIfNoEnvVars(t)
+	cfg := github.FakeTestCfg
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintln(w, "Anything goes...")
+	}))
+	savedAPI := github.API
+	github.API = ts.URL
+	defer func() {
+		ts.Close()
+		github.API = savedAPI
+	}()
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
@@ -147,7 +157,6 @@ func TestOut(t *testing.T) {
 				defParams, defEnv},
 			want{nil, nil, &unknownSourceError{}},
 		},
-
 		{
 			"valid mandatory parameters",
 			in{defSource, defParams, defEnv},
@@ -168,7 +177,8 @@ func TestOut(t *testing.T) {
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, &unknownParamError{}},
 		},
-		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+		{
+			"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil},
 		},
@@ -186,7 +196,7 @@ func TestOut(t *testing.T) {
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.want.err)
 			if gotErrType != wantErrType {
-				t.Fatalf("err: got %v (%v);\nwant %v (%v)", gotErrType, err, wantErrType, tc.want.err)
+				t.Fatalf("\ngot: %v (%v);\nwant: %v (%v)", gotErrType, err, wantErrType, tc.want.err)
 			}
 
 			if diff := cmp.Diff(tc.want.version, version); diff != "" {

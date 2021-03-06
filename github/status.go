@@ -26,7 +26,16 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("%v, status %v (%v)", e.What, e.StatusCode, e.Details)
 }
 
-const API = "https://api.github.com"
+// API is the GitHub API endpoint.
+// Can be overridden by tests to "mock" with net/http/httptest:
+//   ts := httptest.NewServer(...)
+//   savedAPI := github.API
+//   github.API = ts.URL
+//   defer func() {
+//	     ts.Close()
+//	     github.API = savedAPI
+//   }()
+var API = "https://api.github.com"
 
 type status struct {
 	server  string
