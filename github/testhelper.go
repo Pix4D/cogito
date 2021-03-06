@@ -5,6 +5,7 @@ import (
 	"testing"
 )
 
+// TestCfgE2E is a test configuration to run E2E tests.
 type TestCfgE2E struct {
 	Token string
 	Owner string

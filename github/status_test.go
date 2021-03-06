@@ -14,15 +14,15 @@ import (
 func TestGitHubStatusE2E(t *testing.T) {
 	cfg := gh.SkipTestIfNoEnvVars(t)
 	context := "cogito/test"
-	target_url := "https://cogito.invalid/builds/job/42"
+	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
 	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, context)
-	err := status.Add(cfg.SHA, state, target_url, desc)
+	err := status.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
-		t.Fatalf("wanted: no error, got: %v.", err)
+		t.Fatalf("\ngot:  %v\nwant: no error", err)
 	}
 }
 
@@ -32,7 +32,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	const readOnlyRepo = "Spoon-Knife"
 	const readOnlySHA = "d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9"
 	const context = "dummy"
-	const target_url = "dummy"
+	const targetURL = "dummy"
 	desc := time.Now().Format("15:04:05")
 	const state = "success"
 
@@ -42,7 +42,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 		t.Fatalf("\ngot:  %v\nwant: no error", err)
 	}
 
-	err := status.Add(readOnlySHA, state, target_url, desc)
+	err := status.Add(readOnlySHA, state, targetURL, desc)
 
 	var statusErr *gh.StatusError
 	wantStatusCode := http.StatusNotFound

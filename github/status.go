@@ -2,7 +2,6 @@
 //
 // See the README file for additional information, caveats about GitHub API and imposed limits,
 // and reference to official documentation.
-
 package github
 
 import (
@@ -16,6 +15,7 @@ import (
 	"time"
 )
 
+// StatusError is one of the possible errors returned by the github package.
 type StatusError struct {
 	What       string
 	StatusCode int
@@ -49,14 +49,14 @@ func NewStatus(server, token, owner, repo, context string) status {
 	return status{server, token, owner, repo, context}
 }
 
-// Add adds state to the given sha, decorating it with target_url and optional description.
+// Add adds state to the given sha, decorating it with targetURL and optional description.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
-// Parameter target_url (optional) points to the specific process (for example, a CI build)
+// Parameter targetURL (optional) points to the specific process (for example, a CI build)
 // that generated this state.
 // Parameter description (optional) gives more information about the status.
 // The returned error contains some diagnostic information to troubleshoot.
-func (s status) Add(sha, state, target_url, description string) error {
+func (s status) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/:owner/:repo/statuses/:sha
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
 
@@ -65,17 +65,17 @@ func (s status) Add(sha, state, target_url, description string) error {
 	// tag to override the case.
 	reqBody := struct {
 		State       string `json:"state"`
-		Target_url  string `json:"target_url"`
+		TargetURL   string `json:"target_url"`
 		Description string `json:"description"`
 		Context     string `json:"context"`
-	}{state, target_url, description, s.context}
+	}{state, targetURL, description, s.context}
 
-	reqBodyJson, err := json.Marshal(reqBody)
+	reqBodyJSON, err := json.Marshal(reqBody)
 	if err != nil {
 		return fmt.Errorf("JSON encode: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJson))
+	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
 	}
