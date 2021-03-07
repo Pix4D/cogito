@@ -196,7 +196,7 @@ func TestOut(t *testing.T) {
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.want.err)
 			if gotErrType != wantErrType {
-				t.Fatalf("\ngot: %v (%v);\nwant: %v (%v)", gotErrType, err, wantErrType, tc.want.err)
+				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)", gotErrType, err, wantErrType, tc.want.err)
 			}
 
 			if diff := cmp.Diff(tc.want.version, version); diff != "" {
@@ -205,6 +205,60 @@ func TestOut(t *testing.T) {
 
 			if diff := cmp.Diff(tc.want.metadata, metadata); diff != "" {
 				t.Errorf("metadata: (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestOutE2E(t *testing.T) {
+	cfg := help.SkipTestIfNoEnvVars(t)
+
+	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
+	defParams := oc.Params{"state": "error"}
+	defDir := "a-repo"
+
+	type in struct {
+		source oc.Source
+		params oc.Params
+		env    oc.Environment
+	}
+	var testCases = []struct {
+		name    string
+		in      in
+		wantErr error
+	}{
+		{"backend reports success",
+			in{defSource, defParams, defEnv},
+			nil,
+		},
+		{"backend reports failure",
+			in{
+				oc.Source{
+					"access_token": cfg.Token,
+					"owner":        cfg.Owner,
+					"repo":         "does-not-exists-really"},
+				defParams,
+				defEnv},
+			errWrongRemote,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			defer teardown(t)
+
+			r := Resource{}
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+
+			if tc.wantErr == nil {
+				if err != nil {
+					t.Fatalf("\ngot:  %v\nwant: no error", err)
+				}
+			} else {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
+				}
 			}
 		})
 	}
