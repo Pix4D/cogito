@@ -10,11 +10,12 @@ import (
 	"testing"
 	"time"
 
-	gh "github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/help"
 )
 
 func TestGitHubStatusUseMockAPI(t *testing.T) {
-	cfg := gh.FakeTestCfg
+	cfg := help.FakeTestCfg
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, "Anything goes...")
@@ -26,7 +27,7 @@ func TestGitHubStatusUseMockAPI(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	status := gh.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+	status := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
 	err := status.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -35,13 +36,13 @@ func TestGitHubStatusUseMockAPI(t *testing.T) {
 }
 
 func TestGitHubStatusE2E(t *testing.T) {
-	cfg := gh.SkipTestIfNoEnvVars(t)
+	cfg := help.SkipTestIfNoEnvVars(t)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	status := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
 	err := status.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -50,7 +51,7 @@ func TestGitHubStatusE2E(t *testing.T) {
 }
 
 func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
-	cfg := gh.SkipTestIfNoEnvVars(t)
+	cfg := help.SkipTestIfNoEnvVars(t)
 	const readOnlyOwner = "octocat"
 	const readOnlyRepo = "Spoon-Knife"
 	const readOnlySHA = "d0dd1f61b33d64e29d8bc1372a94ef6a2fee76a9"
@@ -59,7 +60,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	const state = "success"
 
-	status := gh.NewStatus(gh.API, cfg.Token, readOnlyOwner, readOnlyRepo, context)
+	status := github.NewStatus(github.API, cfg.Token, readOnlyOwner, readOnlyRepo, context)
 
 	if err := status.CanReadRepo(); err != nil {
 		t.Fatalf("\ngot:  %v\nwant: no error", err)
@@ -67,7 +68,7 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 
 	err := status.Add(readOnlySHA, state, targetURL, desc)
 
-	var statusErr *gh.StatusError
+	var statusErr *github.StatusError
 	wantStatusCode := http.StatusNotFound
 	if errors.As(err, &statusErr) {
 		if statusErr.StatusCode != wantStatusCode {
@@ -83,12 +84,12 @@ func TestGitHubStatusCanDiagnoseReadOnlyUser(t *testing.T) {
 				statusErr.Error(), wantDiagnose)
 		}
 	} else {
-		t.Fatalf("got %v; want *gh.StatusError", reflect.TypeOf(err))
+		t.Fatalf("got %v; want *github.StatusError", reflect.TypeOf(err))
 	}
 }
 
 func TestUnderstandGitHubStatusFailures(t *testing.T) {
-	cfg := gh.SkipTestIfNoEnvVars(t)
+	cfg := help.SkipTestIfNoEnvVars(t)
 
 	var testCases = []struct {
 		name       string
@@ -112,10 +113,10 @@ func TestUnderstandGitHubStatusFailures(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			status := gh.NewStatus(gh.API, tc.token, tc.owner, tc.repo, "dummy")
+			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy")
 			err := status.Add(tc.sha, "dummy", "dummy", "dummy")
 
-			var statusErr *gh.StatusError
+			var statusErr *github.StatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode != tc.wantStatus {
 					t.Fatalf("status code: got %v (%v); want %v (%v)\n%v",
@@ -123,14 +124,14 @@ func TestUnderstandGitHubStatusFailures(t *testing.T) {
 						tc.wantStatus, http.StatusText(tc.wantStatus), err)
 				}
 			} else {
-				t.Fatalf("got %v; want *gh.StatusError", reflect.TypeOf(err))
+				t.Fatalf("got %v; want *github.StatusError", reflect.TypeOf(err))
 			}
 		})
 	}
 }
 
 func TestStatusValidate(t *testing.T) {
-	cfg := gh.SkipTestIfNoEnvVars(t)
+	cfg := help.SkipTestIfNoEnvVars(t)
 
 	var testCases = []struct {
 		name       string
@@ -146,7 +147,7 @@ func TestStatusValidate(t *testing.T) {
 	}
 
 	t.Run("happy path", func(t *testing.T) {
-		status := gh.NewStatus(gh.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
+		status := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, "dummy")
 
 		if err := status.CanReadRepo(); err != nil {
 			t.Fatalf("got: %v; want: no error", err)
@@ -155,11 +156,11 @@ func TestStatusValidate(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			status := gh.NewStatus(gh.API, tc.token, tc.owner, tc.repo, "dummy")
+			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy")
 
 			err := status.CanReadRepo()
 
-			var statusErr *gh.StatusError
+			var statusErr *github.StatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode != tc.wantStatus {
 					t.Fatalf("status code: got %v (%v); want %v (%v)\nerror: %v",
@@ -167,7 +168,7 @@ func TestStatusValidate(t *testing.T) {
 						tc.wantStatus, http.StatusText(tc.wantStatus), err)
 				}
 			} else {
-				t.Fatalf("got %v; want gh.StatusError", reflect.TypeOf(err))
+				t.Fatalf("got %v; want github.StatusError", reflect.TypeOf(err))
 			}
 		})
 	}

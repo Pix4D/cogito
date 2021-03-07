@@ -30,7 +30,7 @@ var (
 )
 
 func TestCheck(t *testing.T) {
-	cfg := github.FakeTestCfg
+	cfg := help.FakeTestCfg
 
 	var testCases = []struct {
 		name         string
@@ -109,7 +109,7 @@ func TestIn(t *testing.T) {
 }
 
 func TestOut(t *testing.T) {
-	cfg := github.FakeTestCfg
+	cfg := help.FakeTestCfg
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusCreated)
 		fmt.Fprintln(w, "Anything goes...")
