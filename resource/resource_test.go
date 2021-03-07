@@ -141,44 +141,36 @@ func TestOut(t *testing.T) {
 		in   in
 		want want
 	}{
-		{
-			"valid mandatory sources",
+		{"valid mandatory sources",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil},
 		},
-		{
-			"missing mandatory sources",
+		{"missing mandatory sources",
 			in{oc.Source{}, defParams, defEnv},
 			want{nil, nil, &missingSourceError{}},
 		},
-		{
-			"unknown source",
+		{"unknown source",
 			in{oc.Source{"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
 				defParams, defEnv},
 			want{nil, nil, &unknownSourceError{}},
 		},
-		{
-			"valid mandatory parameters",
+		{"valid mandatory parameters",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil},
 		},
-		{
-			"completely missing mandatory parameters",
+		{"completely missing mandatory parameters",
 			in{defSource, oc.Params{}, defEnv},
 			want{nil, nil, &missingParamError{}},
 		},
-		{
-			"invalid state parameter",
+		{"invalid state parameter",
 			in{defSource, oc.Params{"state": "hello"}, defEnv},
 			want{nil, nil, &invalidParamError{}},
 		},
-		{
-			"unknown parameter",
+		{"unknown parameter",
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, &unknownParamError{}},
 		},
-		{
-			"do not return a nil version the first time it runs (see Concourse PR #4442)",
+		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil},
 		},
