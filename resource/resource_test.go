@@ -184,6 +184,24 @@ func TestOut(t *testing.T) {
 				nil,
 			},
 		},
+		{"put step: default context",
+			in{defSource, defParams, defEnv},
+			want{
+				defVersion,
+				defMeta,
+				map[string]string{"context": defEnv.Get("BUILD_JOB_NAME")},
+				nil,
+			},
+		},
+		{"put step: optional: context",
+			in{defSource, oc.Params{"state": "error", "context": "bello"}, defEnv},
+			want{
+				defVersion,
+				defMeta,
+				map[string]string{"context": "bello"},
+				nil,
+			},
+		},
 	}
 
 	for _, tc := range testCases {

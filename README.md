@@ -113,7 +113,7 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 ## Optional
 
-- `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name` Default: empty (that is, the context will be: `job_name`).
+- `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
@@ -133,11 +133,13 @@ It is currently a no-op.
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
-## Parameters
+## Required
 
-### Required
+- `state`: The state to set. One of `error`, `failure`, `pending`, `success`.
 
-- `state`: The state to be set. One of `error`, `failure`, `pending`, `success`.
+## Optional:
+
+- `context`: The value of the non-prefix part of the context (see section [Effects on GitHub](#effects-on-github)). Default: `job_name`. See also the optional `context_prefix` in the [source configuration](#source-configuration).
 
 ## Note
 

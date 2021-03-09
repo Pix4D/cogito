@@ -30,11 +30,15 @@ var (
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
-	mandatoryParams = map[string]struct{}{
+	outMandatoryParams = map[string]struct{}{
 		"state": {},
 	}
 
-	validStates = map[string]struct{}{
+	outOptionalParams = map[string]struct{}{
+		"context": {},
+	}
+
+	outValidStates = map[string]struct{}{
 		"error":   {},
 		"failure": {},
 		"pending": {},
@@ -211,8 +215,13 @@ func (r *Resource) Out(
 	token, _ := source["access_token"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
-	context := job
-	if prefix, _ := source["context_prefix"].(string); prefix != "" {
+
+	context := job // default
+	if v, ok := params["context"].(string); ok {
+		context = v
+	}
+
+	if prefix, ok := source["context_prefix"].(string); ok {
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
@@ -261,7 +270,7 @@ func validateSources(source oc.Source) error {
 
 func outValidateParams(params oc.Params) error {
 	// Any missing parameter?
-	for wantP := range mandatoryParams {
+	for wantP := range outMandatoryParams {
 		if _, ok := params[wantP].(string); !ok {
 			return &missingParamError{wantP}
 		}
@@ -269,13 +278,15 @@ func outValidateParams(params oc.Params) error {
 
 	// Any invalid parameter?
 	state, _ := params["state"].(string)
-	if _, ok := validStates[state]; !ok {
+	if _, ok := outValidStates[state]; !ok {
 		return &invalidParamError{"state", state}
 	}
 
 	// Any unknown parameter?
 	for p := range params {
-		if _, ok := mandatoryParams[p]; !ok {
+		_, ok1 := outMandatoryParams[p]
+		_, ok2 := outOptionalParams[p]
+		if !ok1 && !ok2 {
 			return &unknownParamError{p}
 		}
 	}

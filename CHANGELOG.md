@@ -15,7 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Optional source configuration `context_prefix`, that will be prepended to the context. See [Effects on GitHub](README.md#effects-on-github) of the README.
   Thanks @tgolsson for the discussion (#24) and for the initial implementation (#25). Thanks @eitah for a similar discussion (#23).
-
+- Optional put step parameter `context`, that will override the default current job name. See [Effects on GitHub](README.md#effects-on-github) of the README.
+  Thanks @eitah for the discussion (#23).
 
 ## [v0.4.0] - 2021-03-05
 
