@@ -1,7 +1,6 @@
 // Package resource is a Concourse resource to update the GitHub status.
 //
 // See the README file for additional information.
-
 package resource
 
 import (
@@ -32,25 +31,25 @@ var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	mandatoryParams = map[string]struct{}{
-		"state": struct{}{},
+		"state": {},
 	}
 
 	validStates = map[string]struct{}{
-		"error":   struct{}{},
-		"failure": struct{}{},
-		"pending": struct{}{},
-		"success": struct{}{},
+		"error":   {},
+		"failure": {},
+		"pending": {},
+		"success": {},
 	}
 
 	mandatorySources = map[string]struct{}{
-		"owner":        struct{}{},
-		"repo":         struct{}{},
-		"access_token": struct{}{},
+		"owner":        {},
+		"repo":         {},
+		"access_token": {},
 	}
 
 	optionalSources = map[string]struct{}{
-		"log_level": struct{}{},
-		"log_url":   struct{}{},
+		"log_level": {},
+		"log_url":   {},
 	}
 )
 
@@ -218,12 +217,12 @@ func (r *Resource) Out(
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
 	// https://ci.example.com/teams/developers/pipelines/cognito/jobs/hello/builds/25
-	target_url := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
+	targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 		atc, team, pipeline, job, buildN)
 	description := "Build " + buildN
 	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
-		state, owner, repo, ref, context, target_url)
-	err = status.Add(ref, state, target_url, description)
+		state, owner, repo, ref, context, targetURL)
+	err = status.Add(ref, state, targetURL, description)
 	if err != nil {
 		return nil, nil, err
 	}

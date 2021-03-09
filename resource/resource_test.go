@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -28,7 +30,7 @@ var (
 )
 
 func TestCheck(t *testing.T) {
-	cfg := github.SkipTestIfNoEnvVars(t)
+	cfg := help.FakeTestCfg
 
 	var testCases = []struct {
 		name         string
@@ -39,10 +41,20 @@ func TestCheck(t *testing.T) {
 	}{
 		{"happy path",
 			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			defVersion, defVersions, nil},
+			defVersion,
+			defVersions,
+			nil},
 		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			oc.Version{}, defVersions, nil},
+			oc.Version{},
+			defVersions,
+			nil},
+		{"missing mandatory sources",
+			oc.Source{},
+			defVersion,
+			nil,
+			&missingSourceError{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -96,10 +108,18 @@ func TestIn(t *testing.T) {
 	}
 }
 
-// For the time being this is an end-to-end test only. Will add a fake version soon.
-// See README for how to enable end-to-end tests.
 func TestOut(t *testing.T) {
-	cfg := github.SkipTestIfNoEnvVars(t)
+	cfg := help.FakeTestCfg
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusCreated)
+		fmt.Fprintln(w, "Anything goes...")
+	}))
+	savedAPI := github.API
+	github.API = ts.URL
+	defer func() {
+		ts.Close()
+		github.API = savedAPI
+	}()
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
@@ -137,7 +157,6 @@ func TestOut(t *testing.T) {
 				defParams, defEnv},
 			want{nil, nil, &unknownSourceError{}},
 		},
-
 		{
 			"valid mandatory parameters",
 			in{defSource, defParams, defEnv},
@@ -158,7 +177,8 @@ func TestOut(t *testing.T) {
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, &unknownParamError{}},
 		},
-		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+		{
+			"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil},
 		},
@@ -166,7 +186,7 @@ func TestOut(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, ssh_remote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}
@@ -176,7 +196,7 @@ func TestOut(t *testing.T) {
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.want.err)
 			if gotErrType != wantErrType {
-				t.Fatalf("err: got %v (%v);\nwant %v (%v)", gotErrType, err, wantErrType, tc.want.err)
+				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)", gotErrType, err, wantErrType, tc.want.err)
 			}
 
 			if diff := cmp.Diff(tc.want.version, version); diff != "" {
@@ -185,6 +205,60 @@ func TestOut(t *testing.T) {
 
 			if diff := cmp.Diff(tc.want.metadata, metadata); diff != "" {
 				t.Errorf("metadata: (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestOutE2E(t *testing.T) {
+	cfg := help.SkipTestIfNoEnvVars(t)
+
+	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
+	defParams := oc.Params{"state": "error"}
+	defDir := "a-repo"
+
+	type in struct {
+		source oc.Source
+		params oc.Params
+		env    oc.Environment
+	}
+	var testCases = []struct {
+		name    string
+		in      in
+		wantErr error
+	}{
+		{"backend reports success",
+			in{defSource, defParams, defEnv},
+			nil,
+		},
+		{"backend reports failure",
+			in{
+				oc.Source{
+					"access_token": cfg.Token,
+					"owner":        cfg.Owner,
+					"repo":         "does-not-exists-really"},
+				defParams,
+				defEnv},
+			errWrongRemote,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			defer teardown(t)
+
+			r := Resource{}
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+
+			if tc.wantErr == nil {
+				if err != nil {
+					t.Fatalf("\ngot:  %v\nwant: no error", err)
+				}
+			} else {
+				if !errors.Is(err, tc.wantErr) {
+					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
+				}
 			}
 		})
 	}
@@ -228,10 +302,10 @@ func TestRepoDirMatches(t *testing.T) {
 	testCases := []testCase{
 		{"dir is not a repo", "not-a-repo", "dummyurl", os.ErrNotExist},
 		{"bad .git/config", "repo-bad-git-config", "dummyurl", errKeyNotFound},
-		{"repo with wrong HTTPS remote", "a-repo", https_remote("owner", "repo"), errWrongRemote},
-		{"repo with wrong SSH remote", "a-repo", ssh_remote("owner", "repo"), errWrongRemote},
-		{"repo with good SSH remote", "a-repo", ssh_remote(wantOwner, wantRepo), nil},
-		{"repo with good HTTPS remote", "a-repo", https_remote(wantOwner, wantRepo), nil},
+		{"repo with wrong HTTPS remote", "a-repo", httpsRemote("owner", "repo"), errWrongRemote},
+		{"repo with wrong SSH remote", "a-repo", sshRemote("owner", "repo"), errWrongRemote},
+		{"repo with good SSH remote", "a-repo", sshRemote(wantOwner, wantRepo), nil},
+		{"repo with good HTTPS remote", "a-repo", httpsRemote(wantOwner, wantRepo), nil},
 	}
 
 	for _, tc := range testCases {
@@ -315,11 +389,11 @@ func setup(
 	return inDir, teardown
 }
 
-func ssh_remote(owner, repo string) string {
+func sshRemote(owner, repo string) string {
 	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
 }
 
-func https_remote(owner, repo string) string {
+func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
