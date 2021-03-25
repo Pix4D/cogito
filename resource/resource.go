@@ -4,13 +4,11 @@
 package resource
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
@@ -240,15 +238,11 @@ func (r *Resource) Out(
 		atc, team, pipeline, job, buildN)
 
 	if instanceVars != "" {
-		instanceUrl, err := buildInstanceVarsURL(instanceVars)
-		if err != nil {
-			return nil, nil, err
-		}
-		target_url = fmt.Sprintf("%s?%s", target_url, instanceUrl)
+		targetURL = fmt.Sprintf("%s?vars=%s", targetURL, url.QueryEscape(instanceVars))
 	}
 
 	description := "Build " + buildN
-	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
+	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, targetURL %v",
 		state, owner, repo, ref, context, targetURL)
 	err = status.Add(ref, state, targetURL, description)
 	if err != nil {
@@ -437,19 +431,4 @@ func GitCommit(repoPath string) (string, error) {
 	}
 
 	return sha, nil
-}
-
-func buildInstanceVarsURL(instanceVarStr string) (string, error) {
-	var varsMap map[string]interface{}
-	err := json.Unmarshal([]byte(instanceVarStr), &varsMap)
-	if err != nil {
-		return "", err
-	}
-	var vars []string
-	for k, v := range varsMap {
-		vars = append(vars, fmt.Sprintf("vars.%s=\"%s\"",
-			url.QueryEscape(k), url.QueryEscape(v.(string))))
-	}
-	sort.Strings(vars)
-	return strings.Join(vars, "&"), nil
 }
