@@ -335,7 +335,7 @@ func repodirMatches(dir, owner, repo string) error {
 	right := []string{gu.Host, gu.Owner, gu.Repo}
 	for i, l := range left {
 		r := right[i]
-		if strings.ToLower(l) != strings.ToLower(r) {
+		if !strings.EqualFold(l, r) {
 			return fmt.Errorf("remote: %v: got: %q; want: %q: %w", remote, r, l, errWrongRemote)
 		}
 	}
