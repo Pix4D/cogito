@@ -7,7 +7,6 @@ package github
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -135,61 +134,15 @@ func (s status) Add(sha, state, targetURL, description string) error {
 		// Happy path
 		return nil
 	case http.StatusNotFound:
-		msg := disambiguateError(s)
+		msg := fmt.Sprintf(
+			"\nOne of the following happened:\n"+
+				"\t1. The repo https://github.com/%s doesn't exist\n"+
+				"\t2. The user who issued the token doesn't have write access to the repo\n"+
+				"\t3. The token doesn't have scope repo:status\n", path.Join(s.owner, s.repo),
+		)
 		return &StatusError{req.Method + " " + url + msg + OAuthInfo, resp.StatusCode, string(respBody)}
 	default:
 		// Any other error
 		return &StatusError{req.Method + " " + url + OAuthInfo, resp.StatusCode, string(respBody)}
 	}
-}
-
-// We might get 404 Not Found for two completely different reasons:
-// 1. The repository doesn't exist. This makes sense.
-// 2. The user whose token we are using doesn't have write access to the repo.
-//    This is a bug, the API should return 401 Unauthorized instead. Doing so would not be a leak,
-//    since we reach this point ONLY if we are authorized.
-// So we go through this machinery to provide better feedback to the user, attempting to
-// disambiguate.
-func disambiguateError(s status) string {
-	err := s.CanReadRepo()
-	if err == nil {
-		return ": The user with this token doesn't have write access to the repo."
-	}
-	var statusErr *StatusError
-	if errors.As(err, &statusErr) {
-		if statusErr.StatusCode == http.StatusNotFound {
-			return ": The repo doesn't exist."
-		}
-	}
-	return ": Could not disambiguate this error."
-}
-
-// CanReadRepo validates if the token has read access to the repo.
-// This is a workaround to troubleshoot certain errors.
-func (s status) CanReadRepo() error {
-	// API: GET /repos/:owner/:repo
-	url := s.server + path.Join("/repos", s.owner, s.repo)
-
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return fmt.Errorf("create http request: %w", err)
-	}
-	req.Header.Set("Authorization", "token "+s.token)
-	req.Header.Set("Accept", "application/vnd.github.v3+json")
-	req.Header.Set("Content-Type", "application/json")
-
-	// By default there is no timeout, so the call could hang forever.
-	client := &http.Client{Timeout: time.Second * 30}
-	resp, err := client.Do(req)
-	if err != nil {
-		return fmt.Errorf("http client Do: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBody, _ := ioutil.ReadAll(resp.Body)
-
-	if resp.StatusCode != http.StatusOK {
-		return &StatusError{req.Method + " " + url, resp.StatusCode, string(respBody)}
-	}
-	return nil
 }
