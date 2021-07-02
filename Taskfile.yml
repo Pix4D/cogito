@@ -45,10 +45,6 @@ tasks:
         sh: gopass show cogito/test_commit_sha
       COGITO_TEST_OAUTH_TOKEN:
         sh: gopass show cogito/test_oauth_token
-      COGITO_TEST_READ_ONLY_COMMIT_SHA:
-        sh: gopass show cogito/test_read_only_commit_sha
-      COGITO_TEST_READ_ONLY_REPO_NAME:
-        sh: gopass show cogito/test_read_only_repo_name
       COGITO_TEST_REPO_NAME:
         sh: gopass show cogito/test_repo_name
       COGITO_TEST_REPO_OWNER:
