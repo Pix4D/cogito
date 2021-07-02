@@ -348,7 +348,7 @@ func TestRepoDirMatches(t *testing.T) {
 		{"dir is not a repo", "not-a-repo", "dummyurl", os.ErrNotExist},
 		{"bad .git/config", "repo-bad-git-config", "dummyurl", errKeyNotFound},
 		{"repo with wrong HTTPS remote", "a-repo", httpsRemote("owner", "repo"), errWrongRemote},
-		{"repo with wrong SSH remote", "a-repo", sshRemote("owner", "repo"), errWrongRemote},
+		{"repo with wrong SSH remote or wrong source config", "a-repo", sshRemote("owner", "repo"), errWrongRemote},
 		{"repo with good SSH remote", "a-repo", sshRemote(wantOwner, wantRepo), nil},
 		{"repo with good HTTPS remote", "a-repo", httpsRemote(wantOwner, wantRepo), nil},
 	}

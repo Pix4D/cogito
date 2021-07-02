@@ -336,7 +336,9 @@ func repodirMatches(dir, owner, repo string) error {
 	for i, l := range left {
 		r := right[i]
 		if !strings.EqualFold(l, r) {
-			return fmt.Errorf("remote: %v: got: %q; want: %q: %w", remote, r, l, errWrongRemote)
+			return fmt.Errorf("resource source configuration and git repository are incompatible.\nGit remote: %q\n"+
+				"Resource config: host: github.com, owner: %q, repo: %q. %w", remote, owner, repo, errWrongRemote,
+			)
 		}
 	}
 	return nil
