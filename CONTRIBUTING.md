@@ -46,10 +46,9 @@ We require environment variables (as opposed to using a configuration file) to p
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
 
-## Default test repositories
+## Default test repository
 
 * https://github.com/Pix4D/cogito-test-read-write
-* https://github.com/Pix4D/cogito-test-read-only
 
 ## Secure handling of the GitHub OAuth token
 
@@ -138,8 +137,6 @@ cogito/
 ├── docker_username
 ├── test_commit_sha
 ├── test_oauth_token
-├── test_read_only_commit_sha
-├── test_read_only_repo_name
 ├── test_repo_name
 └── test_repo_owner
 ```
