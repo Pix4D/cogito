@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.1] - 2021-07-06
+
+### Changed
+
+- give better error message to the user when the resource is misconfigured
+
+### Fixed
+
+- remove flawed logic attempting to find the real cause when receiving an opaque GitHub API error. Instead, we now print to the user all the possible reasons.
+
 ## [v0.5.0] - 2021-03-09
 
 ### Changed
