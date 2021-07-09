@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
 	"path/filepath"
 	"strings"
 
@@ -230,11 +231,18 @@ func (r *Resource) Out(
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
+	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
+
 	// https://ci.example.com/teams/developers/pipelines/cognito/jobs/hello/builds/25
 	targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 		atc, team, pipeline, job, buildN)
+
+	if instanceVars != "" {
+		targetURL = fmt.Sprintf("%s?vars=%s", targetURL, url.QueryEscape(instanceVars))
+	}
+
 	description := "Build " + buildN
-	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
+	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, targetURL %v",
 		state, owner, repo, ref, context, targetURL)
 	err = status.Add(ref, state, targetURL, description)
 	if err != nil {
