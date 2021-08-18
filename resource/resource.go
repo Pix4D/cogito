@@ -321,6 +321,12 @@ func repodirMatches(dir, owner, repo string) error {
 		return fmt.Errorf("parsing .git/config: %w", err)
 	}
 
+	// .git/config contains a section like:
+	//
+	// [remote "origin"]
+	//     url = git@github.com:Pix4D/cogito.git
+	//     fetch = +refs/heads/*:refs/remotes/origin/*
+	//
 	const section = `remote "origin"`
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
