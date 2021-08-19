@@ -375,6 +375,11 @@ func TestRepoDirMatches(t *testing.T) {
 			httpsRemote(wantOwner, wantRepo),
 			nil,
 		},
+		{"repo with good HTTP remote",
+			"a-repo",
+			httpRemote(wantOwner, wantRepo),
+			nil,
+		},
 		{"invalid git pseudo URL in .git/config",
 			"a-repo",
 			"foo://bar",
@@ -471,6 +476,10 @@ func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
+func httpRemote(owner, repo string) string {
+	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
+}
+
 func TestParseGitPseudoURL(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -500,6 +509,16 @@ func TestParseGitPseudoURL(t *testing.T) {
 		},
 		{"invalid HTTPS URL",
 			"https://github.com:Pix4D/cogito.git",
+			gitURL{},
+			errInvalidURL,
+		},
+		{"valid HTTP URL",
+			"http://github.com/Pix4D/cogito.git",
+			gitURL{"http", "github.com", "Pix4D", "cogito"},
+			nil,
+		},
+		{"invalid HTTP URL",
+			"http://github.com:Pix4D/cogito.git",
 			gitURL{},
 			errInvalidURL,
 		},
