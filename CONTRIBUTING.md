@@ -23,7 +23,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 Have a look at the [task documentation][Task], then run:
 
-```console
+```
 $ task --list
 ```
 
@@ -33,7 +33,7 @@ The Taskfile includes a `test` target, and tests are also run inside the Docker 
 
 Run the default tests:
 
-```console
+```
 $ task test
 ```
 

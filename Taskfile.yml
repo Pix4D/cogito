@@ -23,6 +23,7 @@ tasks:
   default:
     deps: [test]
     desc: Sensible defaults if you invoke `task` without arguments.
+
   ci-init:
     desc: Useful only when running under CI.
     cmds:
@@ -30,11 +31,13 @@ tasks:
       - cmd: echo
         silent: true
       - cmd: go mod download
+
   test:
     desc: Run the tests.
     cmds:
       - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
       - go tool cover -html=coverage.out -o coverage.html
+
   test-e2e:
     desc: Run also the e2e tests.
     cmds:
@@ -49,11 +52,13 @@ tasks:
         sh: gopass show cogito/test_repo_name
       COGITO_TEST_REPO_OWNER:
         sh: gopass show cogito/test_repo_owner
+
   copydir:
     desc: Build copydir.
     dir: bin
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
+
   build:
     deps: [copydir]
     desc: Build on the local machine.
@@ -63,6 +68,7 @@ tasks:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/in
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
+
   docker-login:
     silent: true
     cmds:
@@ -73,6 +79,7 @@ tasks:
         sh: echo ${DOCKER_TOKEN:-$(gopass show cogito/docker_token)}
       DOCKER_USERNAME:
         sh: echo ${DOCKER_USERNAME:-$(gopass show cogito/docker_username)}
+
   docker-build:
     deps: [docker-login]
     desc: Build the Docker image.
@@ -80,6 +87,7 @@ tasks:
       - docker build --build-arg BUILD_INFO --tag $DOCKER_IMAGE .
     env:
       BUILD_INFO: "{{.BUILD_INFO}}"
+
   docker-smoke:
     desc: Simple smoke test of the Docker image.
     cmds:
@@ -89,6 +97,7 @@ tasks:
       - echo
     vars:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
+
   docker-push:
     deps: [docker-login]
     cmds:
