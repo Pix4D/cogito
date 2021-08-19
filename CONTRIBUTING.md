@@ -46,6 +46,27 @@ We require environment variables (as opposed to using a configuration file) to p
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
 
+Run all the tests:
+```
+$ task test-e2e
+```
+
+## Running a specific end-to-end test
+
+Use the `test:env` task target, that runs a shell with available all the secrets needed for the e2e tests.
+
+Run all the subtests of a table-driven test:
+
+```
+$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures'
+```
+
+Run an individual subtest of a table-driven test:
+
+```
+$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures/non_existing_SHA:_Unprocessable_Entity'
+```
+
 ## Default test repository
 
 * https://github.com/Pix4D/cogito-test-read-write
