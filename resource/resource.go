@@ -351,15 +351,16 @@ func repodirMatches(dir, owner, repo string) error {
 }
 
 type gitURL struct {
-	Scheme string // "ssh" or "https"
+	Scheme string // "ssh", "https" or "http"
 	Host   string
 	Owner  string
 	Repo   string
 }
 
-// Two types of pseudo URLs:
+// Three types of pseudo URLs:
 //     git@github.com:Pix4D/cogito.git
 // https://github.com/Pix4D/cogito.git
+//  http://github.com/Pix4D/cogito.git
 func parseGitPseudoURL(URL string) (gitURL, error) {
 	var path string
 	gu := gitURL{}
