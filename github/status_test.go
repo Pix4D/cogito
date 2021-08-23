@@ -60,15 +60,15 @@ func TestUnderstandGitHubStatusFailures(t *testing.T) {
 		sha        string
 		wantStatus int
 	}{
-		{"bad token -> Unauthorized",
+		{"bad token: Unauthorized",
 			"bad-token", cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnauthorized},
-		{"non existing repo -> Not Found",
+		{"non existing repo: Not Found",
 			cfg.Token, cfg.Owner, "non-existing-really", "dummy-sha", http.StatusNotFound},
-		{"bad SHA -> Unprocessable Entity",
+		{"bad SHA: Unprocessable Entity",
 			cfg.Token, cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnprocessableEntity},
-		{"tag instead of SHA -> Unprocessable Entity",
+		{"tag instead of SHA: Unprocessable Entity",
 			cfg.Token, cfg.Owner, cfg.Repo, "v0.0.2", http.StatusUnprocessableEntity},
-		{"non existing SHA -> Unprocessable Entity",
+		{"non existing SHA: Unprocessable Entity",
 			cfg.Token, cfg.Owner, cfg.Repo, "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822", http.StatusUnprocessableEntity},
 	}
 

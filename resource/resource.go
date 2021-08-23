@@ -321,6 +321,12 @@ func repodirMatches(dir, owner, repo string) error {
 		return fmt.Errorf("parsing .git/config: %w", err)
 	}
 
+	// .git/config contains a section like:
+	//
+	// [remote "origin"]
+	//     url = git@github.com:Pix4D/cogito.git
+	//     fetch = +refs/heads/*:refs/remotes/origin/*
+	//
 	const section = `remote "origin"`
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
@@ -345,15 +351,16 @@ func repodirMatches(dir, owner, repo string) error {
 }
 
 type gitURL struct {
-	Scheme string // "ssh" or "https"
+	Scheme string // "ssh", "https" or "http"
 	Host   string
 	Owner  string
 	Repo   string
 }
 
-// Two types of pseudo URLs:
+// Three types of pseudo URLs:
 //     git@github.com:Pix4D/cogito.git
 // https://github.com/Pix4D/cogito.git
+//  http://github.com/Pix4D/cogito.git
 func parseGitPseudoURL(URL string) (gitURL, error) {
 	var path string
 	gu := gitURL{}
@@ -367,6 +374,9 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 	} else if strings.HasPrefix(URL, "https://") {
 		gu.Scheme = "https"
 		path = URL[8:]
+	} else if strings.HasPrefix(URL, "http://") {
+		gu.Scheme = "http"
+		path = URL[7:]
 	} else {
 		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
 	}

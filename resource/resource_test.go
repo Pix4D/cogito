@@ -345,12 +345,46 @@ func TestRepoDirMatches(t *testing.T) {
 		wantErr   error
 	}
 	testCases := []testCase{
-		{"dir is not a repo", "not-a-repo", "dummyurl", os.ErrNotExist},
-		{"bad .git/config", "repo-bad-git-config", "dummyurl", errKeyNotFound},
-		{"repo with wrong HTTPS remote", "a-repo", httpsRemote("owner", "repo"), errWrongRemote},
-		{"repo with wrong SSH remote or wrong source config", "a-repo", sshRemote("owner", "repo"), errWrongRemote},
-		{"repo with good SSH remote", "a-repo", sshRemote(wantOwner, wantRepo), nil},
-		{"repo with good HTTPS remote", "a-repo", httpsRemote(wantOwner, wantRepo), nil},
+		{"dir is not a repo",
+			"not-a-repo",
+			"dummyurl",
+			os.ErrNotExist,
+		},
+		{"bad .git/config",
+			"repo-bad-git-config",
+			"dummyurl",
+			errKeyNotFound,
+		},
+		{"repo with wrong HTTPS remote",
+			"a-repo",
+			httpsRemote("owner", "repo"),
+			errWrongRemote,
+		},
+		{"repo with wrong SSH remote or wrong source config",
+			"a-repo",
+			sshRemote("owner", "repo"),
+			errWrongRemote,
+		},
+		{"repo with good SSH remote",
+			"a-repo",
+			sshRemote(wantOwner, wantRepo),
+			nil,
+		},
+		{"repo with good HTTPS remote",
+			"a-repo",
+			httpsRemote(wantOwner, wantRepo),
+			nil,
+		},
+		{"repo with good HTTP remote",
+			"a-repo",
+			httpRemote(wantOwner, wantRepo),
+			nil,
+		},
+		{"invalid git pseudo URL in .git/config",
+			"a-repo",
+			"foo://bar",
+			errInvalidURL,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -442,6 +476,10 @@ func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
+func httpRemote(owner, repo string) string {
+	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
+}
+
 func TestParseGitPseudoURL(t *testing.T) {
 	testCases := []struct {
 		name    string
@@ -449,13 +487,41 @@ func TestParseGitPseudoURL(t *testing.T) {
 		wantGU  gitURL
 		wantErr error
 	}{
-		{"totally invalid URL", "hello", gitURL{}, errInvalidURL},
-		{"valid SSH URL", "git@github.com:Pix4D/cogito.git",
-			gitURL{"ssh", "github.com", "Pix4D", "cogito"}, nil},
-		{"invalid SSH URL", "git@github.com/Pix4D/cogito.git", gitURL{}, errInvalidURL},
-		{"valid HTTP URL", "https://github.com/Pix4D/cogito.git",
-			gitURL{"https", "github.com", "Pix4D", "cogito"}, nil},
-		{"invalid HTTP URL", "https://github.com:Pix4D/cogito.git", gitURL{}, errInvalidURL},
+		{"totally invalid URL",
+			"hello",
+			gitURL{},
+			errInvalidURL,
+		},
+		{"valid SSH URL",
+			"git@github.com:Pix4D/cogito.git",
+			gitURL{"ssh", "github.com", "Pix4D", "cogito"},
+			nil,
+		},
+		{"invalid SSH URL",
+			"git@github.com/Pix4D/cogito.git",
+			gitURL{},
+			errInvalidURL,
+		},
+		{"valid HTTPS URL",
+			"https://github.com/Pix4D/cogito.git",
+			gitURL{"https", "github.com", "Pix4D", "cogito"},
+			nil,
+		},
+		{"invalid HTTPS URL",
+			"https://github.com:Pix4D/cogito.git",
+			gitURL{},
+			errInvalidURL,
+		},
+		{"valid HTTP URL",
+			"http://github.com/Pix4D/cogito.git",
+			gitURL{"http", "github.com", "Pix4D", "cogito"},
+			nil,
+		},
+		{"invalid HTTP URL",
+			"http://github.com:Pix4D/cogito.git",
+			gitURL{},
+			errInvalidURL,
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
