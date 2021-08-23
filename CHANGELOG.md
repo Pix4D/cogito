@@ -7,10 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED [v0.6.0] - 2021-08-xx
 
+### Added
+
+- Documentation: more details about integration tests and explain how to test instanced pipelines.
+
 ### Changed
 
 - Allow `http` schema in the URI of the git resource (in addition to `https` and `ssh`). This change is transparent to the user and allows to use a HTTP-only git proxy of GitHub.
   Thanks @lsjostro for the initial implementation (#27).
+- Better log messages for Info and Debug level.
+
 
 ## [v0.5.1] - 2021-07-06
 

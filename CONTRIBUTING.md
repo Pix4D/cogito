@@ -16,7 +16,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 ## Optional
 
-* [gopass] to securely store secrets for end-to-end tests.
+* [gopass] to securely store secrets for integration tests.
 * [gotestsum], for more human-friendly test output. If found in `$PATH`, it will be used in place of `go test`.
 
 # Using Task (replacement of make)
@@ -37,35 +37,23 @@ Run the default tests:
 $ task test
 ```
 
-# The end-to-end tests
+# Integration tests
 
-The end-to-end tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
+there are two types of integration tests:
+
+* tests against GitHub
+* tests the Docker image as resource inside Concourse
+
+# Integration tests against GitHub
+
+The integration tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
 
 We require environment variables (as opposed to using a configuration file) to pass test configuration. The reason is twofold:
 
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
 
-Run all the tests:
-```
-$ task test-e2e
-```
-
-## Running a specific end-to-end test
-
-Use the `test:env` task target, that runs a shell with available all the secrets needed for the e2e tests.
-
-Run all the subtests of a table-driven test:
-
-```
-$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures'
-```
-
-Run an individual subtest of a table-driven test:
-
-```
-$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures/non_existing_SHA:_Unprocessable_Entity'
-```
+The following sections contain first instructions for the setup, then instructions on how to run the tests.
 
 ## Default test repository
 
@@ -162,19 +150,35 @@ cogito/
 └── test_repo_owner
 ```
 
-## Running the end-to-end tests
+## Running the integration tests
 
-We are finally ready to run also the end-to-end tests:
+We are finally ready to run also the integration tests:
 
-```console
-$ task test
+```
+$ task test-e2e
 ```
 
-The end-to-end tests have the following logic:
+The integration tests have the following logic:
 
 * If none of the environment variables are set, we skip the test.
 * If all of the environment variables are set, we run the test.
 * If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
+
+## Running a specific end-to-end test
+
+Use the `test:env` task target, that runs a shell with available all the secrets needed for the e2e tests.
+
+Run all the subtests of a table-driven test:
+
+```
+$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures'
+```
+
+Run an individual subtest of a table-driven test:
+
+```
+$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures/non_existing_SHA:_Unprocessable_Entity'
+```
 
 # Building and publishing the image
 
@@ -218,6 +222,14 @@ Push the Docker image. This will always generate a Docker image with a tag corre
 $ task docker-push
 ```
 
+# Integration tests: test the Docker image as resource inside Concourse
+
+Have a look at the sample pipeline in [pipelines/cogito.yml](pipelines/cogito.yml).
+
+You can use my other project [concourse-in-a-box](https://github.com/marco-m/concourse-in-a-box), an all-in-one Concourse CI/CD system based on Docker Compose, with Minio S3-compatible storage and HashiCorp Vault secret manager, to easily test the cogito image.
+
+See also the next section.
+
 # Suggestions for quick iterations during development
 
 These suggestions apply to the development of any Concourse resource.
@@ -226,18 +238,66 @@ After the local tests are passing, the quickest way to test in a pipeline the fr
 
 For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
 
-```console
-$ task docker-build &&
-  task docker-push &&
-  fly -t devs check-resource-type -r cogito-test/cogito &&
+```
+$ fly -t cogito login --concourse-url=http://localhost:8080 --open-browser
+```
+
+```
+$ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
+  -y github-owner=(gopass show cogito/test_repo_owner) \
+  -y repo-name=(gopass show cogito/test_repo_name) \
+  -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
+  -y tag=(git branch --show-current) \
+  -y branch=stable
+```
+
+```
+$ task docker-build docker-push &&
+  fly -t cogito check-resource-type -r cogito-test/cogito &&
   sleep 5 &&
-  fly -t devs trigger-job -j cogito-test/autocat -w
+  fly -t cogito trigger-job -j cogito-test/autocat -w
 ```
 
 On each `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
 
 ```text
 This is the Cogito GitHub status resource. Tag: latest, commit: 91f64c0, date: 2019-10-09
+```
+
+## Testing instanced vars
+
+(Instanced vars)[https://concourse-ci.org/instanced-pipelines.html] is a feature introduced in Concourse 7.4 to group together pipelines generated from the same pipeline configuration file.
+
+With reference to the sample pipeline in [pipelines/cogito.yml](pipelines/cogito.yml), you can use the `((branch))` variable as an instanced var:
+
+Pipeline instance 1:
+
+```
+$ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
+  -y github-owner=(gopass show cogito/test_repo_owner) \
+  -y repo-name=(gopass show cogito/test_repo_name) \
+  -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
+  -y tag=(git branch --show-current) \
+  --instance-var branch=stable
+```
+
+Pipeline instance 2:
+
+```
+$ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
+  -y github-owner=(gopass show cogito/test_repo_owner) \
+  -y repo-name=(gopass show cogito/test_repo_name) \
+  -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
+  -y tag=(git branch --show-current) \
+  --instance-var branch=another-branch
+```
+
+## refreshing the resource image when using instanced vars
+
+```
+$ task docker-build docker-push &&
+    fly -t cogito check-resource-type -r cogito-test/branch:stable/cogito &&
+    fly -t cogito check-resource-type -r cogito-test/branch:another-branch/cogito
 ```
 
 # License
