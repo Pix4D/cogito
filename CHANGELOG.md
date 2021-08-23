@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Documentation: more details about integration tests and explain how to test instanced pipelines.
+- Support Concourse 7.4 [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html): the "details" URL in the GitHub status commit will link to the correct instanced pipeline.
+  Thanks @lsjostro for the initial implementation (#26).
 
 ### Changed
 
