@@ -39,7 +39,7 @@ $ task test
 
 # Integration tests
 
-there are two types of integration tests:
+There are two types of integration tests:
 
 * tests against GitHub
 * tests the Docker image as resource inside Concourse
@@ -155,7 +155,7 @@ cogito/
 We are finally ready to run also the integration tests:
 
 ```
-$ task test-e2e
+$ task test-integration
 ```
 
 The integration tests have the following logic:
@@ -166,7 +166,7 @@ The integration tests have the following logic:
 
 ## Running a specific end-to-end test
 
-Use the `test:env` task target, that runs a shell with available all the secrets needed for the e2e tests.
+Use the `test:env` task target, that runs a shell with available all the secrets needed for the integration tests.
 
 Run all the subtests of a table-driven test:
 

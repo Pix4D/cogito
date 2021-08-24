@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Allow `http` schema in the URI of the git resource (in addition to `https` and `ssh`). This change is transparent to the user and allows to use a HTTP-only git proxy of GitHub.
   Thanks @lsjostro for the initial implementation (#27).
 - Better log messages for Info and Debug level.
-
+- Renamed e2e tests to integration tests.
 
 ## [v0.5.1] - 2021-07-06
 
@@ -32,7 +32,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- tests: where it makes sense, remove the need to perform E2E tests. For the `resource` package, total coverage stayed the same, but the non-E2E coverage went from 53% to 89%.
+- tests: where it makes sense, remove the need to perform integration tests. For the `resource` package, total coverage stayed the same, but the non-integration coverage went from 53% to 89%.
 
 ### Added
 
@@ -55,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Go 1.16
 - Task > 3
-- Moved from `envchain` to `gopass` to store secrets for E2E tests (see file `CONTRIBUTING.md`).
+- Moved from `envchain` to `gopass` to store secrets for integration tests (see file `CONTRIBUTING.md`).
 - Documentation enhancements.
 
 ### Added
@@ -92,7 +92,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- e2e tests are now fully parametric, so that any contributor can run their e2e tests.
+- integration tests are now fully parametric, so that any contributor can run their integration tests.
 - Split contributing and developing information from README into their own DEVELOPMENT (then CONTRIBUTING) file.
 - Simplify testdata
 

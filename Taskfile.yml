@@ -52,8 +52,8 @@ tasks:
       COGITO_TEST_REPO_OWNER:
         sh: gopass show cogito/test_repo_owner
 
-  test-e2e:
-    desc: Run also the e2e tests.
+  test-integration:
+    desc: Run also the integration tests.
     cmds:
       - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
       - go tool cover -html=coverage.out -o coverage.html
