@@ -7,6 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -235,9 +237,8 @@ func (r *Resource) Out(
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
-	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
-	targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
-		atc, team, pipeline, job, buildN)
+	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
+	targetURL := targetURL(atc, team, pipeline, job, buildN, instanceVars)
 	description := "Build " + buildN
 	log.Debugf(`out: posting:
   state: %v
@@ -245,8 +246,10 @@ func (r *Resource) Out(
   repo: %v
   ref: %v
   context: %v
-  targetURL: %v`,
-		state, owner, repo, ref, context, targetURL)
+  targetURL: %v
+  description: %v`,
+		state, owner, repo, ref, context, targetURL, description)
+
 	err = status.Add(ref, state, targetURL, description)
 	if err != nil {
 		return nil, nil, err
@@ -257,6 +260,22 @@ func (r *Resource) Out(
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
 	return dummyVersion, metadata, nil
+}
+
+func targetURL(atc, team, pipeline, job, buildN, instanceVars string) string {
+	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
+
+	targetURL := atc + path.Join("/teams", team, "pipelines", pipeline, "jobs", job, "builds", buildN)
+	// targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
+	// 	atc, team, pipeline, job, buildN)
+
+	// BUILD_PIPELINE_INSTANCE_VARS: {"branch":"stable"}
+	// https://ci.example.com/teams/main/pipelines/cogito/jobs/autocat/builds/3?vars=%7B%22branch%22%3A%22stable%22%7D
+	if instanceVars != "" {
+		targetURL = fmt.Sprintf("%s?vars=%s", targetURL, url.QueryEscape(instanceVars))
+	}
+
+	return targetURL
 }
 
 func stringify1(xs map[string]interface{}) string {

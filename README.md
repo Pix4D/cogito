@@ -10,6 +10,7 @@ Written in Go, it has the following characteristics:
 - Extensive test suite.
 - Autodiscovery of configuration parameters.
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
+- Supports Concourse 7.4 [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
 - Helpful error messages when something goes wrong with the GitHub API.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
 - Boilerplate code generated with [ofcourse](https://github.com/cloudboss/ofcourse).

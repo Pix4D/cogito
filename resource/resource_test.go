@@ -309,6 +309,62 @@ func TestOutE2E(t *testing.T) {
 	}
 }
 
+func TestTargetURL(t *testing.T) {
+	testCases := map[string]struct {
+		atc          string
+		team         string
+		pipeline     string
+		job          string
+		buildN       string
+		instanceVars string
+		want         string
+	}{
+		"all defaults": {
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42",
+		},
+		"instanced vars 1": {
+			instanceVars: `{"branch":"stable"}`,
+			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
+		},
+		"instanced vars 2": {
+			instanceVars: `{"branch":"stable","foo":"bar"}`,
+			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
+		},
+	}
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			if tc.want == "" {
+				t.Fatal("tc.want: empty")
+			}
+
+			atc := "https://ci.example.com"
+			if tc.atc != "" {
+				atc = tc.atc
+			}
+			team := "devs"
+			if tc.team != "" {
+				team = tc.team
+			}
+			pipeline := "magritte"
+			if tc.pipeline != "" {
+				pipeline = tc.pipeline
+			}
+			job := "paint"
+			if tc.job != "" {
+				job = tc.job
+			}
+			buildN := "42"
+			if tc.buildN != "" {
+				buildN = tc.buildN
+			}
+
+			if got := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); got != tc.want {
+				t.Fatalf("\ngot:  %s\nwant: %s", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestCollectInputDirs(t *testing.T) {
 	var testCases = []struct {
 		name    string
