@@ -35,7 +35,7 @@ resource_types:
 
 - name: cogito
   type: registry-image
-  check_every: 1h
+  check_every: 24h
   source:
     repository: pix4d/cogito
     tag: ((tag))
@@ -45,10 +45,10 @@ resources:
 - name: gh-status
   type: cogito
   # Since check is a no-op, we check infrequently to reduce load on the system.
-  check_every: 1h
+  check_every: 24h
   source:
     # Optional, for debugging only.
-    # log_level: debug
+    log_level: debug
     # log_url: ((concourse_cognito_logs))
     owner: ((github-owner))
     repo: ((repo-name))

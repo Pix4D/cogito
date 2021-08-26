@@ -225,8 +225,8 @@ func TestOut(t *testing.T) {
 						}
 					}
 				}
-
 			}))
+
 			savedAPI := github.API
 			github.API = ts.URL
 			defer func() {
@@ -392,7 +392,7 @@ func TestRepoDirMatches(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := repodirMatches(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("error: got %v; want %v", err, tc.wantErr)
 			}

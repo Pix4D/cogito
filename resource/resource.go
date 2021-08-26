@@ -104,7 +104,6 @@ func (e *unknownParamError) Error() string {
 // output in Concourse doesn't mention the name of the resource (or task) generating it.
 func BuildInfo() string {
 	return "This is the Cogito GitHub status resource. " + buildinfo
-
 }
 
 // Resource satisfies the ofcourse.Resource interface.
@@ -125,8 +124,8 @@ func (r *Resource) Check(
 	// Optional. If it doesn't exist or is not a string, we will not log.
 	logURL, _ := source["log_url"].(string)
 	hlog.Infof(logURL, BuildInfo())
-	hlog.Debugf(logURL, "check: start")
-	defer hlog.Debugf(logURL, "check: finish")
+	hlog.Debugf(logURL, "check: started")
+	defer hlog.Debugf(logURL, "check: finished")
 
 	if err := validateSources(source); err != nil {
 		return nil, err
@@ -149,8 +148,11 @@ func (r *Resource) In(
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
 	log.Infof(BuildInfo())
-	log.Debugf("in: start.")
-	defer log.Debugf("in: finish.")
+	log.Debugf("in: started")
+	defer log.Debugf("in: finished")
+
+	log.Debugf("in: params:\n%s", stringify1(params))
+	log.Debugf("in: env:\n%s", stringify2(env.GetAll()))
 
 	if err := validateSources(source); err != nil {
 		return nil, nil, err
@@ -174,8 +176,11 @@ func (r *Resource) Out(
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
 	log.Infof(BuildInfo())
-	log.Debugf("out: start.")
-	defer log.Debugf("out: finish.")
+	log.Debugf("out: started")
+	defer log.Debugf("out: finished")
+
+	log.Debugf("out: params:\n%s", stringify1(params))
+	log.Debugf("out: env:\n%s", stringify2(env.GetAll()))
 
 	if err := validateSources(source); err != nil {
 		return nil, nil, err
@@ -194,14 +199,14 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 	if len(inputDirs) != 1 {
-		err := fmt.Errorf(
-			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
+		err := fmt.Errorf("found %d input dirs: %v. "+
+			"Want exactly 1, corresponding to the GitHub repo %s/%s",
 			len(inputDirs), inputDirs, owner, repo)
 		return nil, nil, err
 	}
 
 	repoDir := filepath.Join(inputDirectory, inputDirs[0])
-	if err := repodirMatches(repoDir, owner, repo); err != nil {
+	if err := checkRepoDir(repoDir, owner, repo); err != nil {
 		return nil, nil, err
 	}
 
@@ -209,7 +214,7 @@ func (r *Resource) Out(
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Debugf("parsed ref %q", ref)
+	log.Debugf("out: parsed ref %q", ref)
 
 	// Finally, post the status to GitHub.
 	token, _ := source["access_token"].(string)
@@ -230,22 +235,44 @@ func (r *Resource) Out(
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
-	// https://ci.example.com/teams/developers/pipelines/cognito/jobs/hello/builds/25
+	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
 	targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 		atc, team, pipeline, job, buildN)
 	description := "Build " + buildN
-	log.Debugf("Posting state %v, owner %v, repo: %v, ref %v, context %v, target_url %v",
+	log.Debugf(`out: posting:
+  state: %v
+  owner: %v
+  repo: %v
+  ref: %v
+  context: %v
+  targetURL: %v`,
 		state, owner, repo, ref, context, targetURL)
 	err = status.Add(ref, state, targetURL, description)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Infof("State (%v) posted successfully", state)
+	log.Infof("out: GitHub state %s for ref %s posted successfully", state, ref[0:9])
 
 	metadata := oc.Metadata{}
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
 	return dummyVersion, metadata, nil
+}
+
+func stringify1(xs map[string]interface{}) string {
+	var bld strings.Builder
+	for k, v := range xs {
+		fmt.Fprintf(&bld, "  %s: %v\n", k, v)
+	}
+	return bld.String()
+}
+
+func stringify2(xs map[string]string) string {
+	var bld strings.Builder
+	for k, v := range xs {
+		fmt.Fprintf(&bld, "  %s: %v\n", k, v)
+	}
+	return bld.String()
 }
 
 func validateSources(source oc.Source) error {
@@ -309,9 +336,9 @@ func collectInputDirs(dir string) ([]string, error) {
 	return dirs, nil
 }
 
-// Check if dir is a git repository, hosted on GitHub, of the form owner/repo, accessed over
-// HTTPS or SSH.
-func repodirMatches(dir, owner, repo string) error {
+// Check if dir is a git repository, of the form owner/repo, with an origin accessed
+// over HTTP, HTTPS or SSH.
+func checkRepoDir(dir, owner, repo string) error {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return fmt.Errorf("parsing .git/config: abspath: %w", err)
