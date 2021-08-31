@@ -432,6 +432,12 @@ func parseGitPseudoURL(URL string) (gitURL, error) {
 		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)
 	}
 	gu.Host = tokens[0]
+
+	if strings.HasSuffix(gu.Host, "@github.com") {
+		// If the path has an oauth component, strip it out first
+		gu.Host = "github.com"
+	}
+
 	gu.Owner = tokens[1]
 	gu.Repo = strings.TrimSuffix(tokens[2], ".git")
 	return gu, nil
