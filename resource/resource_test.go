@@ -255,7 +255,10 @@ func TestOut(t *testing.T) {
 	}
 }
 
-func TestOutE2E(t *testing.T) {
+func TestOutIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}

@@ -41,9 +41,12 @@ jobs:
           # as we don't need it.
           persist-credentials: false
       - run: task ci:setup
-      # # fixme - run: task lint
+      # fixme - run: task lint
       - run: task build
-      - run: task test
+      - run: task test:unit
+      - run: task test:integration
+        env:
+          COGITO_TEST_OAUTH_TOKEN: ${{ secrets.COGITO_TEST_OAUTH_TOKEN }}
       - run: task docker:build
       - run: task docker:smoke
       - run: task docker:login
