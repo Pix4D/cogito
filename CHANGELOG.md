@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED - 2021-09-xx
 
+### Breaking
+
+- Since Concourse 7.x _finally_ prints logging output also for the `check` step, we removed support for logging the output of the check step to Google Chat: now all output is printed to the web UI and to `fly check-rersource`.
+  The `log_url` attribute for the source configuration is **DEPRECATED**, will be removed in a future release and is a no-op.
+
 ### Changed
 
 - CI: move from Travis to GitHub Actions.

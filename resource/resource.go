@@ -13,7 +13,6 @@ import (
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/hlog"
 	"github.com/sasbury/mini"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
@@ -118,16 +117,9 @@ func (r *Resource) Check(
 	env oc.Environment,
 	log *oc.Logger,
 ) ([]oc.Version, error) {
-	// Note about logging:
-	// For `check` we cannot use ofcourse.Logger due to the fact that the Concourse web UI or
-	// `fly check-resource` do NOT show anything printed to stderr unless the `check` executable
-	// itself exited with a non-zero status code :-(
-
-	// Optional. If it doesn't exist or is not a string, we will not log.
-	logURL, _ := source["log_url"].(string)
-	hlog.Infof(logURL, BuildInfo())
-	hlog.Debugf(logURL, "check: started")
-	defer hlog.Debugf(logURL, "check: finished")
+	log.Infof(BuildInfo())
+	log.Infof("check: started beppe maniglia")
+	defer log.Infof("check: finished")
 
 	if err := validateSources(source); err != nil {
 		return nil, err
