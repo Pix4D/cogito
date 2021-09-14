@@ -5,13 +5,15 @@ version: "3"
 
 vars:
   DATE: '{{ now | date "2006-01-02" }}'
+  REPO: github.com/Pix4D/cogito
   COMMIT:
     sh: git log -n 1 --format=%h
-  REPO: github.com/Pix4D/cogito
-  DOCKER_TAG:
-    sh: ci/git-ref-to-docker-tag.sh
   DOCKER_ORG: '{{default "pix4d" .DOCKER_ORG}}'
   DOCKER_IMAGE: cogito
+  DOCKER_TAG:
+    sh: ci/git-branch-or-tag.sh
+  IS_RELEASE:
+    sh: ci/git-is-release.sh
   DOCKER_BASE_NAME: "{{.DOCKER_ORG}}/{{.DOCKER_IMAGE}}"
   DOCKER_FULL_NAME: "{{.DOCKER_BASE_NAME}}:{{.DOCKER_TAG}}"
   BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
@@ -100,22 +102,23 @@ tasks:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
 
   docker:push:
-    desc: Push the Docker image
+    desc: Push the Docker image.
     cmds:
       - docker push {{.DOCKER_FULL_NAME}}
-      - |-
-        if [ -n "$DOCKER_LATEST" ]; then
-            docker tag {{.DOCKER_FULL_NAME}} {{.DOCKER_BASE_NAME}}:latest
-            # FIXME safety while adding GH actions: disable pushing "latest"
-            exit 1
-            docker push {{.DOCKER_BASE_NAME}}:latest
-            echo Pushed a new \"latest\" tag!
-        else
-            echo Did not push a new \"latest\" tag.
-        fi
-    vars:
-      DOCKER_LATEST:
-        sh: ci/git-latest.sh
+    preconditions:
+      - sh: test -z "$IS_RELEASE" || test -n "$CI"
+        msg: Release tag detected ({{.DOCKER_TAG}}); releases are made only on CI.
+
+  docker:maybe-push-release:
+    desc: If a release tag has been detected, Docker push with the 'latest' tag.
+    cmds:
+      - docker tag {{.DOCKER_FULL_NAME}} {{.DOCKER_BASE_NAME}}:latest
+      - docker push {{.DOCKER_BASE_NAME}}:latest
+    preconditions:
+      - sh: test -n "$CI"
+        msg: This target must run only on CI, not locally.
+    status:
+      - test -z "{{.IS_RELEASE}}"
 
   ci:setup:
     desc: Useful only when running under CI.

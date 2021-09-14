@@ -1,18 +1,5 @@
 # See https://docs.github.com/en/actions/reference/
 
-# on:
-#   release:
-#     # Only use the types keyword to narrow down the activity types that will trigger
-#     # your workflow.
-#     types: [published, created, edited]
-#
-# on:
-#   pull_request:
-    # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request
-    # On event pull_request, the workflow runs only on activity types opened,
-    # synchronize, or reopened. Change this default with the types keyword.
-    #types: [opened, synchronize, reopened]
-
 on: [push]
 
 name: ci
@@ -20,7 +7,6 @@ name: ci
 env:
   go-version: 1.16.x
   task-version: v3.7.3
-  DOCKER_ORG: pix4d
 
 jobs:
   all:
@@ -54,6 +40,7 @@ jobs:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
           DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
       - run: task docker:push
+      - run: task docker:maybe-push-release
       - run: task ci:teardown
         # ALWAYS run this step, also if any previous step failed.
         if: always()
