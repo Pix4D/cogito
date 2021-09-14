@@ -41,7 +41,7 @@ jobs:
           # as we don't need it.
           persist-credentials: false
       - run: task ci:setup
-      # fixme - run: task lint
+      - run: task lint
       - run: task build
       - run: task test:unit
       - run: task test:integration

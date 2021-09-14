@@ -118,8 +118,8 @@ func (r *Resource) Check(
 	log *oc.Logger,
 ) ([]oc.Version, error) {
 	log.Infof(BuildInfo())
-	log.Infof("check: started beppe maniglia")
-	defer log.Infof("check: finished")
+	log.Debugf("check: started")
+	defer log.Debugf("check: finished")
 
 	if err := validateSources(source); err != nil {
 		return nil, err
@@ -399,25 +399,28 @@ type gitURL struct {
 //     git@github.com:Pix4D/cogito.git
 // https://github.com/Pix4D/cogito.git
 //  http://github.com/Pix4D/cogito.git
-func parseGitPseudoURL(URL string) (gitURL, error) {
+func parseGitPseudoURL(url string) (gitURL, error) {
 	var path string
 	gu := gitURL{}
-	if strings.HasPrefix(URL, "git@") {
+
+	switch {
+	case strings.HasPrefix(url, "git@"):
 		gu.Scheme = "ssh"
-		path = URL[4:]
+		path = url[4:]
 		if strings.Count(path, ":") != 1 {
-			return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
+			return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
 		}
 		path = strings.Replace(path, ":", "/", 1)
-	} else if strings.HasPrefix(URL, "https://") {
+	case strings.HasPrefix(url, "https://"):
 		gu.Scheme = "https"
-		path = URL[8:]
-	} else if strings.HasPrefix(URL, "http://") {
+		path = url[8:]
+	case strings.HasPrefix(url, "http://"):
 		gu.Scheme = "http"
-		path = URL[7:]
-	} else {
-		return gitURL{}, fmt.Errorf("url: %v: %w", URL, errInvalidURL)
+		path = url[7:]
+	default:
+		return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
 	}
+
 	// github.com/Pix4D/cogito.git
 	tokens := strings.Split(path, "/")
 	if len(tokens) != 3 {

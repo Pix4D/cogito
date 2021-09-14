@@ -34,8 +34,7 @@ tasks:
   lint:
     desc: Lint the code.
     cmds:
-      # The flag "--enable" actually _adds_ to the default linters
-      - golangci-lint run --enable gofmt,gocritic ./...
+      - golangci-lint run ./...
 
   test:unit:
     desc: Run the unit tests.
