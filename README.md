@@ -22,6 +22,13 @@ Written in Go, it has the following characteristics:
 
 This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTING.md) for how to build the Docker image, develop, test and contribute to this resource.
 
+**Please, before opening a PR, open a ticket to discuss your use case**.
+This allows to better understand the _why_ of a new feature and not to waste your time (and ours) developing a feature that for some reason doesn't fit well with the spirit of the project or could be implemented differently.
+This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
+
+We care about code quality, readability and tests, so please follow the current style and provide adequate test coverage.
+In case of doubts about how to tackle testing something, feel free to ask.
+
 # Semver, releases and Docker images
 
 This project follows [Semantic Versioning](https://semver.org/) and has a [CHANGELOG](./CHANGELOG).
