@@ -3,70 +3,63 @@
 
 version: "3"
 
-env:
-  DOCKER_IMAGE: cogito
-
 vars:
   DATE: '{{ now | date "2006-01-02" }}'
   COMMIT:
     sh: git log -n 1 --format=%h
   REPO: github.com/Pix4D/cogito
-  TAG:
+  DOCKER_TAG:
     sh: ci/git-ref-to-docker-tag.sh
-  BUILD_INFO: "Tag: {{.TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
+  DOCKER_ORG: '{{default "pix4d" .DOCKER_ORG}}'
+  DOCKER_IMAGE: cogito
+  DOCKER_BASE_NAME: "{{.DOCKER_ORG}}/{{.DOCKER_IMAGE}}"
+  DOCKER_FULL_NAME: "{{.DOCKER_BASE_NAME}}:{{.DOCKER_TAG}}"
+  BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   GOTESTSUM:
     sh: "echo $(which gotestsum 2> /dev/null)"
   TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
+  #
+  GOLANGCI_VERSION: v1.42.1
+  GOTESTSUM_VERSION: v1.7.0
 
 tasks:
-  default:
-    deps: [test]
-    desc: Sensible defaults if you invoke `task` without arguments.
 
-  ci-init:
-    desc: Useful only when running under CI.
+  install:deps:
+    desc: Install tool dependencies.
     cmds:
-      - cmd: go get gotest.tools/gotestsum
-      - cmd: echo
-        silent: true
-      - cmd: go mod download
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
+      - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
 
-  test:
+  lint:
+    desc: Lint the code.
+    cmds:
+      # The flag "--enable" actually _adds_ to the default linters
+      - golangci-lint run --enable gofmt,gocritic ./...
+
+  test:unit:
     desc: Run the unit tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
-      - go tool cover -html=coverage.out -o coverage.html
+      - "{{.TESTRUNNER}} -count=1 -short -coverprofile=coverage.out ./..."
 
   test:env:
     desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run '^TestFooIntegration' ./pkg/update"
     cmds:
       - '{{ .CLI_ARGS }}'
     env: &test-env
-      COGITO_TEST_COMMIT_SHA:
-        sh: gopass show cogito/test_commit_sha
+      COGITO_TEST_COMMIT_SHA: '{{default "32e4b4f91bb8de500f6a7aa2011f93c3f322381c" .COGITO_TEST_COMMIT_SHA}}'
       COGITO_TEST_OAUTH_TOKEN:
-        sh: gopass show cogito/test_oauth_token
-      COGITO_TEST_REPO_NAME:
-        sh: gopass show cogito/test_repo_name
-      COGITO_TEST_REPO_OWNER:
-        sh: gopass show cogito/test_repo_owner
+        sh: 'echo {{default "$(gopass show cogito/test_oauth_token)" .COGITO_TEST_OAUTH_TOKEN}}'
+      COGITO_TEST_REPO_NAME: '{{default "cogito-test-read-write" .COGITO_TEST_REPO_NAME}}'
+      COGITO_TEST_REPO_OWNER: '{{default "pix4d" .COGITO_TEST_REPO_OWNER}}'
 
-  test-integration:
-    desc: Run also the integration tests.
+  test:integration:
+    desc: Run the integration tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
-      - go tool cover -html=coverage.out -o coverage.html
+      - "{{.TESTRUNNER}} -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./..."
     env: *test-env
 
-  copydir:
-    desc: Build copydir.
-    dir: bin
-    cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
-
   build:
-    deps: [copydir]
     desc: Build on the local machine.
     dir: bin
     cmds:
@@ -75,51 +68,71 @@ tasks:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
 
-  docker-login:
-    silent: true
+  build:copydir:
+    desc: Build copydir (development helper, normally not needed).
+    dir: bin
     cmds:
-      - echo "Logging in to DockerHub"
-      - docker login -u $DOCKER_USERNAME -p $DOCKER_TOKEN 2> /dev/null
-    env:
-      DOCKER_TOKEN:
-        sh: echo ${DOCKER_TOKEN:-$(gopass show cogito/docker_token)}
-      DOCKER_USERNAME:
-        sh: echo ${DOCKER_USERNAME:-$(gopass show cogito/docker_username)}
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
 
-  docker-build:
-    deps: [docker-login]
+  docker:login:
+    cmds:
+      - echo $DOCKER_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin
+    env:
+      DOCKER_USERNAME:
+        sh: 'echo {{default "$(gopass show cogito/docker_username)" .DOCKER_USERNAME}}'
+      DOCKER_TOKEN:
+        sh: 'echo {{default "$(gopass show cogito/docker_token)" .DOCKER_TOKEN}}'
+
+  docker:build:
     desc: Build the Docker image.
     cmds:
-      - docker build --build-arg BUILD_INFO --tag $DOCKER_IMAGE .
+      - docker build --build-arg BUILD_INFO --tag {{.DOCKER_FULL_NAME}} .
     env:
       BUILD_INFO: "{{.BUILD_INFO}}"
 
-  docker-smoke:
+  docker:smoke:
     desc: Simple smoke test of the Docker image.
     cmds:
-      - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/check
+      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/check
       - echo
-      - echo '{{.INPUT}}' | docker run --rm --interactive cogito /opt/resource/in dummy
+      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy
       - echo
     vars:
       INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
 
-  docker-push:
-    deps: [docker-login]
+  docker:push:
+    desc: Push the Docker image
     cmds:
-      - docker tag $DOCKER_IMAGE $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_TAG
-      - echo Pushing $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_TAG
-      - docker push $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_TAG
+      - docker push {{.DOCKER_FULL_NAME}}
       - |-
         if [ -n "$DOCKER_LATEST" ]; then
-            docker tag $DOCKER_IMAGE $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_LATEST
-            echo Pushing $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_LATEST
-            docker push $DOCKER_ORG/$DOCKER_IMAGE:$DOCKER_LATEST
+            docker tag {{.DOCKER_FULL_NAME}} {{.DOCKER_BASE_NAME}}:latest
+            # FIXME safety while adding GH actions: disable pushing "latest"
+            exit 1
+            docker push {{.DOCKER_BASE_NAME}}:latest
+            echo Pushed a new \"latest\" tag!
+        else
+            echo Did not push a new \"latest\" tag.
         fi
-    env:
-      DOCKER_ORG:
-        sh: echo ${DOCKER_ORG:-$(gopass show cogito/docker_org)}
-      DOCKER_TAG:
-        sh: ci/git-ref-to-docker-tag.sh
+    vars:
       DOCKER_LATEST:
         sh: ci/git-latest.sh
+
+  ci:setup:
+    desc: Useful only when running under CI.
+    cmds:
+      - task: install:deps
+      # Running "go mod download" is optional, since "go build" would do it anyway.
+      # We run it explicitly to make the output of "go build" more focused.
+      - cmd: go mod download -x
+
+  # When using GitHub Actions, add this snippet at the end of the workflow:
+  #    - run: docker logout
+  #    # Always remove credentials, also if any previous step failed.
+  #    if: always()
+  ci:teardown:
+    desc: ALWAYS run this when in CI (reduces security exposures)
+    cmds:
+      # Remove credentials from the file system, added by "docker login" :-(
+      - cmd: docker logout
+

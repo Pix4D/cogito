@@ -1,3 +1,4 @@
+// Useful when developing help.CopyDir.
 package main
 
 import (

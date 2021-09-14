@@ -34,7 +34,10 @@ func TestGitHubStatusUseMockAPI(t *testing.T) {
 	}
 }
 
-func TestGitHubStatusE2E(t *testing.T) {
+func TestGitHubStatusIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
@@ -49,7 +52,10 @@ func TestGitHubStatusE2E(t *testing.T) {
 	}
 }
 
-func TestUnderstandGitHubStatusFailures(t *testing.T) {
+func TestUnderstandGitHubStatusFailuresIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
 	var testCases = []struct {

@@ -1,0 +1,60 @@
+# See https://docs.github.com/en/actions/reference/
+
+# on:
+#   release:
+#     # Only use the types keyword to narrow down the activity types that will trigger
+#     # your workflow.
+#     types: [published, created, edited]
+#
+# on:
+#   pull_request:
+    # https://docs.github.com/en/actions/reference/events-that-trigger-workflows#pull_request
+    # On event pull_request, the workflow runs only on activity types opened,
+    # synchronize, or reopened. Change this default with the types keyword.
+    #types: [opened, synchronize, reopened]
+
+on: [push]
+
+name: ci
+
+env:
+  go-version: 1.16.x
+  task-version: v3.7.3
+  DOCKER_ORG: pix4d
+
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Install Task
+        run: go install github.com/go-task/task/v3/cmd/task@${{ env.task-version }}
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          # By default, actions/checkout will persist the GITHUB_TOKEN, so that further
+          # steps in the job can perform authenticated git commands (that is: WRITE to
+          # the repo). Following the Principle of least privilege, we disable this as long
+          # as we don't need it.
+          persist-credentials: false
+      - run: task ci:setup
+      # fixme - run: task lint
+      - run: task build
+      - run: task test:unit
+      - run: task test:integration
+        env:
+          COGITO_TEST_OAUTH_TOKEN: ${{ secrets.COGITO_TEST_OAUTH_TOKEN }}
+      - run: task docker:build
+      - run: task docker:smoke
+      - run: task docker:login
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+      - run: task docker:push
+      - run: task ci:teardown
+        # ALWAYS run this step, also if any previous step failed.
+        if: always()
+
