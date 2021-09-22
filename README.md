@@ -22,6 +22,13 @@ Written in Go, it has the following characteristics:
 
 This document explains how to use this resource. See [CONTRIBUTING](./CONTRIBUTING.md) for how to build the Docker image, develop, test and contribute to this resource.
 
+**Please, before opening a PR, open a ticket to discuss your use case**.
+This allows to better understand the _why_ of a new feature and not to waste your time (and ours) developing a feature that for some reason doesn't fit well with the spirit of the project or could be implemented differently.
+This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
+
+We care about code quality, readability and tests, so please follow the current style and provide adequate test coverage.
+In case of doubts about how to tackle testing something, feel free to ask.
+
 # Semver, releases and Docker images
 
 This project follows [Semantic Versioning](https://semver.org/) and has a [CHANGELOG](./CHANGELOG).
@@ -116,7 +123,7 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
-- `log_url`. A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
+- `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
 ## Suggestions
 

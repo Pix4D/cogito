@@ -2,9 +2,12 @@
 
 Contributions following the minimalist spirit of this project are welcome.
 
-Please, before opening a PR, open a ticket to discuss your use case. This allows to better understand the _why_ of a new feature and not to waste your time (and mine) developing a feature that for some reason doesn't fit well with the spirit of the library or could be implemented differently. This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
+**Please, before opening a PR, open a ticket to discuss your use case**.
+This allows to better understand the _why_ of a new feature and not to waste your time (and ours) developing a feature that for some reason doesn't fit well with the spirit of the project or could be implemented differently.
+This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
 
-I care about code quality, readability and tests, so please follow the current style and provide adequate test coverage. In case of doubts about how to tackle testing something, feel free to ask.
+We care about code quality, readability and tests, so please follow the current style and provide adequate test coverage.
+In case of doubts about how to tackle testing something, feel free to ask.
 
 # Development Prerequisites
 
@@ -12,7 +15,7 @@ I care about code quality, readability and tests, so please follow the current s
 
 * Go, version >= 1.16
 * Docker, version >= 20
-* [Task], version >= 3.2
+* [Task], version >= 3.7
 
 ## Optional
 
@@ -29,12 +32,12 @@ $ task --list
 
 # Running the default tests
 
-The Taskfile includes a `test` target, and tests are also run inside the Docker build.
+The Taskfile includes a `test:unit` target, and tests are also run inside the Docker build.
 
 Run the default tests:
 
 ```
-$ task test
+$ task test:unit
 ```
 
 # Integration tests
@@ -81,7 +84,7 @@ Do not use your DockerHub password, instead create a dedicated access token, see
 
 Unfortunately it is not possible to limit the scope of a token to a given image repository: a token has access to all repositories of an account. Nonetheless, it still makes sense to use a separate token per image repository, since it enables better auditing.
 
-Login to your account and go to Settings | Security. Create a token, give it a name such as `Travis Project Cogito` and securely back it up in your OS key store.
+Login to your account and go to Settings | Security. Create a token, give it a name such as `CI Project Cogito` and securely back it up in your OS key store.
 
 From an API point of view, the token can be used with `docker login` as if it was a password.
 
@@ -92,31 +95,6 @@ $ gopass insert cogito/docker_username
 $ gopass insert cogito/docker_org
 $ gopass insert cogito/docker_token
 ```
-
-See next section (Travis secrets setup) for how to configure this secret with Travis.
-
-## Travis secrets setup
-
-Please read the reference documentation [travis encryption-keys] before continuing.
-
-The main idea is to store the secrets in the source repository (the repository containing the `.travis.yml` file), using the encrypted environment variables feature of Travis.
-
-Note that this feature, for security reasons, does NOT make secure environment variables available to PRs coming from a forked source repository.
-
-The [travis encryption-keys] documentation contains also pointers to the `travis` CLI. For macOS, `brew install travis` just works.
-
-Do not follow the documentation example (`travis encrypt SOMEVAR="secretvalue"`) because it would leave the secrets in the shell history. Instead, run the tool in interactive mode with the `--interactive` flag:
-
-```console
-$ cd the-repo
-$ travis encrypt --add --interactive
-Detected repository as pix4d/cogito, is this correct? |yes|
-Reading from stdin, press Ctrl+D when done
-DOCKER_TOKEN="YOUR_TOKEN"  <= this is a real secret
-THE_SECRET="42"            <= this shows how to pass additional secrets; see the tests
-```
-
-Add the output string to the `env` dictionary of the `.travis.yml` file.
 
 ## Prepare the test repository
 
@@ -307,4 +285,3 @@ This code is licensed according to the MIT license (see file [LICENSE](./LICENSE
 [Task]: https://taskfile.dev/
 [gotestsum]: https://github.com/gotestyourself/gotestsum
 [gopass]: https://github.com/gopasspw/gopass
-[travis encryption-keys]: https://docs.travis-ci.com/user/encryption-keys/
