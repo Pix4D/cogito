@@ -3,6 +3,7 @@
 Contributions following the minimalist spirit of this project are welcome.
 
 **Please, before opening a PR, open a ticket to discuss your use case**.
+
 This allows to better understand the _why_ of a new feature and not to waste your time (and ours) developing a feature that for some reason doesn't fit well with the spirit of the project or could be implemented differently.
 This is in the spirit of [Talk, then code](https://dave.cheney.net/2019/02/18/talk-then-code).
 
@@ -277,6 +278,26 @@ $ task docker-build docker-push &&
     fly -t cogito check-resource-type -r cogito-test/branch:stable/cogito &&
     fly -t cogito check-resource-type -r cogito-test/branch:another-branch/cogito
 ```
+
+# Setting up GitHub Action CI
+
+Update the expired secrets as follows.
+
+## Regenerate your personal access token (PAT)
+
+1. Go to [Settings | Tokens](https://github.com/settings/tokens) for your account.
+2. Create or regenerate a token with name `test-cogito`, with scope "repo:status". Set an expiration of 90 days.
+3. Copy the token.
+
+## Update the CI secret with your PAT
+
+1. Go to [Settings | Secrets | Actions](https://github.com/Pix4D/cogito/settings/secrets/actions)
+2. Click on Update for secret `COGITO_TEST_OAUTH_TOKEN`.
+3. Paste the PAT you generated in the previous section.
+
+## Check that it works
+
+Trigger a manual run of the CI to verify that everything works fine.
 
 # License
 
