@@ -117,7 +117,7 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 - `owner`: The GitHub user or organization.
 - `repo`: The GitHub repository name.
-- `access-token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
+- `access_token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
 
 ## Optional
 

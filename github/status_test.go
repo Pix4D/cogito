@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"path"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,22 +17,44 @@ import (
 
 func TestGitHubStatusUseMockAPI(t *testing.T) {
 	cfg := help.FakeTestCfg
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusCreated)
-		fmt.Fprintln(w, "Anything goes...")
-	}))
-	defer ts.Close()
-
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-
-	status := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
-	err := status.Add(cfg.SHA, state, targetURL, desc)
-
-	if err != nil {
-		t.Fatalf("\ngot:  %v\nwant: no error", err)
+	var testCases = []struct {
+		name       string
+		wantErr    string
+		wantStatus int
+		write      string
+	}{
+		{"No errors",
+			"", http.StatusCreated, "Anything goes..."},
+		{"Server error",
+			http.StatusText(500), http.StatusInternalServerError, "Something bad happened!"},
+		{"Repo not found",
+			fmt.Sprintf(
+				"\nOne of the following happened:\n"+
+					"\t1. The repo https://github.com/%s doesn't exist\n"+
+					"\t2. The user who issued the token doesn't have write access to the repo\n"+
+					"\t3. The token doesn't have scope repo:status\n", path.Join(cfg.Owner, cfg.Repo),
+			),
+			http.StatusNotFound, "Repo not found"},
+	}
+	for _, tc := range testCases {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(tc.wantStatus)
+			fmt.Fprintln(w, tc.write)
+		}))
+		defer ts.Close()
+		t.Run(tc.name, func(t *testing.T) {
+			status := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			err := status.Add(cfg.SHA, state, targetURL, desc)
+			if err != nil {
+				if !strings.Contains(err.Error(), tc.wantErr) {
+					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
+				}
+			}
+		})
 	}
 }
 
