@@ -257,7 +257,8 @@ func (r *Resource) Out(
 func targetURL(atc, team, pipeline, job, buildN, instanceVars string) string {
 	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
 
-	targetURL := atc + path.Join("/teams", team, "pipelines", pipeline, "jobs", job, "builds", buildN)
+	targetURL := atc +
+		path.Join("/teams", team, "pipelines", pipeline, "jobs", job, "builds", buildN)
 	// targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
 	// 	atc, team, pipeline, job, buildN)
 
@@ -380,9 +381,10 @@ func checkRepoDir(dir, owner, repo string) error {
 	for i, l := range left {
 		r := right[i]
 		if !strings.EqualFold(l, r) {
-			return fmt.Errorf("resource source configuration and git repository are incompatible.\nGit remote: %q\n"+
-				"Resource config: host: github.com, owner: %q, repo: %q. %w", remote, owner, repo, errWrongRemote,
-			)
+			return fmt.Errorf(`resource source configuration and git repository are incompatible.
+Git remote: %q
+Resource config: host: github.com, owner: %q, repo: %q. %w`,
+				remote, owner, repo, errWrongRemote)
 		}
 	}
 	return nil

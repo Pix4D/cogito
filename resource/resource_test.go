@@ -95,7 +95,9 @@ func TestIn(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := Resource{}
 
-			version, metadata, err := r.In("/tmp", defSource, oc.Params{}, tc.inVersion, defEnv, silentLog)
+			version, metadata, err := r.In(
+				"/tmp", defSource, oc.Params{}, tc.inVersion, defEnv, silentLog,
+			)
 
 			if err != nil {
 				t.Fatalf("err: got %v; want %v", err, nil)
@@ -209,23 +211,25 @@ func TestOut(t *testing.T) {
 			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
-			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(http.StatusCreated)
-				fmt.Fprintln(w, "Anything goes...")
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					fmt.Fprintln(w, "Anything goes...")
 
-				if tc.want.body != nil {
-					buf, _ := io.ReadAll(r.Body)
-					var bm map[string]string
-					if err := json.Unmarshal(buf, &bm); err != nil {
-						t.Fatalf("parsing JSON body: %v", err)
-					}
-					for k, v := range tc.want.body {
-						if bm[k] != v {
-							t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+					if tc.want.body != nil {
+						buf, _ := io.ReadAll(r.Body)
+						var bm map[string]string
+						if err := json.Unmarshal(buf, &bm); err != nil {
+							t.Fatalf("parsing JSON body: %v", err)
+						}
+						for k, v := range tc.want.body {
+							if bm[k] != v {
+								t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+							}
 						}
 					}
-				}
-			}))
+				}),
+			)
 
 			savedAPI := github.API
 			github.API = ts.URL
@@ -241,7 +245,8 @@ func TestOut(t *testing.T) {
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.want.err)
 			if gotErrType != wantErrType {
-				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)", gotErrType, err, wantErrType, tc.want.err)
+				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)",
+					gotErrType, err, wantErrType, tc.want.err)
 			}
 
 			if diff := cmp.Diff(tc.want.version, version); diff != "" {
