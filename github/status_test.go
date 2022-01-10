@@ -27,24 +27,37 @@ func TestGitHubStatusUseMockAPI(t *testing.T) {
 		wantStatus int
 		write      string
 	}{
-		{"No errors",
-			"", http.StatusCreated, "Anything goes..."},
-		{"Server error",
-			http.StatusText(500), http.StatusInternalServerError, "Something bad happened!"},
-		{"Repo not found",
-			fmt.Sprintf(
-				"\nOne of the following happened:\n"+
-					"\t1. The repo https://github.com/%s doesn't exist\n"+
-					"\t2. The user who issued the token doesn't have write access to the repo\n"+
-					"\t3. The token doesn't have scope repo:status\n", path.Join(cfg.Owner, cfg.Repo),
-			),
-			http.StatusNotFound, "Repo not found"},
+		{
+			"No errors",
+			"",
+			http.StatusCreated,
+			"Anything goes...",
+		},
+		{
+			"Server error",
+			http.StatusText(500),
+			http.StatusInternalServerError,
+			"Something bad happened!",
+		},
+		{
+			"Repo not found",
+			fmt.Sprintf(`
+One of the following happened:
+    1. The repo https://github.com/%s doesn't exist
+	2. The user who issued the token doesn't have write access to the repo
+	3. The token doesn't have scope repo:status
+`,
+				path.Join(cfg.Owner, cfg.Repo)),
+			http.StatusNotFound,
+			"Repo not found",
+		},
 	}
 	for _, tc := range testCases {
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(tc.wantStatus)
-			fmt.Fprintln(w, tc.write)
-		}))
+		ts := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.wantStatus)
+				fmt.Fprintln(w, tc.write)
+			}))
 		defer ts.Close()
 		t.Run(tc.name, func(t *testing.T) {
 			status := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)

@@ -22,8 +22,9 @@ vars:
     sh: "echo $(which gotestsum 2> /dev/null)"
   TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
   #
-  GOLANGCI_VERSION: v1.42.1
+  GOLANGCI_VERSION: v1.43.0
   GOTESTSUM_VERSION: v1.7.0
+  GOLINES_VERSION: v0.7.0
 
 tasks:
 
@@ -32,11 +33,17 @@ tasks:
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
+      - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
 
   lint:
     desc: Lint the code.
     cmds:
       - golangci-lint run ./...
+
+  lint:linelength:
+    desc: Enforce max line length. Use the tool output only as a hint, sometimes it makes wrong decisions.
+    cmds:
+      - golines --max-len=99 --write-output .
 
   test:unit:
     desc: Run the unit tests.

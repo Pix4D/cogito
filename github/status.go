@@ -134,17 +134,31 @@ func (s status) Add(sha, state, targetURL, description string) error {
 		// Happy path
 		return nil
 	case http.StatusNotFound:
-		msg := fmt.Sprintf(
-			"\nOne of the following happened:\n"+
-				"\t1. The repo https://github.com/%s doesn't exist\n"+
-				"\t2. The user who issued the token doesn't have write access to the repo\n"+
-				"\t3. The token doesn't have scope repo:status\n", path.Join(s.owner, s.repo),
-		)
-		return &StatusError{req.Method + " " + url + msg + OAuthInfo, resp.StatusCode, fmt.Sprintf("%s\n%s", http.StatusText(resp.StatusCode), string(respBody))}
+		msg := fmt.Sprintf(`
+One of the following happened:
+    1. The repo https://github.com/%s doesn't exist
+	2. The user who issued the token doesn't have write access to the repo
+	3. The token doesn't have scope repo:status
+`,
+			path.Join(s.owner, s.repo))
+		return &StatusError{
+			req.Method + " " + url + msg + OAuthInfo,
+			resp.StatusCode,
+			fmt.Sprintf("%s\n%s", http.StatusText(resp.StatusCode), string(respBody)),
+		}
 	case http.StatusInternalServerError:
-		return &StatusError{req.Method + " " + url + OAuthInfo, resp.StatusCode, fmt.Sprintf("%s\nMay be %s is not healthy?", http.StatusText(resp.StatusCode), s.server)}
+		return &StatusError{
+			req.Method + " " + url + OAuthInfo,
+			resp.StatusCode,
+			fmt.Sprintf("%s\nMay be %s is not healthy?",
+				http.StatusText(resp.StatusCode), s.server),
+		}
 	default:
 		// Any other error
-		return &StatusError{req.Method + " " + url + OAuthInfo, resp.StatusCode, string(respBody)}
+		return &StatusError{
+			req.Method + " " + url + OAuthInfo,
+			resp.StatusCode,
+			string(respBody),
+		}
 	}
 }

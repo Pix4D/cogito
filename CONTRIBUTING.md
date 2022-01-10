@@ -134,7 +134,7 @@ cogito/
 We are finally ready to run also the integration tests:
 
 ```
-$ task test-integration
+$ task test:integration
 ```
 
 The integration tests have the following logic:
