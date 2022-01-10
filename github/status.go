@@ -63,7 +63,7 @@ func NewStatus(server, token, owner, repo, context string) status {
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
 // that generated this state.
 // Parameter description (optional) gives more information about the status.
-// The returned error contains some diagnostic information to troubleshoot.
+// The returned error contains some diagnostic information to help troubleshooting.
 func (s status) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/:owner/:repo/statuses/:sha
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
