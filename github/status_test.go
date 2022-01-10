@@ -15,48 +15,50 @@ import (
 	"github.com/Pix4D/cogito/help"
 )
 
-func TestGitHubStatusUseMockAPI(t *testing.T) {
+func TestGitHubStatusMockAPI(t *testing.T) {
 	cfg := help.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
+
 	var testCases = []struct {
 		name       string
+		body       string
 		wantErr    string
 		wantStatus int
-		write      string
 	}{
 		{
-			"No errors",
-			"",
-			http.StatusCreated,
-			"Anything goes...",
+			name:       "No errors",
+			body:       "Anything goes...",
+			wantErr:    "",
+			wantStatus: http.StatusCreated,
 		},
 		{
-			"Server error",
-			http.StatusText(500),
-			http.StatusInternalServerError,
-			"Something bad happened!",
+			name:       "Server error",
+			body:       "Something bad happened!",
+			wantErr:    http.StatusText(500),
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			"Repo not found",
-			fmt.Sprintf(`
+			name: "Repo not found",
+			body: "Repo not found",
+			wantErr: fmt.Sprintf(`
 One of the following happened:
     1. The repo https://github.com/%s doesn't exist
 	2. The user who issued the token doesn't have write access to the repo
 	3. The token doesn't have scope repo:status
 `,
 				path.Join(cfg.Owner, cfg.Repo)),
-			http.StatusNotFound,
-			"Repo not found",
+			wantStatus: http.StatusNotFound,
 		},
 	}
+
 	for _, tc := range testCases {
 		ts := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.wantStatus)
-				fmt.Fprintln(w, tc.write)
+				fmt.Fprintln(w, tc.body)
 			}))
 		defer ts.Close()
 		t.Run(tc.name, func(t *testing.T) {
