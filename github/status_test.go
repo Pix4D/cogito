@@ -96,10 +96,12 @@ One of the following happened:
 		t.Run(tc.name, func(t *testing.T) {
 			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.wantErr) {
-					t.Fatalf("\nhave: %v\nwant: %v", err, tc.wantErr)
-				}
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("\nhave: %v\nwant: %v", err, tc.wantErr)
 			}
 		})
 	}
