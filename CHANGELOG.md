@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED - xxxx-xx-xx
 
+### Fixed
+
+- Return more user-friendly errors from the github/status API.
+
 ## [v0.6.1] - 2022-01-06
 
 ### Breaking
@@ -22,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Return standard error description in addition to the error code. 
+- Return standard error description in addition to the error code from the github/status API.
 
 ## [v0.6.0] - 2021-08-26
 

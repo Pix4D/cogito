@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -22,7 +23,7 @@ type StatusError struct {
 }
 
 func (e *StatusError) Error() string {
-	return fmt.Sprintf("%v, status %v (%v)", e.What, e.StatusCode, e.Details)
+	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
 
 // API is the GitHub API endpoint.
@@ -51,13 +52,13 @@ type status struct {
 // Be careful when using PIPELINENAME: if that name is ephemeral, it will make it impossible to
 // use GitHub repository branch protection rules.
 // See also:
-// * https://developer.github.com/v3/repos/statuses/
+// * https://docs.github.com/en/rest/reference/commits#create-a-commit-status
 // * README file
 func NewStatus(server, token, owner, repo, context string) status {
 	return status{server, token, owner, repo, context}
 }
 
-// Add adds state to the given sha, decorating it with targetURL and optional description.
+// Add adds a commit state to the given sha, decorating it with targetURL and optional description.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
@@ -65,7 +66,7 @@ func NewStatus(server, token, owner, repo, context string) status {
 // Parameter description (optional) gives more information about the status.
 // The returned error contains some diagnostic information to help troubleshooting.
 func (s status) Add(sha, state, targetURL, description string) error {
-	// API: POST /repos/:owner/:repo/statuses/:sha
+	// API: POST /repos/{owner}/{repo}/statuses/{sha}
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
 
 	// Field names must be uppercase (that is, exported) for the JSON encoder to consider
@@ -124,41 +125,43 @@ func (s status) Add(sha, state, targetURL, description string) error {
 
 	XAcceptedOauthScope := resp.Header["X-Accepted-Oauth-Scopes"]
 	XOauthScopes := resp.Header["X-Oauth-Scopes"]
-	OAuthInfo := fmt.Sprintf(" X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
+	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		XAcceptedOauthScope, XOauthScopes)
 
 	respBody, _ := ioutil.ReadAll(resp.Body)
+	var hint string
 
 	switch resp.StatusCode {
 	case http.StatusCreated:
 		// Happy path
 		return nil
 	case http.StatusNotFound:
-		msg := fmt.Sprintf(`
-One of the following happened:
+		hint = fmt.Sprintf(`one of the following happened:
     1. The repo https://github.com/%s doesn't exist
-	2. The user who issued the token doesn't have write access to the repo
-	3. The token doesn't have scope repo:status
-`,
+    2. The user who issued the token doesn't have write access to the repo
+    3. The token doesn't have scope repo:status`,
 			path.Join(s.owner, s.repo))
-		return &StatusError{
-			What:       req.Method + " " + url + msg + OAuthInfo,
-			StatusCode: resp.StatusCode,
-			Details:    fmt.Sprintf("%s\n%s", http.StatusText(resp.StatusCode), string(respBody)),
-		}
 	case http.StatusInternalServerError:
-		return &StatusError{
-			What:       req.Method + " " + url + OAuthInfo,
-			StatusCode: resp.StatusCode,
-			Details: fmt.Sprintf("%s\nMay be %s is not healthy?",
-				http.StatusText(resp.StatusCode), s.server),
-		}
+		hint = "Github API is down"
 	default:
 		// Any other error
-		return &StatusError{
-			What:       req.Method + " " + url + OAuthInfo,
-			StatusCode: resp.StatusCode,
-			Details:    string(respBody),
-		}
+		hint = "none"
 	}
+	return &StatusError{
+		What: fmt.Sprintf("Failed to add state %q for commit %s: %d %s",
+			state, sha[0:min(len(sha), 7)], resp.StatusCode, http.StatusText(resp.StatusCode)),
+		StatusCode: resp.StatusCode,
+		Details: fmt.Sprintf(`Body: %s
+Hint: %s
+Action: %s %s
+OAuth: %s`,
+			strings.TrimSpace(string(respBody)), hint, req.Method, url, OAuthInfo),
+	}
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
