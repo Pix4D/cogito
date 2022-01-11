@@ -21,7 +21,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	var testCases = []struct {
+	testCases := []struct {
 		name   string
 		body   string
 		status int
@@ -58,7 +58,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	var testCases = []struct {
+	testCases := []struct {
 		name       string
 		body       string
 		wantErr    string
@@ -130,7 +130,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 	}
 }
 
-func TestGitHubStatusIntegration(t *testing.T) {
+func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -140,21 +140,21 @@ func TestGitHubStatusIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	status := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
-	err := status.Add(cfg.SHA, state, targetURL, desc)
+	ghStatus := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
-		t.Fatalf("\nhave: %v\nwant: no error", err)
+		t.Fatalf("\nhave: %s\nwant: <no error>", err)
 	}
 }
 
-func TestUnderstandGitHubStatusFailuresIntegration(t *testing.T) {
+func TestGitHubStatusFailureIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
-	var testCases = []struct {
+	testCases := []struct {
 		name       string
 		token      string
 		owner      string
@@ -162,16 +162,46 @@ func TestUnderstandGitHubStatusFailuresIntegration(t *testing.T) {
 		sha        string
 		wantStatus int
 	}{
-		{"bad token: Unauthorized",
-			"bad-token", cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnauthorized},
-		{"non existing repo: Not Found",
-			cfg.Token, cfg.Owner, "non-existing-really", "dummy-sha", http.StatusNotFound},
-		{"bad SHA: Unprocessable Entity",
-			cfg.Token, cfg.Owner, cfg.Repo, "dummy-sha", http.StatusUnprocessableEntity},
-		{"tag instead of SHA: Unprocessable Entity",
-			cfg.Token, cfg.Owner, cfg.Repo, "v0.0.2", http.StatusUnprocessableEntity},
-		{"non existing SHA: Unprocessable Entity",
-			cfg.Token, cfg.Owner, cfg.Repo, "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822", http.StatusUnprocessableEntity},
+		{
+			name:       "bad token: Unauthorized",
+			token:      "bad-token",
+			owner:      cfg.Owner,
+			repo:       cfg.Repo,
+			sha:        "dummy-sha",
+			wantStatus: http.StatusUnauthorized,
+		},
+		{
+			name:       "non existing repo: Not Found",
+			token:      cfg.Token,
+			owner:      cfg.Owner,
+			repo:       "non-existing-really",
+			sha:        "dummy-sha",
+			wantStatus: http.StatusNotFound,
+		},
+		{
+			name:       "bad SHA: Unprocessable Entity",
+			token:      cfg.Token,
+			owner:      cfg.Owner,
+			repo:       cfg.Repo,
+			sha:        "dummy-sha",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "tag instead of SHA: Unprocessable Entity",
+			token:      cfg.Token,
+			owner:      cfg.Owner,
+			repo:       cfg.Repo,
+			sha:        "v0.0.2",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
+		{
+			name:       "non existing SHA: Unprocessable Entity",
+			token:      cfg.Token,
+			owner:      cfg.Owner,
+			repo:       cfg.Repo,
+			sha:        "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
+			wantStatus: http.StatusUnprocessableEntity,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -182,7 +212,7 @@ func TestUnderstandGitHubStatusFailuresIntegration(t *testing.T) {
 			var statusErr *github.StatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode != tc.wantStatus {
-					t.Fatalf("status code: have %v (%v); want %v (%v)\n%v",
+					t.Fatalf("status code: have %d (%s); want %d (%s)\n%s",
 						statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
 						tc.wantStatus, http.StatusText(tc.wantStatus), err)
 				}
