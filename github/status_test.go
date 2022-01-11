@@ -65,24 +65,37 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		wantStatus int
 	}{
 		{
+			name: "404 Not Found (multiple causes)",
+			body: "fake body",
+			wantErr: `Failed to add state "success" for commit 0123456: 404 Not Found
+Body: fake body
+Hint: one of the following happened:
+    1. The repo https://github.com/fakeOwner/fakeRepo doesn't exist
+    2. The user who issued the token doesn't have write access to the repo
+    3. The token doesn't have scope repo:status
+Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
+OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+			wantStatus: http.StatusNotFound,
+		},
+		{
 			name: "500 Internal Server Error",
 			body: "fake body",
-			wantErr: `POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789 X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [], status 500 (Internal Server Error
-May be %[1]s is not healthy?)`,
+			wantErr: `Failed to add state "success" for commit 0123456: 500 Internal Server Error
+Body: fake body
+Hint: Github API is down
+Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
+OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "404 Not Found (multiple causes)",
+			name: "Any other error",
 			body: "fake body",
-			wantErr: `POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-One of the following happened:
-    1. The repo https://github.com/fakeOwner/fakeRepo doesn't exist
-	2. The user who issued the token doesn't have write access to the repo
-	3. The token doesn't have scope repo:status
- X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [], status 404 (Not Found
-fake body
-)`,
-			wantStatus: http.StatusNotFound,
+			wantErr: `Failed to add state "success" for commit 0123456: 418 I'm a teapot
+Body: fake body
+Hint: none
+Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
+OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+			wantStatus: http.StatusTeapot,
 		},
 	}
 
