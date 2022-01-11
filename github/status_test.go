@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"path"
 	"reflect"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/help"
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
@@ -66,21 +65,23 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		wantStatus int
 	}{
 		{
-			name:       "500 Internal Server Error",
-			body:       "Something bad happened!",
-			wantErr:    http.StatusText(http.StatusInternalServerError),
+			name: "500 Internal Server Error",
+			body: "fake body",
+			wantErr: `POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789 X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [], status 500 (Internal Server Error
+May be %[1]s is not healthy?)`,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "404 Not Found (multiple causes)",
-			body: "Repo not found",
-			wantErr: fmt.Sprintf(`
+			body: "fake body",
+			wantErr: `POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 One of the following happened:
-    1. The repo https://github.com/%s doesn't exist
+    1. The repo https://github.com/fakeOwner/fakeRepo doesn't exist
 	2. The user who issued the token doesn't have write access to the repo
 	3. The token doesn't have scope repo:status
-`,
-				path.Join(cfg.Owner, cfg.Repo)),
+ X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [], status 404 (Not Found
+fake body
+)`,
 			wantStatus: http.StatusNotFound,
 		},
 	}
@@ -94,14 +95,23 @@ One of the following happened:
 		defer ts.Close()
 
 		t.Run(tc.name, func(t *testing.T) {
+			wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
 			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+
 			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+				t.Fatalf("\nhave: <no error>\nwant: %s", wantErr)
+			}
+			var ghError *github.StatusError
+			if !errors.As(err, &ghError) {
+				t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
+			}
+			if have, want := ghError.StatusCode, tc.wantStatus; have != want {
+				t.Fatalf("status code: have: %d; want: %d", have, want)
 			}
 
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Fatalf("\nhave: %v\nwant: %v", err, tc.wantErr)
+			if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
+				t.Fatalf("error: (+have -want):\n%s", diff)
 			}
 		})
 	}
