@@ -63,7 +63,7 @@ func NewStatus(server, token, owner, repo, context string) status {
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
 // that generated this state.
 // Parameter description (optional) gives more information about the status.
-// The returned error contains some diagnostic information to troubleshoot.
+// The returned error contains some diagnostic information to help troubleshooting.
 func (s status) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/:owner/:repo/statuses/:sha
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
@@ -142,23 +142,23 @@ One of the following happened:
 `,
 			path.Join(s.owner, s.repo))
 		return &StatusError{
-			req.Method + " " + url + msg + OAuthInfo,
-			resp.StatusCode,
-			fmt.Sprintf("%s\n%s", http.StatusText(resp.StatusCode), string(respBody)),
+			What:       req.Method + " " + url + msg + OAuthInfo,
+			StatusCode: resp.StatusCode,
+			Details:    fmt.Sprintf("%s\n%s", http.StatusText(resp.StatusCode), string(respBody)),
 		}
 	case http.StatusInternalServerError:
 		return &StatusError{
-			req.Method + " " + url + OAuthInfo,
-			resp.StatusCode,
-			fmt.Sprintf("%s\nMay be %s is not healthy?",
+			What:       req.Method + " " + url + OAuthInfo,
+			StatusCode: resp.StatusCode,
+			Details: fmt.Sprintf("%s\nMay be %s is not healthy?",
 				http.StatusText(resp.StatusCode), s.server),
 		}
 	default:
 		// Any other error
 		return &StatusError{
-			req.Method + " " + url + OAuthInfo,
-			resp.StatusCode,
-			string(respBody),
+			What:       req.Method + " " + url + OAuthInfo,
+			StatusCode: resp.StatusCode,
+			Details:    string(respBody),
 		}
 	}
 }

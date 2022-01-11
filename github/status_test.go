@@ -15,57 +15,93 @@ import (
 	"github.com/Pix4D/cogito/help"
 )
 
-func TestGitHubStatusUseMockAPI(t *testing.T) {
+func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	cfg := help.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
+
 	var testCases = []struct {
-		name       string
-		wantErr    string
-		wantStatus int
-		write      string
+		name   string
+		body   string
+		status int
 	}{
 		{
-			"No errors",
-			"",
-			http.StatusCreated,
-			"Anything goes...",
+			name:   "No errors",
+			body:   "Anything goes...",
+			status: http.StatusCreated,
+		},
+	}
+
+	for _, tc := range testCases {
+		ts := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.status)
+				fmt.Fprintln(w, tc.body)
+			}))
+		defer ts.Close()
+
+		t.Run(tc.name, func(t *testing.T) {
+			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestGitHubStatusFailureMockAPI(t *testing.T) {
+	cfg := help.FakeTestCfg
+	context := "cogito/test"
+	targetURL := "https://cogito.invalid/builds/job/42"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
+
+	var testCases = []struct {
+		name       string
+		body       string
+		wantErr    string
+		wantStatus int
+	}{
+		{
+			name:       "500 Internal Server Error",
+			body:       "Something bad happened!",
+			wantErr:    http.StatusText(http.StatusInternalServerError),
+			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			"Server error",
-			http.StatusText(500),
-			http.StatusInternalServerError,
-			"Something bad happened!",
-		},
-		{
-			"Repo not found",
-			fmt.Sprintf(`
+			name: "404 Not Found (multiple causes)",
+			body: "Repo not found",
+			wantErr: fmt.Sprintf(`
 One of the following happened:
     1. The repo https://github.com/%s doesn't exist
 	2. The user who issued the token doesn't have write access to the repo
 	3. The token doesn't have scope repo:status
 `,
 				path.Join(cfg.Owner, cfg.Repo)),
-			http.StatusNotFound,
-			"Repo not found",
+			wantStatus: http.StatusNotFound,
 		},
 	}
+
 	for _, tc := range testCases {
 		ts := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tc.wantStatus)
-				fmt.Fprintln(w, tc.write)
+				fmt.Fprintln(w, tc.body)
 			}))
 		defer ts.Close()
+
 		t.Run(tc.name, func(t *testing.T) {
-			status := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
-			err := status.Add(cfg.SHA, state, targetURL, desc)
-			if err != nil {
-				if !strings.Contains(err.Error(), tc.wantErr) {
-					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
-				}
+			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+
+			if !strings.Contains(err.Error(), tc.wantErr) {
+				t.Fatalf("\nhave: %v\nwant: %v", err, tc.wantErr)
 			}
 		})
 	}
@@ -85,7 +121,7 @@ func TestGitHubStatusIntegration(t *testing.T) {
 	err := status.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
-		t.Fatalf("\ngot:  %v\nwant: no error", err)
+		t.Fatalf("\nhave: %v\nwant: no error", err)
 	}
 }
 
@@ -123,12 +159,12 @@ func TestUnderstandGitHubStatusFailuresIntegration(t *testing.T) {
 			var statusErr *github.StatusError
 			if errors.As(err, &statusErr) {
 				if statusErr.StatusCode != tc.wantStatus {
-					t.Fatalf("status code: got %v (%v); want %v (%v)\n%v",
+					t.Fatalf("status code: have %v (%v); want %v (%v)\n%v",
 						statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
 						tc.wantStatus, http.StatusText(tc.wantStatus), err)
 				}
 			} else {
-				t.Fatalf("got %v; want *github.StatusError", reflect.TypeOf(err))
+				t.Fatalf("have %v; want *github.StatusError", reflect.TypeOf(err))
 			}
 		})
 	}
