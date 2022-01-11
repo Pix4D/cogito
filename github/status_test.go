@@ -179,22 +179,6 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name:       "bad SHA: Unprocessable Entity",
-			token:      cfg.Token,
-			owner:      cfg.Owner,
-			repo:       cfg.Repo,
-			sha:        "dummy-sha",
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
-			name:       "tag instead of SHA: Unprocessable Entity",
-			token:      cfg.Token,
-			owner:      cfg.Owner,
-			repo:       cfg.Repo,
-			sha:        "v0.0.2",
-			wantStatus: http.StatusUnprocessableEntity,
-		},
-		{
 			name:       "non existing SHA: Unprocessable Entity",
 			token:      cfg.Token,
 			owner:      cfg.Owner,
