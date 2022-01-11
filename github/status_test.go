@@ -66,13 +66,13 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		wantStatus int
 	}{
 		{
-			name:       "Server error",
+			name:       "500 Internal Server Error",
 			body:       "Something bad happened!",
 			wantErr:    http.StatusText(http.StatusInternalServerError),
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
-			name: "Repo not found",
+			name: "404 Not Found (multiple causes)",
 			body: "Repo not found",
 			wantErr: fmt.Sprintf(`
 One of the following happened:
