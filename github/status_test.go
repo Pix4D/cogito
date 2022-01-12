@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"testing"
 	"time"
 
@@ -153,55 +152,84 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
+	state := "success"
 
 	testCases := []struct {
 		name       string
-		token      string
-		owner      string
-		repo       string
-		sha        string
+		token      string // default: cfg.Token
+		owner      string // default: cfg.Owner
+		repo       string // default: cfg.Repo
+		sha        string // default: cfg.SHA
+		wantErr    string
 		wantStatus int
 	}{
 		{
-			name:       "bad token: Unauthorized",
-			token:      "bad-token",
-			owner:      cfg.Owner,
-			repo:       cfg.Repo,
-			sha:        "dummy-sha",
+			name:  "bad token: Unauthorized",
+			token: "bad-token",
+			wantErr: `Failed to add state "success" for commit 32e4b4f: 401 Unauthorized
+Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+Hint: none
+Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
+OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
-			name:       "non existing repo: Not Found",
-			token:      cfg.Token,
-			owner:      cfg.Owner,
-			repo:       "non-existing-really",
-			sha:        "dummy-sha",
+			name: "non existing repo: Not Found",
+			repo: "non-existing-really",
+			wantErr: `Failed to add state "success" for commit 32e4b4f: 404 Not Found
+Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/reference/repos#create-a-commit-status"}
+Hint: one of the following happened:
+    1. The repo https://github.com/pix4d/non-existing-really doesn't exist
+    2. The user who issued the token doesn't have write access to the repo
+    3. The token doesn't have scope repo:status
+Action: POST https://api.github.com/repos/pix4d/non-existing-really/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
+OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
 			wantStatus: http.StatusNotFound,
 		},
 		{
-			name:       "non existing SHA: Unprocessable Entity",
-			token:      cfg.Token,
-			owner:      cfg.Owner,
-			repo:       cfg.Repo,
-			sha:        "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
+			name: "non existing SHA: Unprocessable Entity",
+			sha:  "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
+			wantErr: `Failed to add state "success" for commit e576e3a: 422 Unprocessable Entity
+Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/reference/repos#create-a-commit-status"}
+Hint: none
+Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822
+OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy")
-			err := status.Add(tc.sha, "dummy", "dummy", "dummy")
+			// zero values are defaults
+			if tc.token == "" {
+				tc.token = cfg.Token
+			}
+			if tc.owner == "" {
+				tc.owner = cfg.Owner
+			}
+			if tc.repo == "" {
+				tc.repo = cfg.Repo
+			}
+			if tc.sha == "" {
+				tc.sha = cfg.SHA
+			}
 
-			var statusErr *github.StatusError
-			if errors.As(err, &statusErr) {
-				if statusErr.StatusCode != tc.wantStatus {
-					t.Fatalf("status code: have %d (%s); want %d (%s)\n%s",
-						statusErr.StatusCode, http.StatusText(statusErr.StatusCode),
-						tc.wantStatus, http.StatusText(tc.wantStatus), err)
-				}
-			} else {
-				t.Fatalf("have %v; want *github.StatusError", reflect.TypeOf(err))
+			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy-context")
+			err := status.Add(tc.sha, state, "dummy-url", "dummy-desc")
+
+			if err == nil {
+				t.Fatal("\nhave: <no error>\nwant: <some error>")
+			}
+			var ghError *github.StatusError
+			if !errors.As(err, &ghError) {
+				t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
+			}
+			if have, want := ghError.StatusCode, tc.wantStatus; have != want {
+				t.Fatalf("status code: have: %d; want: %d", have, want)
+			}
+
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Fatalf("error: (+have -want):\n%s", diff)
 			}
 		})
 	}
