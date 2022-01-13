@@ -45,11 +45,6 @@ tasks:
     cmds:
       - golines --max-len=99 --write-output .
 
-  test:unit:
-    desc: Run the unit tests.
-    cmds:
-      - "{{.TESTRUNNER}} -count=1 -short -coverprofile=coverage.out ./..."
-
   test:env:
     desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run '^TestFooIntegration' ./pkg/update"
     cmds:
@@ -61,11 +56,27 @@ tasks:
       COGITO_TEST_REPO_NAME: '{{default "cogito-test-read-write" .COGITO_TEST_REPO_NAME}}'
       COGITO_TEST_REPO_OWNER: '{{default "pix4d" .COGITO_TEST_REPO_OWNER}}'
 
+  test:unit:
+    desc: Run the unit tests.
+    cmds:
+      - "{{.TESTRUNNER}} -count=1 -short -coverprofile=coverage.out ./..."
+
   test:integration:
     desc: Run the integration tests.
     cmds:
       - "{{.TESTRUNNER}} -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./..."
     env: *test-env
+
+  test:all:
+    desc: Run all the tests (unit + integration). Use this target to get total coverage.
+    cmds:
+      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
+    env: *test-env
+
+  browser:
+    desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
+    cmds:
+      - go tool cover -html=coverage.out
 
   build:
     desc: Build on the local machine.
