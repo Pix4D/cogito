@@ -16,7 +16,7 @@ In case of doubts about how to tackle testing something, feel free to ask.
 
 * Go, version >= 1.16
 * Docker, version >= 20
-* [Task], version >= 3.7
+* [Task], version >= 3.9
 
 ## Optional
 
@@ -45,14 +45,14 @@ $ task test:unit
 
 There are two types of integration tests:
 
-* tests against GitHub
-* tests the Docker image as resource inside Concourse
+* tests upon GitHub
+* tests upon the Docker image as resource inside Concourse
 
-# Integration tests against GitHub
+# Integration tests upon GitHub
 
 The integration tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
 
-We require environment variables (as opposed to using a configuration file) to pass test configuration. The reason is twofold:
+We require environment variables to pass test configuration. The reason is twofold:
 
 * To enable any contributor to run their own tests without having to edit any file.
 * To securely store secrets!
@@ -65,7 +65,7 @@ The following sections contain first instructions for the setup, then instructio
 
 ## Secure handling of the GitHub OAuth token
 
-We use the [gopass] tool, that stores secrets in the file system using GPG. We then make the secrets available as environment variables in [Taskfile.yml](Taskfile.yml).
+We use the [gopass] tool, that stores secrets in the file system using GPG. We then make the secrets available as environment variables in the [Taskfile.yml](Taskfile.yml).
 
 Add the GitHub OAuth token:
 
@@ -131,7 +131,7 @@ cogito/
 
 ## Running the integration tests
 
-We are finally ready to run also the integration tests:
+We are finally ready to run the integration tests:
 
 ```
 $ task test:integration
@@ -145,18 +145,18 @@ The integration tests have the following logic:
 
 ## Running a specific end-to-end test
 
-Use the `test:env` task target, that runs a shell with available all the secrets needed for the integration tests.
+Use the `test:env` task target, that runs a shell with the secrets needed for the integration tests available as environment variables.
 
 Run all the subtests of a table-driven test:
 
 ```
-$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures'
+$ task test:env -- go test ./github -count=1 -run 'TestGitHubStatusFailureIntegration'
 ```
 
 Run an individual subtest of a table-driven test:
 
 ```
-$ task test:env -- go test ./github -count=1 -run 'TestUnderstandGitHubStatusFailures/non_existing_SHA:_Unprocessable_Entity'
+$ task test:env -- go test ./github -count=1 -run 'TestGitHubStatusFailureIntegration/non_existing_SHA:_Unprocessable_Entity'
 ```
 
 # Building and publishing the image
@@ -167,38 +167,32 @@ The Taskfile includes targets for building and publishing the docker image.
 
 **WARNING**: If you are working on a commit that has a tag, using the CI script will also have an effect on the published Docker image tag. Double-check what you are doing.
 
-FIXME: with the move from envchain to gopass, I need to think how to fix this.
-
-```console
-$ envchain cogito ci/travis.sh
-```
-
 ## Step-by-step
 
-Simply have a look at the contents of `ci/travis.sh` and run each step there manually.
+Simply have a look at the contents of [.github/workflows/ci.yml](.github/workflows/ci.yml) and run each step there manually.
 
 Run the tests
 
 ```console
-$ task test
+$ task test:unit test:integration
 ```
 
 Build the Docker image
 
 ```console
-$ task docker-build
+$ task docker:build
 ```
 
 Run simple smoke test of the image
 
 ```console
-$ task docker-smoke
+$ task docker:smoke
 ```
 
 Push the Docker image. This will always generate a Docker image with a tag corresponding to the branch name. If the tip of the branch has a git tag (for example `v1.2.3`), this will also generate a Docker image with that tag (for example `1.2.3`).
 
 ```console
-$ task docker-push
+$ task docker:push
 ```
 
 # Integration tests: test the Docker image as resource inside Concourse
@@ -209,7 +203,7 @@ You can use my other project [concourse-in-a-box](https://github.com/marco-m/con
 
 See also the next section.
 
-# Suggestions for quick iterations during development
+## Quick iterations during development
 
 These suggestions apply to the development of any Concourse resource.
 
@@ -299,9 +293,21 @@ Update the expired secrets as follows.
 
 Trigger a manual run of the CI to verify that everything works fine.
 
+## Making a release
+
+A release is performed by the Github Action CI, triggered by a git tag of the form `v1.2.3`.
+
+- When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
+- Prepare the PR to also contain an updated CHANGELOG.
+- Merge the PR to master.
+- Create and then push a git tag.
+- Double-check that the Github Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
+
 # License
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
+
+
 
 [Task]: https://taskfile.dev/
 [gotestsum]: https://github.com/gotestyourself/gotestsum
