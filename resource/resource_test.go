@@ -667,7 +667,44 @@ func httpRemote(owner, repo string) string {
 	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
 }
 
-func TestParseGitPseudoURL(t *testing.T) {
+func TestParseGitPseudoURLSuccess(t *testing.T) {
+	testCases := []struct {
+		name   string
+		inURL  string
+		wantGU gitURL
+	}{
+		{
+			name:   "valid SSH URL",
+			inURL:  "git@github.com:Pix4D/cogito.git",
+			wantGU: gitURL{"ssh", "github.com", "Pix4D", "cogito"},
+		},
+		{
+			name:   "valid HTTPS URL",
+			inURL:  "https://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{"https", "github.com", "Pix4D", "cogito"},
+		},
+		{
+			name:   "valid HTTP URL",
+			inURL:  "http://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{"http", "github.com", "Pix4D", "cogito"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gitUrl, err := parseGitPseudoURL(tc.inURL)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
+				t.Errorf("gitURL: (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseGitPseudoURLFailure(t *testing.T) {
 	testCases := []struct {
 		name    string
 		inURL   string
@@ -681,34 +718,16 @@ func TestParseGitPseudoURL(t *testing.T) {
 			wantErr: errInvalidURL,
 		},
 		{
-			name:    "valid SSH URL",
-			inURL:   "git@github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{"ssh", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
-		},
-		{
 			name:    "invalid SSH URL",
 			inURL:   "git@github.com/Pix4D/cogito.git",
 			wantGU:  gitURL{},
 			wantErr: errInvalidURL,
 		},
 		{
-			name:    "valid HTTPS URL",
-			inURL:   "https://github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{"https", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
-		},
-		{
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
 			wantGU:  gitURL{},
 			wantErr: errInvalidURL,
-		},
-		{
-			name:    "valid HTTP URL",
-			inURL:   "http://github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{"http", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
 		},
 		{
 			name:    "invalid HTTP URL",
@@ -720,12 +739,13 @@ func TestParseGitPseudoURL(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gu, err := parseGitPseudoURL(tc.inURL)
+			_, err := parseGitPseudoURL(tc.inURL)
+
+			if err == nil {
+				t.Fatalf("have: <no error>; want: %v", tc.wantErr)
+			}
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
-			}
-			if diff := cmp.Diff(tc.wantGU, gu); diff != "" {
-				t.Errorf("gitURL: (-want +got):\n%s", diff)
 			}
 		})
 	}
