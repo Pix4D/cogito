@@ -461,72 +461,98 @@ func TestCollectInputDirs(t *testing.T) {
 	}
 }
 
-func TestRepoDirMatches(t *testing.T) {
+func TestCheckRepoDirSuccess(t *testing.T) {
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
 
 	testCases := []struct {
-		name      string
-		dir       string
-		inRepoURL string
-		wantErr   error
+		name    string
+		dir     string
+		repoURL string
 	}{
 		{
-			name:      "dir is not a repo",
-			dir:       "not-a-repo",
-			inRepoURL: "dummyurl",
-			wantErr:   os.ErrNotExist,
+			name:    "repo with good SSH remote",
+			dir:     "a-repo",
+			repoURL: sshRemote(wantOwner, wantRepo),
 		},
 		{
-			name:      "bad .git/config",
-			dir:       "repo-bad-git-config",
-			inRepoURL: "dummyurl",
-			wantErr:   errKeyNotFound,
+			name:    "repo with good HTTPS remote",
+			dir:     "a-repo",
+			repoURL: httpsRemote(wantOwner, wantRepo),
 		},
 		{
-			name:      "repo with wrong HTTPS remote",
-			dir:       "a-repo",
-			inRepoURL: httpsRemote("owner", "repo"),
-			wantErr:   errWrongRemote,
-		},
-		{
-			name:      "repo with wrong SSH remote or wrong source config",
-			dir:       "a-repo",
-			inRepoURL: sshRemote("owner", "repo"),
-			wantErr:   errWrongRemote,
-		},
-		{
-			name:      "repo with good SSH remote",
-			dir:       "a-repo",
-			inRepoURL: sshRemote(wantOwner, wantRepo),
-			wantErr:   nil,
-		},
-		{
-			name:      "repo with good HTTPS remote",
-			dir:       "a-repo",
-			inRepoURL: httpsRemote(wantOwner, wantRepo),
-			wantErr:   nil,
-		},
-		{
-			name:      "repo with good HTTP remote",
-			dir:       "a-repo",
-			inRepoURL: httpRemote(wantOwner, wantRepo),
-			wantErr:   nil,
-		},
-		{
-			name:      "invalid git pseudo URL in .git/config",
-			dir:       "a-repo",
-			inRepoURL: "foo://bar",
-			wantErr:   errInvalidURL,
+			name:    "repo with good HTTP remote",
+			dir:     "a-repo",
+			repoURL: httpRemote(wantOwner, wantRepo),
 		},
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, "dummySHA", "dummyHead")
+		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestCheckRepoDirFailure(t *testing.T) {
+	const wantOwner = "smiling"
+	const wantRepo = "butterfly"
+
+	testCases := []struct {
+		name    string
+		dir     string
+		repoURL string
+		wantErr error
+	}{
+		{
+			name:    "dir is not a repo",
+			dir:     "not-a-repo",
+			repoURL: "dummyurl",
+			wantErr: os.ErrNotExist,
+		},
+		{
+			name:    "bad .git/config",
+			dir:     "repo-bad-git-config",
+			repoURL: "dummyurl",
+			wantErr: errKeyNotFound,
+		},
+		{
+			name:    "repo with wrong HTTPS remote",
+			dir:     "a-repo",
+			repoURL: httpsRemote("owner", "repo"),
+			wantErr: errWrongRemote,
+		},
+		{
+			name:    "repo with wrong SSH remote or wrong source config",
+			dir:     "a-repo",
+			repoURL: sshRemote("owner", "repo"),
+			wantErr: errWrongRemote,
+		},
+		{
+			name:    "invalid git pseudo URL in .git/config",
+			dir:     "a-repo",
+			repoURL: "foo://bar",
+			wantErr: errInvalidURL,
+		},
+	}
+
+	for _, tc := range testCases {
+		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
 			if !errors.Is(err, tc.wantErr) {
 				t.Errorf("error: got %v; want %v", err, tc.wantErr)
 			}
