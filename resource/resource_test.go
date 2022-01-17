@@ -507,40 +507,44 @@ func TestCheckRepoDirFailure(t *testing.T) {
 	const wantRepo = "butterfly"
 
 	testCases := []struct {
-		name    string
-		dir     string
-		repoURL string
-		wantErr error
+		name      string
+		dir       string
+		repoURL   string
+		wantErrRe string // regexp
 	}{
 		{
-			name:    "dir is not a repo",
-			dir:     "not-a-repo",
-			repoURL: "dummyurl",
-			wantErr: os.ErrNotExist,
+			name:      "dir is not a repo",
+			dir:       "not-a-repo",
+			repoURL:   "dummyurl",
+			wantErrRe: `parsing .git/config: open (\S+)/not-a-repo/.git/config: no such file or directory`,
 		},
 		{
-			name:    "bad .git/config",
-			dir:     "repo-bad-git-config",
-			repoURL: "dummyurl",
-			wantErr: errKeyNotFound,
+			name:      "bad .git/config",
+			dir:       "repo-bad-git-config",
+			repoURL:   "dummyurl",
+			wantErrRe: `.git/config: key 'remote "origin"/url': key not found`,
 		},
 		{
 			name:    "repo with wrong HTTPS remote",
 			dir:     "a-repo",
 			repoURL: httpsRemote("owner", "repo"),
-			wantErr: errWrongRemote,
+			wantErrRe: `resource source configuration and git repository are incompatible.
+Git remote: "https://github.com/owner/repo.git"
+Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
 		},
 		{
 			name:    "repo with wrong SSH remote or wrong source config",
 			dir:     "a-repo",
 			repoURL: sshRemote("owner", "repo"),
-			wantErr: errWrongRemote,
+			wantErrRe: `resource source configuration and git repository are incompatible.
+Git remote: "git@github.com:owner/repo.git"
+Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
 		},
 		{
-			name:    "invalid git pseudo URL in .git/config",
-			dir:     "a-repo",
-			repoURL: "foo://bar",
-			wantErr: errInvalidURL,
+			name:      "invalid git pseudo URL in .git/config",
+			dir:       "a-repo",
+			repoURL:   "foo://bar",
+			wantErrRe: `.git/config: remote: url: foo://bar: invalid git URL`,
 		},
 	}
 
@@ -552,10 +556,14 @@ func TestCheckRepoDirFailure(t *testing.T) {
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
 
 			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
 			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("error: got %v; want %v", err, tc.wantErr)
+
+			have := err.Error()
+			re := regexp.MustCompile(tc.wantErrRe)
+			if !re.MatchString(have) {
+				diff := cmp.Diff(tc.wantErrRe, have)
+				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
