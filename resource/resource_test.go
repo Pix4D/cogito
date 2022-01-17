@@ -560,62 +560,86 @@ func TestCheckRepoDirFailure(t *testing.T) {
 	}
 }
 
-func TestGitCommit(t *testing.T) {
+func TestGitCommitSuccess(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 	const defHead = "ref: refs/heads/a-branch-FIXME"
 
 	testCases := []struct {
-		name      string
-		dir       string
-		inRepoURL string
-		inHead    string
-		wantErr   error
+		name    string
+		dir     string
+		repoURL string
+		head    string
 	}{
 		{
-			name:      "missing HEAD",
-			dir:       "not-a-repo",
-			inRepoURL: "dummy",
-			inHead:    "dummy",
-			wantErr:   os.ErrNotExist,
+			name:    "happy path for branch checkout",
+			dir:     "a-repo",
+			repoURL: "dummy",
+			head:    defHead,
 		},
 		{
-			name:      "happy path for branch checkout",
-			dir:       "a-repo",
-			inRepoURL: "dummy",
-			inHead:    defHead,
-			wantErr:   nil,
-		},
-		{
-			name:      "happy path for detached HEAD checkout",
-			dir:       "a-repo",
-			inRepoURL: "dummy",
-			inHead:    wantSHA,
-			wantErr:   nil,
-		},
-		{
-			name:      "invalid format for HEAD",
-			dir:       "a-repo",
-			inRepoURL: "dummyURL",
-			inHead:    "this is a bad head",
-			wantErr:   errInvalidHead,
+			name:    "happy path for detached HEAD checkout",
+			dir:     "a-repo",
+			repoURL: "dummy",
+			head:    wantSHA,
 		},
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, wantSHA, tc.inHead)
+		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			gotRef, gotErr := GitCommit(filepath.Join(inDir, tc.dir))
+			sha, err := GitCommit(filepath.Join(dir, tc.dir))
 
-			if !errors.Is(gotErr, tc.wantErr) {
-				t.Fatalf("err: got %v; want %v", gotErr, tc.wantErr)
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
-			if gotErr != nil {
-				return
+			if sha != wantSHA {
+				t.Fatalf("ref: have: %s; want: %s", sha, wantSHA)
 			}
-			if gotRef != wantSHA {
-				t.Fatalf("ref: got %q; want %q", gotRef, wantSHA)
+		})
+	}
+}
+
+func TestGitCommitFailure(t *testing.T) {
+	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+
+	testCases := []struct {
+		name    string
+		dir     string
+		repoURL string
+		head    string
+		wantErr error
+	}{
+		{
+			name:    "missing HEAD",
+			dir:     "not-a-repo",
+			repoURL: "dummy",
+			head:    "dummy",
+			wantErr: os.ErrNotExist,
+		},
+		{
+			name:    "invalid format for HEAD",
+			dir:     "a-repo",
+			repoURL: "dummyURL",
+			head:    "this is a bad head",
+			wantErr: errInvalidHead,
+		},
+	}
+
+	for _, tc := range testCases {
+		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := GitCommit(filepath.Join(dir, tc.dir))
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+
+			if !errors.Is(err, tc.wantErr) {
+				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
 			}
 		})
 	}
