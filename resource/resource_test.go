@@ -41,21 +41,34 @@ func TestCheck(t *testing.T) {
 		wantVersions []oc.Version
 		wantErr      error
 	}{
-		{"happy path",
-			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			defVersion,
-			defVersions,
-			nil},
-		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
-			oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo},
-			oc.Version{},
-			defVersions,
-			nil},
-		{"missing mandatory sources",
-			oc.Source{},
-			defVersion,
-			nil,
-			&missingSourceError{},
+		{
+			name: "happy path",
+			inSource: oc.Source{
+				"access_token": cfg.Token,
+				"owner":        cfg.Owner,
+				"repo":         cfg.Repo,
+			},
+			inVersion:    defVersion,
+			wantVersions: defVersions,
+			wantErr:      nil,
+		},
+		{
+			name: "do not return a nil version the first time it runs (see Concourse PR #4442)",
+			inSource: oc.Source{
+				"access_token": cfg.Token,
+				"owner":        cfg.Owner,
+				"repo":         cfg.Repo,
+			},
+			inVersion:    oc.Version{},
+			wantVersions: defVersions,
+			wantErr:      nil,
+		},
+		{
+			name:         "missing mandatory sources",
+			inSource:     oc.Source{},
+			inVersion:    defVersion,
+			wantVersions: nil,
+			wantErr:      &missingSourceError{},
 		},
 	}
 
@@ -80,15 +93,24 @@ func TestCheck(t *testing.T) {
 }
 
 func TestIn(t *testing.T) {
-	defSource := oc.Source{"access_token": "dummy", "owner": "dummy", "repo": "dummy"}
+	defSource := oc.Source{
+		"access_token": "dummy",
+		"owner":        "dummy",
+		"repo":         "dummy",
+	}
 
 	var testCases = []struct {
 		name      string
 		inVersion oc.Version
 	}{
-		{"happy path", defVersion},
-		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
-			oc.Version{}},
+		{
+			name:      "happy path",
+			inVersion: defVersion,
+		},
+		{
+			name:      "do not return a nil version the first time it runs (see Concourse PR #4442)",
+			inVersion: oc.Version{},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -100,13 +122,13 @@ func TestIn(t *testing.T) {
 			)
 
 			if err != nil {
-				t.Fatalf("err: got %v; want %v", err, nil)
+				t.Fatalf("err: have %v; want %v", err, nil)
 			}
 			if diff := cmp.Diff(defVersion, version); diff != "" {
-				t.Errorf("version: (-want +got):\n%s", diff)
+				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 			if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
-				t.Errorf("metadata: (-want +got):\n%s", diff)
+				t.Errorf("metadata: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -115,9 +137,17 @@ func TestIn(t *testing.T) {
 func TestOut(t *testing.T) {
 	cfg := help.FakeTestCfg
 
-	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
-	defParams := oc.Params{"state": "error"}
-	defMeta := oc.Metadata{oc.NameVal{Name: "state", Value: "error"}}
+	defSource := oc.Source{
+		"access_token": cfg.Token,
+		"owner":        cfg.Owner,
+		"repo":         cfg.Repo,
+	}
+	defParams := oc.Params{
+		"state": "error",
+	}
+	defMeta := oc.Metadata{oc.NameVal{
+		Name: "state", Value: "error"},
+	}
 	defDir := "a-repo"
 
 	type in struct {
@@ -136,40 +166,49 @@ func TestOut(t *testing.T) {
 		in   in
 		want want
 	}{
-		{"valid mandatory sources",
+		{
+			"valid mandatory sources",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil, nil},
 		},
-		{"missing mandatory sources",
+		{
+			"missing mandatory sources",
 			in{oc.Source{}, defParams, defEnv},
 			want{nil, nil, nil, &missingSourceError{}},
 		},
-		{"unknown source",
+		{
+			"unknown source",
 			in{oc.Source{"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
 				defParams, defEnv},
 			want{nil, nil, nil, &unknownSourceError{}},
 		},
-		{"valid mandatory parameters",
+		{
+			"valid mandatory parameters",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil, nil},
 		},
-		{"completely missing mandatory parameters",
+		{
+			"completely missing mandatory parameters",
 			in{defSource, oc.Params{}, defEnv},
 			want{nil, nil, nil, &missingParamError{}},
 		},
-		{"invalid state parameter",
+		{
+			"invalid state parameter",
 			in{defSource, oc.Params{"state": "hello"}, defEnv},
 			want{nil, nil, nil, &invalidParamError{}},
 		},
-		{"unknown parameter",
+		{
+			"unknown parameter",
 			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
 			want{nil, nil, nil, &unknownParamError{}},
 		},
-		{"do not return a nil version the first time it runs (see Concourse PR #4442)",
+		{
+			"do not return a nil version the first time it runs (see Concourse PR #4442)",
 			in{defSource, defParams, defEnv},
 			want{defVersion, defMeta, nil, nil},
 		},
-		{"source: optional: context_prefix",
+		{
+			"source: optional: context_prefix",
 			in{
 				oc.Source{
 					"access_token":   cfg.Token,
@@ -186,7 +225,8 @@ func TestOut(t *testing.T) {
 				nil,
 			},
 		},
-		{"put step: default context",
+		{
+			"put step: default context",
 			in{defSource, defParams, defEnv},
 			want{
 				defVersion,
@@ -195,7 +235,8 @@ func TestOut(t *testing.T) {
 				nil,
 			},
 		},
-		{"put step: optional: context",
+		{
+			"put step: optional: context",
 			in{defSource, oc.Params{"state": "error", "context": "bello"}, defEnv},
 			want{
 				defVersion,
@@ -280,19 +321,21 @@ func TestOutIntegration(t *testing.T) {
 		in      in
 		wantErr error
 	}{
-		{"backend reports success",
-			in{defSource, defParams, defEnv},
-			nil,
+		{
+			name:    "backend reports success",
+			in:      in{defSource, defParams, defEnv},
+			wantErr: nil,
 		},
-		{"backend reports failure",
-			in{
+		{
+			name: "backend reports failure",
+			in: in{
 				oc.Source{
 					"access_token": cfg.Token,
 					"owner":        cfg.Owner,
 					"repo":         "does-not-exists-really"},
 				defParams,
 				defEnv},
-			errWrongRemote,
+			wantErr: errWrongRemote,
 		},
 	}
 
@@ -318,7 +361,8 @@ func TestOutIntegration(t *testing.T) {
 }
 
 func TestTargetURL(t *testing.T) {
-	testCases := map[string]struct {
+	testCases := []struct {
+		name         string
 		atc          string
 		team         string
 		pipeline     string
@@ -327,20 +371,23 @@ func TestTargetURL(t *testing.T) {
 		instanceVars string
 		want         string
 	}{
-		"all defaults": {
+		{
+			name: "all defaults",
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42",
 		},
-		"instanced vars 1": {
+		{
+			name:         "instanced vars 1",
 			instanceVars: `{"branch":"stable"}`,
 			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
 		},
-		"instanced vars 2": {
+		{
+			name:         "instanced vars 2",
 			instanceVars: `{"branch":"stable","foo":"bar"}`,
 			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
 		},
 	}
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
 			if tc.want == "" {
 				t.Fatal("tc.want: empty")
 			}
@@ -380,9 +427,24 @@ func TestCollectInputDirs(t *testing.T) {
 		wantErr error
 		wantN   int
 	}{
-		{"non existing base directory", "non-existing", os.ErrNotExist, 0},
-		{"empty directory", "testdata/empty-dir", nil, 0},
-		{"two directories and one file", "testdata/two-dirs", nil, 2},
+		{
+			name:    "non existing base directory",
+			dir:     "non-existing",
+			wantErr: os.ErrNotExist,
+			wantN:   0,
+		},
+		{
+			name:    "empty directory",
+			dir:     "testdata/empty-dir",
+			wantErr: nil,
+			wantN:   0,
+		},
+		{
+			name:    "two directories and one file",
+			dir:     "testdata/two-dirs",
+			wantErr: nil,
+			wantN:   2,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -402,52 +464,60 @@ func TestCollectInputDirs(t *testing.T) {
 func TestRepoDirMatches(t *testing.T) {
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
-	type testCase struct {
+
+	testCases := []struct {
 		name      string
 		dir       string
 		inRepoURL string
 		wantErr   error
-	}
-	testCases := []testCase{
-		{"dir is not a repo",
-			"not-a-repo",
-			"dummyurl",
-			os.ErrNotExist,
+	}{
+		{
+			name:      "dir is not a repo",
+			dir:       "not-a-repo",
+			inRepoURL: "dummyurl",
+			wantErr:   os.ErrNotExist,
 		},
-		{"bad .git/config",
-			"repo-bad-git-config",
-			"dummyurl",
-			errKeyNotFound,
+		{
+			name:      "bad .git/config",
+			dir:       "repo-bad-git-config",
+			inRepoURL: "dummyurl",
+			wantErr:   errKeyNotFound,
 		},
-		{"repo with wrong HTTPS remote",
-			"a-repo",
-			httpsRemote("owner", "repo"),
-			errWrongRemote,
+		{
+			name:      "repo with wrong HTTPS remote",
+			dir:       "a-repo",
+			inRepoURL: httpsRemote("owner", "repo"),
+			wantErr:   errWrongRemote,
 		},
-		{"repo with wrong SSH remote or wrong source config",
-			"a-repo",
-			sshRemote("owner", "repo"),
-			errWrongRemote,
+		{
+			name:      "repo with wrong SSH remote or wrong source config",
+			dir:       "a-repo",
+			inRepoURL: sshRemote("owner", "repo"),
+			wantErr:   errWrongRemote,
 		},
-		{"repo with good SSH remote",
-			"a-repo",
-			sshRemote(wantOwner, wantRepo),
-			nil,
+		{
+			name:      "repo with good SSH remote",
+			dir:       "a-repo",
+			inRepoURL: sshRemote(wantOwner, wantRepo),
+			wantErr:   nil,
 		},
-		{"repo with good HTTPS remote",
-			"a-repo",
-			httpsRemote(wantOwner, wantRepo),
-			nil,
+		{
+			name:      "repo with good HTTPS remote",
+			dir:       "a-repo",
+			inRepoURL: httpsRemote(wantOwner, wantRepo),
+			wantErr:   nil,
 		},
-		{"repo with good HTTP remote",
-			"a-repo",
-			httpRemote(wantOwner, wantRepo),
-			nil,
+		{
+			name:      "repo with good HTTP remote",
+			dir:       "a-repo",
+			inRepoURL: httpRemote(wantOwner, wantRepo),
+			wantErr:   nil,
 		},
-		{"invalid git pseudo URL in .git/config",
-			"a-repo",
-			"foo://bar",
-			errInvalidURL,
+		{
+			name:      "invalid git pseudo URL in .git/config",
+			dir:       "a-repo",
+			inRepoURL: "foo://bar",
+			wantErr:   errInvalidURL,
 		},
 	}
 
@@ -467,18 +537,42 @@ func TestRepoDirMatches(t *testing.T) {
 func TestGitCommit(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 	const defHead = "ref: refs/heads/a-branch-FIXME"
-	type testCase struct {
+
+	testCases := []struct {
 		name      string
 		dir       string
 		inRepoURL string
 		inHead    string
 		wantErr   error
-	}
-	testCases := []testCase{
-		{"missing HEAD", "not-a-repo", "dummy", "dummy", os.ErrNotExist},
-		{"happy path for branch checkout", "a-repo", "dummy", defHead, nil},
-		{"happy path for detached HEAD checkout", "a-repo", "dummy", wantSHA, nil},
-		{"invalid format for HEAD", "a-repo", "dummyURL", "this is a bad head", errInvalidHead},
+	}{
+		{
+			name:      "missing HEAD",
+			dir:       "not-a-repo",
+			inRepoURL: "dummy",
+			inHead:    "dummy",
+			wantErr:   os.ErrNotExist,
+		},
+		{
+			name:      "happy path for branch checkout",
+			dir:       "a-repo",
+			inRepoURL: "dummy",
+			inHead:    defHead,
+			wantErr:   nil,
+		},
+		{
+			name:      "happy path for detached HEAD checkout",
+			dir:       "a-repo",
+			inRepoURL: "dummy",
+			inHead:    wantSHA,
+			wantErr:   nil,
+		},
+		{
+			name:      "invalid format for HEAD",
+			dir:       "a-repo",
+			inRepoURL: "dummyURL",
+			inHead:    "this is a bad head",
+			wantErr:   errInvalidHead,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -508,7 +602,10 @@ func setup(
 	inRepoURL string,
 	inCommitSHA string,
 	inHead string,
-) (string, func(t *testing.T)) {
+) (
+	string,
+	func(t *testing.T),
+) {
 	// Make a temp dir to be the resource work directory
 	inDir, err := ioutil.TempDir("", "cogito-test-")
 	if err != nil {
@@ -551,42 +648,50 @@ func TestParseGitPseudoURL(t *testing.T) {
 		wantGU  gitURL
 		wantErr error
 	}{
-		{"totally invalid URL",
-			"hello",
-			gitURL{},
-			errInvalidURL,
+		{
+			name:    "totally invalid URL",
+			inURL:   "hello",
+			wantGU:  gitURL{},
+			wantErr: errInvalidURL,
 		},
-		{"valid SSH URL",
-			"git@github.com:Pix4D/cogito.git",
-			gitURL{"ssh", "github.com", "Pix4D", "cogito"},
-			nil,
+		{
+			name:    "valid SSH URL",
+			inURL:   "git@github.com:Pix4D/cogito.git",
+			wantGU:  gitURL{"ssh", "github.com", "Pix4D", "cogito"},
+			wantErr: nil,
 		},
-		{"invalid SSH URL",
-			"git@github.com/Pix4D/cogito.git",
-			gitURL{},
-			errInvalidURL,
+		{
+			name:    "invalid SSH URL",
+			inURL:   "git@github.com/Pix4D/cogito.git",
+			wantGU:  gitURL{},
+			wantErr: errInvalidURL,
 		},
-		{"valid HTTPS URL",
-			"https://github.com/Pix4D/cogito.git",
-			gitURL{"https", "github.com", "Pix4D", "cogito"},
-			nil,
+		{
+			name:    "valid HTTPS URL",
+			inURL:   "https://github.com/Pix4D/cogito.git",
+			wantGU:  gitURL{"https", "github.com", "Pix4D", "cogito"},
+			wantErr: nil,
 		},
-		{"invalid HTTPS URL",
-			"https://github.com:Pix4D/cogito.git",
-			gitURL{},
-			errInvalidURL,
+		{
+			name:    "invalid HTTPS URL",
+			inURL:   "https://github.com:Pix4D/cogito.git",
+			wantGU:  gitURL{},
+			wantErr: errInvalidURL,
 		},
-		{"valid HTTP URL",
-			"http://github.com/Pix4D/cogito.git",
-			gitURL{"http", "github.com", "Pix4D", "cogito"},
-			nil,
+		{
+			name:    "valid HTTP URL",
+			inURL:   "http://github.com/Pix4D/cogito.git",
+			wantGU:  gitURL{"http", "github.com", "Pix4D", "cogito"},
+			wantErr: nil,
 		},
-		{"invalid HTTP URL",
-			"http://github.com:Pix4D/cogito.git",
-			gitURL{},
-			errInvalidURL,
+		{
+			name:    "invalid HTTP URL",
+			inURL:   "http://github.com:Pix4D/cogito.git",
+			wantGU:  gitURL{},
+			wantErr: errInvalidURL,
 		},
 	}
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			gu, err := parseGitPseudoURL(tc.inURL)
