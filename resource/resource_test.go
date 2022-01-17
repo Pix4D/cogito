@@ -579,7 +579,7 @@ Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong gi
 			name:      "invalid git pseudo URL in .git/config",
 			dir:       "a-repo",
 			repoURL:   "foo://bar",
-			wantErrRe: `.git/config: remote: url: foo://bar: invalid git URL`,
+			wantErrRe: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
 		},
 	}
 
@@ -779,32 +779,27 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 	testCases := []struct {
 		name    string
 		inURL   string
-		wantGU  gitURL
-		wantErr error
+		wantErr string
 	}{
 		{
 			name:    "totally invalid URL",
 			inURL:   "hello",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			wantErr: "invalid git URL hello: no valid scheme",
 		},
 		{
 			name:    "invalid SSH URL",
 			inURL:   "git@github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			wantErr: "invalid git SSH URL git@github.com/Pix4D/cogito.git: want exactly one ':'",
 		},
 		{
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
 		},
 		{
 			name:    "invalid HTTP URL",
 			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
 		},
 	}
 
@@ -815,8 +810,8 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 			if err == nil {
 				t.Fatalf("have: <no error>; want: %v", tc.wantErr)
 			}
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}

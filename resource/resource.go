@@ -4,7 +4,6 @@
 package resource
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
@@ -21,10 +20,6 @@ import (
 
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
 var buildinfo = "unknown"
-
-var (
-	errInvalidURL = errors.New("invalid git URL")
-)
 
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
@@ -404,27 +399,35 @@ func parseGitPseudoURL(url string) (gitURL, error) {
 	gu := gitURL{}
 
 	switch {
+	// example: git@github.com:Pix4D/cogito.git
 	case strings.HasPrefix(url, "git@"):
 		gu.Scheme = "ssh"
 		path = url[4:]
 		if strings.Count(path, ":") != 1 {
-			return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
+			return gitURL{}, fmt.Errorf("invalid git SSH URL %s: want exactly one ':'", url)
 		}
 		path = strings.Replace(path, ":", "/", 1)
+
+	// example: https://github.com/Pix4D/cogito.git
 	case strings.HasPrefix(url, "https://"):
 		gu.Scheme = "https"
 		path = url[8:]
+
+	// example: http://github.com/Pix4D/cogito.git
 	case strings.HasPrefix(url, "http://"):
 		gu.Scheme = "http"
 		path = url[7:]
+
 	default:
-		return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
+		return gitURL{}, fmt.Errorf("invalid git URL %s: no valid scheme", url)
 	}
 
 	// github.com/Pix4D/cogito.git
 	tokens := strings.Split(path, "/")
-	if len(tokens) != 3 {
-		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)
+	if have, want := len(tokens), 3; have != want {
+		return gitURL{},
+			fmt.Errorf("invalid git URL: path: want: %d components; have: %d %s",
+				want, have, tokens)
 	}
 	gu.Host = tokens[0]
 	gu.Owner = tokens[1]
