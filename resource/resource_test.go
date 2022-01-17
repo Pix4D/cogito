@@ -302,7 +302,7 @@ func TestOut(t *testing.T) {
 	}
 }
 
-func TestOutIntegration(t *testing.T) {
+func TestOutIntegrationSuccess(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -317,26 +317,14 @@ func TestOutIntegration(t *testing.T) {
 		params oc.Params
 		env    oc.Environment
 	}
-	var testCases = []struct {
-		name    string
-		in      in
-		wantErr error
+
+	testCases := []struct {
+		name string
+		in   in
 	}{
 		{
-			name:    "backend reports success",
-			in:      in{defSource, defParams, defEnv},
-			wantErr: nil,
-		},
-		{
-			name: "backend reports failure",
-			in: in{
-				oc.Source{
-					"access_token": cfg.Token,
-					"owner":        cfg.Owner,
-					"repo":         "does-not-exists-really"},
-				defParams,
-				defEnv},
-			wantErr: errWrongRemote,
+			name: "backend reports success",
+			in:   in{defSource, defParams, defEnv},
 		},
 	}
 
@@ -348,14 +336,61 @@ func TestOutIntegration(t *testing.T) {
 			r := Resource{}
 			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
 
-			if tc.wantErr == nil {
-				if err != nil {
-					t.Fatalf("\ngot:  %v\nwant: no error", err)
-				}
-			} else {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
-				}
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestOutIntegrationFailure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	cfg := help.SkipTestIfNoEnvVars(t)
+
+	defParams := oc.Params{"state": "error"}
+	defDir := "a-repo"
+
+	type in struct {
+		source oc.Source
+		params oc.Params
+		env    oc.Environment
+	}
+
+	testCases := []struct {
+		name    string
+		in      in
+		wantErr string
+	}{
+		{
+			name: "backend reports failure",
+			in: in{
+				oc.Source{
+					"access_token": cfg.Token,
+					"owner":        cfg.Owner,
+					"repo":         "does-not-exists-really"},
+				defParams,
+				defEnv},
+			wantErr: `resource source configuration and git repository are incompatible.
+Git remote: "git@github.com:pix4d/cogito-test-read-write.git"
+Resource config: host: github.com, owner: "pix4d", repo: "does-not-exists-really". wrong git remote`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			defer teardown(t)
+
+			r := Resource{}
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+
+			if err == nil {
+				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
