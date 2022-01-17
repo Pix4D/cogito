@@ -23,9 +23,7 @@ import (
 var buildinfo = "unknown"
 
 var (
-	errKeyNotFound = errors.New("key not found")
-	errWrongRemote = errors.New("wrong git remote")
-	errInvalidURL  = errors.New("invalid git URL")
+	errInvalidURL = errors.New("invalid git URL")
 )
 
 var (
@@ -370,7 +368,7 @@ func checkRepoDir(dir, owner, repo string) error {
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
 	if remote == "" {
-		return fmt.Errorf(".git/config: key '%s/%s': %w", section, key, errKeyNotFound)
+		return fmt.Errorf(".git/config: key '%s/%s': key not found", section, key)
 	}
 	gu, err := parseGitPseudoURL(remote)
 	if err != nil {
@@ -383,8 +381,8 @@ func checkRepoDir(dir, owner, repo string) error {
 		if !strings.EqualFold(l, r) {
 			return fmt.Errorf(`resource source configuration and git repository are incompatible.
 Git remote: %q
-Resource config: host: github.com, owner: %q, repo: %q. %w`,
-				remote, owner, repo, errWrongRemote)
+Resource config: host: github.com, owner: %q, repo: %q. wrong git remote`,
+				remote, owner, repo)
 		}
 	}
 	return nil
