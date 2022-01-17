@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"testing"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
@@ -605,25 +606,25 @@ func TestGitCommitFailure(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 
 	testCases := []struct {
-		name    string
-		dir     string
-		repoURL string
-		head    string
-		wantErr error
+		name      string
+		dir       string
+		repoURL   string
+		head      string
+		wantErrRe string // regexp
 	}{
 		{
-			name:    "missing HEAD",
-			dir:     "not-a-repo",
-			repoURL: "dummy",
-			head:    "dummy",
-			wantErr: os.ErrNotExist,
+			name:      "missing HEAD",
+			dir:       "not-a-repo",
+			repoURL:   "dummy",
+			head:      "dummy",
+			wantErrRe: `git commit: read HEAD: open (\S+)/not-a-repo/.git/HEAD: no such file or directory`,
 		},
 		{
-			name:    "invalid format for HEAD",
-			dir:     "a-repo",
-			repoURL: "dummyURL",
-			head:    "this is a bad head",
-			wantErr: errInvalidHead,
+			name:      "invalid format for HEAD",
+			dir:       "a-repo",
+			repoURL:   "dummyURL",
+			head:      "this is a bad head",
+			wantErrRe: `git commit: invalid HEAD format: "this is a bad head"`,
 		},
 	}
 
@@ -635,11 +636,14 @@ func TestGitCommitFailure(t *testing.T) {
 			_, err := GitCommit(filepath.Join(dir, tc.dir))
 
 			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
 			}
 
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
+			have := err.Error()
+			re := regexp.MustCompile(tc.wantErrRe)
+			if !re.MatchString(have) {
+				diff := cmp.Diff(tc.wantErrRe, have)
+				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}

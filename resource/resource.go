@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -25,7 +26,6 @@ var (
 	errKeyNotFound = errors.New("key not found")
 	errWrongRemote = errors.New("wrong git remote")
 	errInvalidURL  = errors.New("invalid git URL")
-	errInvalidHead = errors.New("invalid HEAD format")
 )
 
 var (
@@ -439,9 +439,9 @@ func GitCommit(repoPath string) (string, error) {
 	dotGitPath := filepath.Join(repoPath, ".git")
 
 	headPath := filepath.Join(dotGitPath, "HEAD")
-	headBuf, err := ioutil.ReadFile(headPath)
+	headBuf, err := os.ReadFile(headPath)
 	if err != nil {
-		return "", fmt.Errorf("reading HEAD: %w", err)
+		return "", fmt.Errorf("git commit: read HEAD: %w", err)
 	}
 
 	// The HEAD file can have two completely different contents:
@@ -462,19 +462,19 @@ func GitCommit(repoPath string) (string, error) {
 		// branch checkout
 		shaRelPath := tokens[1]
 		shaPath := filepath.Join(dotGitPath, shaRelPath)
-		shaBuf, err := ioutil.ReadFile(shaPath)
+		shaBuf, err := os.ReadFile(shaPath)
 		if err != nil {
-			return "", fmt.Errorf("reading SHA file: %w", err)
+			return "", fmt.Errorf("git commit: branch checkout: read SHA file: %w", err)
 		}
 		sha = strings.TrimSuffix(string(shaBuf), "\n")
 	default:
-		return "", errInvalidHead
+		return "", fmt.Errorf("git commit: invalid HEAD format: %q", head)
 	}
 
 	// Minimal validation that the file contents look like a 40-digit SHA.
 	const shaLen = 40
 	if len(sha) != shaLen {
-		return "", fmt.Errorf("SHA: %v: got len of %v; want %v", sha, len(sha), shaLen)
+		return "", fmt.Errorf("git commit: SHA %s: have len of %d; want %d", sha, len(sha), shaLen)
 	}
 
 	return sha, nil
