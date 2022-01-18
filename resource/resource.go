@@ -197,7 +197,7 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	ref, err := GitCommit(repoDir)
+	ref, err := GitGetCommit(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -435,8 +435,8 @@ func parseGitPseudoURL(url string) (gitURL, error) {
 	return gu, nil
 }
 
-// GitCommit looks into a git repository and extracts the commit SHA of the HEAD.
-func GitCommit(repoPath string) (string, error) {
+// GitGetCommit looks into a git repository and extracts the commit SHA of the HEAD.
+func GitGetCommit(repoPath string) (string, error) {
 	dotGitPath := filepath.Join(repoPath, ".git")
 
 	headPath := filepath.Join(dotGitPath, "HEAD")

@@ -604,7 +604,7 @@ Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong gi
 	}
 }
 
-func TestGitCommitSuccess(t *testing.T) {
+func TestGitGetCommitSuccess(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 	const defHead = "ref: refs/heads/a-branch-FIXME"
 
@@ -633,7 +633,7 @@ func TestGitCommitSuccess(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			sha, err := GitCommit(filepath.Join(dir, tc.dir))
+			sha, err := GitGetCommit(filepath.Join(dir, tc.dir))
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -645,7 +645,7 @@ func TestGitCommitSuccess(t *testing.T) {
 	}
 }
 
-func TestGitCommitFailure(t *testing.T) {
+func TestGitGetCommitFailure(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 
 	testCases := []struct {
@@ -676,7 +676,7 @@ func TestGitCommitFailure(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := GitCommit(filepath.Join(dir, tc.dir))
+			_, err := GitGetCommit(filepath.Join(dir, tc.dir))
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
