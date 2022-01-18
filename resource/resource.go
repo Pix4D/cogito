@@ -363,7 +363,7 @@ func checkRepoDir(dir, owner, repo string) error {
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
 	if remote == "" {
-		return fmt.Errorf(".git/config: key '%s/%s': key not found", section, key)
+		return fmt.Errorf(".git/config: key [%s]/%s: not found", section, key)
 	}
 	gu, err := parseGitPseudoURL(remote)
 	if err != nil {

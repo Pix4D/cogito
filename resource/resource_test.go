@@ -554,10 +554,10 @@ func TestCheckRepoDirFailure(t *testing.T) {
 			wantErrRe: `parsing .git/config: open (\S+)/not-a-repo/.git/config: no such file or directory`,
 		},
 		{
-			name:      "bad .git/config",
+			name:      "bad file .git/config",
 			dir:       "repo-bad-git-config",
 			repoURL:   "dummyurl",
-			wantErrRe: `.git/config: key 'remote "origin"/url': key not found`,
+			wantErrRe: `.git/config: key \[remote "origin"\]/url: not found`,
 		},
 		{
 			name:    "repo with wrong HTTPS remote",
@@ -597,8 +597,10 @@ Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong gi
 			have := err.Error()
 			re := regexp.MustCompile(tc.wantErrRe)
 			if !re.MatchString(have) {
-				diff := cmp.Diff(tc.wantErrRe, have)
-				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
+				if diff := cmp.Diff(tc.wantErrRe, have); diff != "" {
+					t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
+				}
+				t.Fatalf("error msg regexp\nhave: %s\nwant: %s", have, tc.wantErrRe)
 			}
 		})
 	}
@@ -726,14 +728,17 @@ func setup(
 	return inDir, teardown
 }
 
+// sshRemote returns a github SSH URL
 func sshRemote(owner, repo string) string {
 	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
 }
 
+// httpsRemote returns a github HTTPS URL
 func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
+// httpRemote returns a github HTTP URL
 func httpRemote(owner, repo string) string {
 	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
 }
