@@ -32,15 +32,14 @@ var (
 			"BUILD_JOB_NAME":   "a-job"})
 )
 
-func TestCheck(t *testing.T) {
+func TestCheckSuccess(t *testing.T) {
 	cfg := help.FakeTestCfg
 
-	var testCases = []struct {
+	testCases := []struct {
 		name         string
 		inSource     oc.Source
 		inVersion    oc.Version
 		wantVersions []oc.Version
-		wantErr      error
 	}{
 		{
 			name: "happy path",
@@ -51,7 +50,6 @@ func TestCheck(t *testing.T) {
 			},
 			inVersion:    defVersion,
 			wantVersions: defVersions,
-			wantErr:      nil,
 		},
 		{
 			name: "do not return a nil version the first time it runs (see Concourse PR #4442)",
@@ -62,8 +60,34 @@ func TestCheck(t *testing.T) {
 			},
 			inVersion:    oc.Version{},
 			wantVersions: defVersions,
-			wantErr:      nil,
 		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := Resource{}
+
+			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+
+			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
+				t.Fatalf("version: (-want +have):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestCheckFailure(t *testing.T) {
+	testCases := []struct {
+		name         string
+		inSource     oc.Source
+		inVersion    oc.Version
+		wantVersions []oc.Version
+		wantErr      error
+	}{
 		{
 			name:         "missing mandatory sources",
 			inSource:     oc.Source{},
@@ -79,15 +103,19 @@ func TestCheck(t *testing.T) {
 
 			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.wantErr)
 			if gotErrType != wantErrType {
-				t.Fatalf("err: got %v (%v);\nwant %v (%v)",
+				t.Fatalf("err: have %v (%v);\nwant %v (%v)",
 					gotErrType, err, wantErrType, tc.wantErr)
 			}
 
 			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
-				t.Fatalf("version: (-want +got):\n%s", diff)
+				t.Fatalf("version: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -244,7 +272,7 @@ func TestOutMockSuccess(t *testing.T) {
 						}
 						for k, v := range tc.wantBody {
 							if bm[k] != v {
-								t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
 							}
 						}
 					}
@@ -380,7 +408,7 @@ func TestOutMockFailure(t *testing.T) {
 						}
 						for k, v := range tc.wantBody {
 							if bm[k] != v {
-								t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
 							}
 						}
 					}
@@ -405,16 +433,16 @@ func TestOutMockFailure(t *testing.T) {
 			gotErrType := reflect.TypeOf(err)
 			wantErrType := reflect.TypeOf(tc.wantErr)
 			if gotErrType != wantErrType {
-				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)",
+				t.Fatalf("\nhave: %v (%v)\nwant: %v (%v)",
 					gotErrType, err, wantErrType, tc.wantErr)
 			}
 
 			if diff := cmp.Diff(tc.wantVersion, version); diff != "" {
-				t.Errorf("version: (-want +got):\n%s", diff)
+				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 
 			if diff := cmp.Diff(tc.wantMetadata, metadata); diff != "" {
-				t.Errorf("metadata: (-want +got):\n%s", diff)
+				t.Errorf("metadata: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -567,8 +595,8 @@ func TestTargetURL(t *testing.T) {
 				buildN = tc.buildN
 			}
 
-			if got := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); got != tc.want {
-				t.Fatalf("\ngot:  %s\nwant: %s", got, tc.want)
+			if have := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); have != tc.want {
+				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
 			}
 		})
 	}
@@ -605,11 +633,11 @@ func TestCollectInputDirs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dirs, err := collectInputDirs(tc.dir)
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("sut(%v): error: got %v; want %v", tc.dir, err, tc.wantErr)
+				t.Errorf("sut(%v): error: have %v; want %v", tc.dir, err, tc.wantErr)
 			}
 			gotN := len(dirs)
 			if gotN != tc.wantN {
-				t.Errorf("sut(%v): len(dirs): got %v; want %v", tc.dir, gotN, tc.wantN)
+				t.Errorf("sut(%v): len(dirs): have %v; want %v", tc.dir, gotN, tc.wantN)
 			}
 		})
 	}
@@ -893,7 +921,7 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
-				t.Errorf("gitURL: (-want +got):\n%s", diff)
+				t.Errorf("gitURL: (-want +have):\n%s", diff)
 			}
 		})
 	}
