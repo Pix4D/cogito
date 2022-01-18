@@ -93,7 +93,7 @@ func TestCheckFailure(t *testing.T) {
 			inSource:     oc.Source{},
 			inVersion:    defVersion,
 			wantVersions: nil,
-			wantErr:      &missingSourceError{},
+			wantErr:      &missingSourceKeyError{},
 		},
 	}
 
@@ -336,7 +336,7 @@ func TestOutMockFailure(t *testing.T) {
 			wantVersion:  nil,
 			wantMetadata: nil,
 			wantBody:     nil,
-			wantErr:      &missingSourceError{},
+			wantErr:      &missingSourceKeyError{},
 		},
 		{
 			name: "unknown source",
@@ -351,7 +351,7 @@ func TestOutMockFailure(t *testing.T) {
 			wantVersion:  nil,
 			wantMetadata: nil,
 			wantBody:     nil,
-			wantErr:      &unknownSourceError{},
+			wantErr:      &unknownSourceKeyError{},
 		},
 		{
 			name:         "completely missing mandatory parameters",

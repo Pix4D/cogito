@@ -39,41 +39,41 @@ var (
 		"success": {},
 	}
 
-	mandatorySources = map[string]struct{}{
+	mandatorySourceKeys = map[string]struct{}{
 		"owner":        {},
 		"repo":         {},
 		"access_token": {},
 	}
 
-	optionalSources = map[string]struct{}{
+	optionalSourceKeys = map[string]struct{}{
 		"log_level":      {},
 		"log_url":        {},
 		"context_prefix": {},
 	}
 )
 
-type missingSourceError struct {
-	S string
+type missingSourceKeyError struct {
+	Key string
 }
 
-func (e *missingSourceError) Error() string {
-	return fmt.Sprintf("missing required source key %q", e.S)
+func (e *missingSourceKeyError) Error() string {
+	return fmt.Sprintf("missing source key %q", e.Key)
 }
 
-type unknownSourceError struct {
-	Param string
+type unknownSourceKeyError struct {
+	Key string
 }
 
-func (e *unknownSourceError) Error() string {
-	return fmt.Sprintf("unknown source %q", e.Param)
+func (e *unknownSourceKeyError) Error() string {
+	return fmt.Sprintf("unknown source key %q", e.Key)
 }
 
 type missingParamError struct {
-	S string
+	Param string
 }
 
 func (e *missingParamError) Error() string {
-	return fmt.Sprintf("missing parameter %q", e.S)
+	return fmt.Sprintf("missing parameter %q", e.Param)
 }
 
 type invalidParamError struct {
@@ -114,7 +114,7 @@ func (r *Resource) Check(
 	log.Debugf("check: started")
 	defer log.Debugf("check: finished")
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func (r *Resource) In(
 	log.Debugf("in: params:\n%s", stringify1(params))
 	log.Debugf("in: env:\n%s", stringify2(env.GetAll()))
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, nil, err
 	}
 
@@ -169,11 +169,11 @@ func (r *Resource) Out(
 	log.Debugf("out: params:\n%s", stringify1(params))
 	log.Debugf("out: env:\n%s", stringify2(env.GetAll()))
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, nil, err
 	}
 
-	if err := outValidateParams(params); err != nil {
+	if err := validateOutParams(params); err != nil {
 		return nil, nil, err
 	}
 	state, _ := params["state"].(string)
@@ -203,7 +203,9 @@ func (r *Resource) Out(
 	}
 	log.Debugf("out: parsed ref %q", ref)
 
+	//
 	// Finally, post the status to GitHub.
+	//
 	token, _ := source["access_token"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
@@ -280,31 +282,31 @@ func stringify2(xs map[string]string) string {
 	return bld.String()
 }
 
-func validateSources(source oc.Source) error {
-	// Any missing source?
-	for wantS := range mandatorySources {
-		if _, ok := source[wantS].(string); !ok {
-			return &missingSourceError{wantS}
+func validateSource(source oc.Source) error {
+	// Any missing source key?
+	for wantKey := range mandatorySourceKeys {
+		if _, ok := source[wantKey].(string); !ok {
+			return &missingSourceKeyError{wantKey}
 		}
 	}
 
-	// Any unknown source?
-	for s := range source {
-		_, ok1 := mandatorySources[s]
-		_, ok2 := optionalSources[s]
+	// Any unknown source key?
+	for key := range source {
+		_, ok1 := mandatorySourceKeys[key]
+		_, ok2 := optionalSourceKeys[key]
 		if !ok1 && !ok2 {
-			return &unknownSourceError{s}
+			return &unknownSourceKeyError{key}
 		}
 	}
 
 	return nil
 }
 
-func outValidateParams(params oc.Params) error {
+func validateOutParams(params oc.Params) error {
 	// Any missing parameter?
-	for wantP := range outMandatoryParams {
-		if _, ok := params[wantP].(string); !ok {
-			return &missingParamError{wantP}
+	for wantParam := range outMandatoryParams {
+		if _, ok := params[wantParam].(string); !ok {
+			return &missingParamError{wantParam}
 		}
 	}
 
@@ -315,11 +317,11 @@ func outValidateParams(params oc.Params) error {
 	}
 
 	// Any unknown parameter?
-	for p := range params {
-		_, ok1 := outMandatoryParams[p]
-		_, ok2 := outOptionalParams[p]
+	for param := range params {
+		_, ok1 := outMandatoryParams[param]
+		_, ok2 := outOptionalParams[param]
 		if !ok1 && !ok2 {
-			return &unknownParamError{p}
+			return &unknownParamError{param}
 		}
 	}
 
