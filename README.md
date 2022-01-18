@@ -113,13 +113,13 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 # Source Configuration
 
-## Required
+## Required keys
 
 - `owner`: The GitHub user or organization.
 - `repo`: The GitHub repository name.
 - `access_token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
 
-## Optional
+## Optional keys
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
@@ -141,11 +141,11 @@ It is currently a no-op.
 
 Sets or updates the GitHub status for a given commit, following the [GitHub status API].
 
-## Required
+## Required params
 
 - `state`: The state to set. One of `error`, `failure`, `pending`, `success`.
 
-## Optional:
+## Optional params
 
 - `context`: The value of the non-prefix part of the context (see section [Effects on GitHub](#effects-on-github)). Default: `job_name`. See also the optional `context_prefix` in the [source configuration](#source-configuration).
 
