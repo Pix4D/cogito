@@ -93,6 +93,11 @@ tasks:
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
 
+  clean:
+    desc: Delete build artifacts
+    cmds:
+      - rm -f coverage.out
+
   docker:login:
     cmds:
       - echo $DOCKER_TOKEN | docker login -u $DOCKER_USERNAME --password-stdin

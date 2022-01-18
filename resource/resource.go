@@ -4,10 +4,10 @@
 package resource
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
 	"path/filepath"
 	"strings"
@@ -20,13 +20,6 @@ import (
 
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
 var buildinfo = "unknown"
-
-var (
-	errKeyNotFound = errors.New("key not found")
-	errWrongRemote = errors.New("wrong git remote")
-	errInvalidURL  = errors.New("invalid git URL")
-	errInvalidHead = errors.New("invalid HEAD format")
-)
 
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
@@ -370,7 +363,7 @@ func checkRepoDir(dir, owner, repo string) error {
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
 	if remote == "" {
-		return fmt.Errorf(".git/config: key '%s/%s': %w", section, key, errKeyNotFound)
+		return fmt.Errorf(".git/config: key '%s/%s': key not found", section, key)
 	}
 	gu, err := parseGitPseudoURL(remote)
 	if err != nil {
@@ -383,8 +376,8 @@ func checkRepoDir(dir, owner, repo string) error {
 		if !strings.EqualFold(l, r) {
 			return fmt.Errorf(`resource source configuration and git repository are incompatible.
 Git remote: %q
-Resource config: host: github.com, owner: %q, repo: %q. %w`,
-				remote, owner, repo, errWrongRemote)
+Resource config: host: github.com, owner: %q, repo: %q. wrong git remote`,
+				remote, owner, repo)
 		}
 	}
 	return nil
@@ -406,27 +399,35 @@ func parseGitPseudoURL(url string) (gitURL, error) {
 	gu := gitURL{}
 
 	switch {
+	// example: git@github.com:Pix4D/cogito.git
 	case strings.HasPrefix(url, "git@"):
 		gu.Scheme = "ssh"
 		path = url[4:]
 		if strings.Count(path, ":") != 1 {
-			return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
+			return gitURL{}, fmt.Errorf("invalid git SSH URL %s: want exactly one ':'", url)
 		}
 		path = strings.Replace(path, ":", "/", 1)
+
+	// example: https://github.com/Pix4D/cogito.git
 	case strings.HasPrefix(url, "https://"):
 		gu.Scheme = "https"
 		path = url[8:]
+
+	// example: http://github.com/Pix4D/cogito.git
 	case strings.HasPrefix(url, "http://"):
 		gu.Scheme = "http"
 		path = url[7:]
+
 	default:
-		return gitURL{}, fmt.Errorf("url: %v: %w", url, errInvalidURL)
+		return gitURL{}, fmt.Errorf("invalid git URL %s: no valid scheme", url)
 	}
 
 	// github.com/Pix4D/cogito.git
 	tokens := strings.Split(path, "/")
-	if len(tokens) != 3 {
-		return gitURL{}, fmt.Errorf("path: %v: %w", path, errInvalidURL)
+	if have, want := len(tokens), 3; have != want {
+		return gitURL{},
+			fmt.Errorf("invalid git URL: path: want: %d components; have: %d %s",
+				want, have, tokens)
 	}
 	gu.Host = tokens[0]
 	gu.Owner = tokens[1]
@@ -439,9 +440,9 @@ func GitCommit(repoPath string) (string, error) {
 	dotGitPath := filepath.Join(repoPath, ".git")
 
 	headPath := filepath.Join(dotGitPath, "HEAD")
-	headBuf, err := ioutil.ReadFile(headPath)
+	headBuf, err := os.ReadFile(headPath)
 	if err != nil {
-		return "", fmt.Errorf("reading HEAD: %w", err)
+		return "", fmt.Errorf("git commit: read HEAD: %w", err)
 	}
 
 	// The HEAD file can have two completely different contents:
@@ -462,19 +463,19 @@ func GitCommit(repoPath string) (string, error) {
 		// branch checkout
 		shaRelPath := tokens[1]
 		shaPath := filepath.Join(dotGitPath, shaRelPath)
-		shaBuf, err := ioutil.ReadFile(shaPath)
+		shaBuf, err := os.ReadFile(shaPath)
 		if err != nil {
-			return "", fmt.Errorf("reading SHA file: %w", err)
+			return "", fmt.Errorf("git commit: branch checkout: read SHA file: %w", err)
 		}
 		sha = strings.TrimSuffix(string(shaBuf), "\n")
 	default:
-		return "", errInvalidHead
+		return "", fmt.Errorf("git commit: invalid HEAD format: %q", head)
 	}
 
 	// Minimal validation that the file contents look like a 40-digit SHA.
 	const shaLen = 40
 	if len(sha) != shaLen {
-		return "", fmt.Errorf("SHA: %v: got len of %v; want %v", sha, len(sha), shaLen)
+		return "", fmt.Errorf("git commit: SHA %s: have len of %d; want %d", sha, len(sha), shaLen)
 	}
 
 	return sha, nil

@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"testing"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
@@ -301,7 +302,7 @@ func TestOut(t *testing.T) {
 	}
 }
 
-func TestOutIntegration(t *testing.T) {
+func TestOutIntegrationSuccess(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -316,26 +317,14 @@ func TestOutIntegration(t *testing.T) {
 		params oc.Params
 		env    oc.Environment
 	}
-	var testCases = []struct {
-		name    string
-		in      in
-		wantErr error
+
+	testCases := []struct {
+		name string
+		in   in
 	}{
 		{
-			name:    "backend reports success",
-			in:      in{defSource, defParams, defEnv},
-			wantErr: nil,
-		},
-		{
-			name: "backend reports failure",
-			in: in{
-				oc.Source{
-					"access_token": cfg.Token,
-					"owner":        cfg.Owner,
-					"repo":         "does-not-exists-really"},
-				defParams,
-				defEnv},
-			wantErr: errWrongRemote,
+			name: "backend reports success",
+			in:   in{defSource, defParams, defEnv},
 		},
 	}
 
@@ -347,14 +336,61 @@ func TestOutIntegration(t *testing.T) {
 			r := Resource{}
 			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
 
-			if tc.wantErr == nil {
-				if err != nil {
-					t.Fatalf("\ngot:  %v\nwant: no error", err)
-				}
-			} else {
-				if !errors.Is(err, tc.wantErr) {
-					t.Fatalf("\ngot:  %v\nwant: %v", err, tc.wantErr)
-				}
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestOutIntegrationFailure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+	cfg := help.SkipTestIfNoEnvVars(t)
+
+	defParams := oc.Params{"state": "error"}
+	defDir := "a-repo"
+
+	type in struct {
+		source oc.Source
+		params oc.Params
+		env    oc.Environment
+	}
+
+	testCases := []struct {
+		name    string
+		in      in
+		wantErr string
+	}{
+		{
+			name: "backend reports failure",
+			in: in{
+				oc.Source{
+					"access_token": cfg.Token,
+					"owner":        cfg.Owner,
+					"repo":         "does-not-exists-really"},
+				defParams,
+				defEnv},
+			wantErr: `resource source configuration and git repository are incompatible.
+Git remote: "git@github.com:pix4d/cogito-test-read-write.git"
+Resource config: host: github.com, owner: "pix4d", repo: "does-not-exists-really". wrong git remote`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			defer teardown(t)
+
+			r := Resource{}
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+
+			if err == nil {
+				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -461,135 +497,196 @@ func TestCollectInputDirs(t *testing.T) {
 	}
 }
 
-func TestRepoDirMatches(t *testing.T) {
+func TestCheckRepoDirSuccess(t *testing.T) {
+	const wantOwner = "smiling"
+	const wantRepo = "butterfly"
+
+	testCases := []struct {
+		name    string
+		dir     string
+		repoURL string
+	}{
+		{
+			name:    "repo with good SSH remote",
+			dir:     "a-repo",
+			repoURL: sshRemote(wantOwner, wantRepo),
+		},
+		{
+			name:    "repo with good HTTPS remote",
+			dir:     "a-repo",
+			repoURL: httpsRemote(wantOwner, wantRepo),
+		},
+		{
+			name:    "repo with good HTTP remote",
+			dir:     "a-repo",
+			repoURL: httpRemote(wantOwner, wantRepo),
+		},
+	}
+
+	for _, tc := range testCases {
+		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestCheckRepoDirFailure(t *testing.T) {
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
 
 	testCases := []struct {
 		name      string
 		dir       string
-		inRepoURL string
-		wantErr   error
+		repoURL   string
+		wantErrRe string // regexp
 	}{
 		{
 			name:      "dir is not a repo",
 			dir:       "not-a-repo",
-			inRepoURL: "dummyurl",
-			wantErr:   os.ErrNotExist,
+			repoURL:   "dummyurl",
+			wantErrRe: `parsing .git/config: open (\S+)/not-a-repo/.git/config: no such file or directory`,
 		},
 		{
 			name:      "bad .git/config",
 			dir:       "repo-bad-git-config",
-			inRepoURL: "dummyurl",
-			wantErr:   errKeyNotFound,
+			repoURL:   "dummyurl",
+			wantErrRe: `.git/config: key 'remote "origin"/url': key not found`,
 		},
 		{
-			name:      "repo with wrong HTTPS remote",
-			dir:       "a-repo",
-			inRepoURL: httpsRemote("owner", "repo"),
-			wantErr:   errWrongRemote,
+			name:    "repo with wrong HTTPS remote",
+			dir:     "a-repo",
+			repoURL: httpsRemote("owner", "repo"),
+			wantErrRe: `resource source configuration and git repository are incompatible.
+Git remote: "https://github.com/owner/repo.git"
+Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
 		},
 		{
-			name:      "repo with wrong SSH remote or wrong source config",
-			dir:       "a-repo",
-			inRepoURL: sshRemote("owner", "repo"),
-			wantErr:   errWrongRemote,
-		},
-		{
-			name:      "repo with good SSH remote",
-			dir:       "a-repo",
-			inRepoURL: sshRemote(wantOwner, wantRepo),
-			wantErr:   nil,
-		},
-		{
-			name:      "repo with good HTTPS remote",
-			dir:       "a-repo",
-			inRepoURL: httpsRemote(wantOwner, wantRepo),
-			wantErr:   nil,
-		},
-		{
-			name:      "repo with good HTTP remote",
-			dir:       "a-repo",
-			inRepoURL: httpRemote(wantOwner, wantRepo),
-			wantErr:   nil,
+			name:    "repo with wrong SSH remote or wrong source config",
+			dir:     "a-repo",
+			repoURL: sshRemote("owner", "repo"),
+			wantErrRe: `resource source configuration and git repository are incompatible.
+Git remote: "git@github.com:owner/repo.git"
+Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
 		},
 		{
 			name:      "invalid git pseudo URL in .git/config",
 			dir:       "a-repo",
-			inRepoURL: "foo://bar",
-			wantErr:   errInvalidURL,
+			repoURL:   "foo://bar",
+			wantErrRe: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
 		},
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, "dummySHA", "dummyHead")
+		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("error: got %v; want %v", err, tc.wantErr)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
+			}
+
+			have := err.Error()
+			re := regexp.MustCompile(tc.wantErrRe)
+			if !re.MatchString(have) {
+				diff := cmp.Diff(tc.wantErrRe, have)
+				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
 }
 
-func TestGitCommit(t *testing.T) {
+func TestGitCommitSuccess(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 	const defHead = "ref: refs/heads/a-branch-FIXME"
 
 	testCases := []struct {
-		name      string
-		dir       string
-		inRepoURL string
-		inHead    string
-		wantErr   error
+		name    string
+		dir     string
+		repoURL string
+		head    string
 	}{
 		{
-			name:      "missing HEAD",
-			dir:       "not-a-repo",
-			inRepoURL: "dummy",
-			inHead:    "dummy",
-			wantErr:   os.ErrNotExist,
+			name:    "happy path for branch checkout",
+			dir:     "a-repo",
+			repoURL: "dummy",
+			head:    defHead,
 		},
 		{
-			name:      "happy path for branch checkout",
-			dir:       "a-repo",
-			inRepoURL: "dummy",
-			inHead:    defHead,
-			wantErr:   nil,
-		},
-		{
-			name:      "happy path for detached HEAD checkout",
-			dir:       "a-repo",
-			inRepoURL: "dummy",
-			inHead:    wantSHA,
-			wantErr:   nil,
-		},
-		{
-			name:      "invalid format for HEAD",
-			dir:       "a-repo",
-			inRepoURL: "dummyURL",
-			inHead:    "this is a bad head",
-			wantErr:   errInvalidHead,
+			name:    "happy path for detached HEAD checkout",
+			dir:     "a-repo",
+			repoURL: "dummy",
+			head:    wantSHA,
 		},
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.inRepoURL, wantSHA, tc.inHead)
+		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			gotRef, gotErr := GitCommit(filepath.Join(inDir, tc.dir))
+			sha, err := GitCommit(filepath.Join(dir, tc.dir))
 
-			if !errors.Is(gotErr, tc.wantErr) {
-				t.Fatalf("err: got %v; want %v", gotErr, tc.wantErr)
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
-			if gotErr != nil {
-				return
+			if sha != wantSHA {
+				t.Fatalf("ref: have: %s; want: %s", sha, wantSHA)
 			}
-			if gotRef != wantSHA {
-				t.Fatalf("ref: got %q; want %q", gotRef, wantSHA)
+		})
+	}
+}
+
+func TestGitCommitFailure(t *testing.T) {
+	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+
+	testCases := []struct {
+		name      string
+		dir       string
+		repoURL   string
+		head      string
+		wantErrRe string // regexp
+	}{
+		{
+			name:      "missing HEAD",
+			dir:       "not-a-repo",
+			repoURL:   "dummy",
+			head:      "dummy",
+			wantErrRe: `git commit: read HEAD: open (\S+)/not-a-repo/.git/HEAD: no such file or directory`,
+		},
+		{
+			name:      "invalid format for HEAD",
+			dir:       "a-repo",
+			repoURL:   "dummyURL",
+			head:      "this is a bad head",
+			wantErrRe: `git commit: invalid HEAD format: "this is a bad head"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
+		defer teardown(t)
+
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := GitCommit(filepath.Join(dir, tc.dir))
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
+			}
+
+			have := err.Error()
+			re := regexp.MustCompile(tc.wantErrRe)
+			if !re.MatchString(have) {
+				diff := cmp.Diff(tc.wantErrRe, have)
+				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -641,65 +738,80 @@ func httpRemote(owner, repo string) string {
 	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
 }
 
-func TestParseGitPseudoURL(t *testing.T) {
+func TestParseGitPseudoURLSuccess(t *testing.T) {
 	testCases := []struct {
-		name    string
-		inURL   string
-		wantGU  gitURL
-		wantErr error
+		name   string
+		inURL  string
+		wantGU gitURL
 	}{
 		{
-			name:    "totally invalid URL",
-			inURL:   "hello",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			name:   "valid SSH URL",
+			inURL:  "git@github.com:Pix4D/cogito.git",
+			wantGU: gitURL{"ssh", "github.com", "Pix4D", "cogito"},
 		},
 		{
-			name:    "valid SSH URL",
-			inURL:   "git@github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{"ssh", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
+			name:   "valid HTTPS URL",
+			inURL:  "https://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{"https", "github.com", "Pix4D", "cogito"},
 		},
 		{
-			name:    "invalid SSH URL",
-			inURL:   "git@github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
-		},
-		{
-			name:    "valid HTTPS URL",
-			inURL:   "https://github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{"https", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
-		},
-		{
-			name:    "invalid HTTPS URL",
-			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
-		},
-		{
-			name:    "valid HTTP URL",
-			inURL:   "http://github.com/Pix4D/cogito.git",
-			wantGU:  gitURL{"http", "github.com", "Pix4D", "cogito"},
-			wantErr: nil,
-		},
-		{
-			name:    "invalid HTTP URL",
-			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantGU:  gitURL{},
-			wantErr: errInvalidURL,
+			name:   "valid HTTP URL",
+			inURL:  "http://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{"http", "github.com", "Pix4D", "cogito"},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			gu, err := parseGitPseudoURL(tc.inURL)
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("err: got %v; want %v", err, tc.wantErr)
+			gitUrl, err := parseGitPseudoURL(tc.inURL)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
-			if diff := cmp.Diff(tc.wantGU, gu); diff != "" {
+			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
 				t.Errorf("gitURL: (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestParseGitPseudoURLFailure(t *testing.T) {
+	testCases := []struct {
+		name    string
+		inURL   string
+		wantErr string
+	}{
+		{
+			name:    "totally invalid URL",
+			inURL:   "hello",
+			wantErr: "invalid git URL hello: no valid scheme",
+		},
+		{
+			name:    "invalid SSH URL",
+			inURL:   "git@github.com/Pix4D/cogito.git",
+			wantErr: "invalid git SSH URL git@github.com/Pix4D/cogito.git: want exactly one ':'",
+		},
+		{
+			name:    "invalid HTTPS URL",
+			inURL:   "https://github.com:Pix4D/cogito.git",
+			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+		},
+		{
+			name:    "invalid HTTP URL",
+			inURL:   "http://github.com:Pix4D/cogito.git",
+			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := parseGitPseudoURL(tc.inURL)
+
+			if err == nil {
+				t.Fatalf("have: <no error>; want: %v", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
