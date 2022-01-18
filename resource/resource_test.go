@@ -179,12 +179,6 @@ func TestOutMockSuccess(t *testing.T) {
 	}
 	defDir := "a-repo"
 
-	type in struct {
-		source oc.Source
-		params oc.Params
-		env    oc.Environment
-	}
-
 	testCases := []struct {
 		name         string
 		source       oc.Source
@@ -319,49 +313,41 @@ func TestOutMockFailure(t *testing.T) {
 	defDir := "a-repo"
 
 	var testCases = []struct {
-		name         string
-		source       oc.Source
-		params       oc.Params
-		env          oc.Environment
-		wantVersion  oc.Version
-		wantMetadata oc.Metadata
-		wantBody     map[string]string
-		wantErr      error
+		name     string
+		source   oc.Source
+		params   oc.Params
+		env      oc.Environment
+		wantBody map[string]string
+		wantErr  string
 	}{
 		{
-			name:         "missing mandatory sources",
-			source:       oc.Source{},
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  nil,
-			wantMetadata: nil,
-			wantBody:     nil,
-			wantErr:      &missingSourceKeyError{},
+			name:     "missing mandatory source key",
+			source:   oc.Source{},
+			params:   defParams,
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "missing source key 'owner'",
 		},
 		{
-			name: "unknown source",
+			name: "unknown source key",
 			source: oc.Source{
 				"access_token": "x",
 				"owner":        "a",
 				"repo":         "b",
 				"pizza":        "napoli",
 			},
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  nil,
-			wantMetadata: nil,
-			wantBody:     nil,
-			wantErr:      &unknownSourceKeyError{},
+			params:   defParams,
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "unknown source key 'pizza'",
 		},
 		{
-			name:         "completely missing mandatory parameters",
-			source:       defSource,
-			params:       oc.Params{},
-			env:          defEnv,
-			wantVersion:  nil,
-			wantMetadata: nil,
-			wantBody:     nil,
-			wantErr:      &missingParamError{},
+			name:     "missing mandatory parameters",
+			source:   defSource,
+			params:   oc.Params{},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "missing put parameter 'state'",
 		},
 		{
 			name:   "invalid state parameter",
@@ -369,11 +355,9 @@ func TestOutMockFailure(t *testing.T) {
 			params: oc.Params{
 				"state": "hello",
 			},
-			env:          defEnv,
-			wantVersion:  nil,
-			wantMetadata: nil,
-			wantBody:     nil,
-			wantErr:      &invalidParamError{},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "invalid put parameter 'state: hello'",
 		},
 		{
 			name:   "unknown parameter",
@@ -382,11 +366,9 @@ func TestOutMockFailure(t *testing.T) {
 				"state": "pending",
 				"pizza": "margherita",
 			},
-			env:          defEnv,
-			wantVersion:  nil,
-			wantMetadata: nil,
-			wantBody:     nil,
-			wantErr:      &unknownParamError{},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "unknown put parameter 'pizza'",
 		},
 	}
 
@@ -423,26 +405,15 @@ func TestOutMockFailure(t *testing.T) {
 			}()
 
 			res := Resource{}
-			version, metadata, err := res.Out(
+			_, _, err := res.Out(
 				inDir, tc.source, tc.params, tc.env, silentLog)
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
 			}
 
-			gotErrType := reflect.TypeOf(err)
-			wantErrType := reflect.TypeOf(tc.wantErr)
-			if gotErrType != wantErrType {
-				t.Fatalf("\nhave: %v (%v)\nwant: %v (%v)",
-					gotErrType, err, wantErrType, tc.wantErr)
-			}
-
-			if diff := cmp.Diff(tc.wantVersion, version); diff != "" {
-				t.Errorf("version: (-want +have):\n%s", diff)
-			}
-
-			if diff := cmp.Diff(tc.wantMetadata, metadata); diff != "" {
-				t.Errorf("metadata: (-want +have):\n%s", diff)
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}

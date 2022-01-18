@@ -52,47 +52,6 @@ var (
 	}
 )
 
-type missingSourceKeyError struct {
-	Key string
-}
-
-func (e *missingSourceKeyError) Error() string {
-	return fmt.Sprintf("missing source key %q", e.Key)
-}
-
-type unknownSourceKeyError struct {
-	Key string
-}
-
-func (e *unknownSourceKeyError) Error() string {
-	return fmt.Sprintf("unknown source key %q", e.Key)
-}
-
-type missingParamError struct {
-	Param string
-}
-
-func (e *missingParamError) Error() string {
-	return fmt.Sprintf("missing parameter %q", e.Param)
-}
-
-type invalidParamError struct {
-	Param string
-	Value string
-}
-
-func (e *invalidParamError) Error() string {
-	return fmt.Sprintf("invalid parameter %q: %q", e.Param, e.Value)
-}
-
-type unknownParamError struct {
-	Param string
-}
-
-func (e *unknownParamError) Error() string {
-	return fmt.Sprintf("unknown parameter %q", e.Param)
-}
-
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
 // This is useful to understand in the Concourse UI and logs which resource it is, since log
 // output in Concourse doesn't mention the name of the resource (or task) generating it.
@@ -286,7 +245,7 @@ func validateSource(source oc.Source) error {
 	// Any missing source key?
 	for wantKey := range mandatorySourceKeys {
 		if _, ok := source[wantKey].(string); !ok {
-			return &missingSourceKeyError{wantKey}
+			return fmt.Errorf("missing source key '%s'", wantKey)
 		}
 	}
 
@@ -295,7 +254,7 @@ func validateSource(source oc.Source) error {
 		_, ok1 := mandatorySourceKeys[key]
 		_, ok2 := optionalSourceKeys[key]
 		if !ok1 && !ok2 {
-			return &unknownSourceKeyError{key}
+			return fmt.Errorf("unknown source key '%s'", key)
 		}
 	}
 
@@ -306,14 +265,14 @@ func validateOutParams(params oc.Params) error {
 	// Any missing parameter?
 	for wantParam := range outMandatoryParams {
 		if _, ok := params[wantParam].(string); !ok {
-			return &missingParamError{wantParam}
+			return fmt.Errorf("missing put parameter '%s'", wantParam)
 		}
 	}
 
 	// Any invalid parameter?
 	state, _ := params["state"].(string)
 	if _, ok := outValidStates[state]; !ok {
-		return &invalidParamError{"state", state}
+		return fmt.Errorf("invalid put parameter 'state: %s'", state)
 	}
 
 	// Any unknown parameter?
@@ -321,7 +280,7 @@ func validateOutParams(params oc.Params) error {
 		_, ok1 := outMandatoryParams[param]
 		_, ok2 := outOptionalParams[param]
 		if !ok1 && !ok2 {
-			return &unknownParamError{param}
+			return fmt.Errorf("unknown put parameter '%s'", param)
 		}
 	}
 
