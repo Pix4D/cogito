@@ -457,7 +457,7 @@ func TestOutIntegrationFailure(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "backend reports failure",
+			name: "local validations fail",
 			in: in{
 				oc.Source{
 					"access_token": cfg.Token,
@@ -465,9 +465,16 @@ func TestOutIntegrationFailure(t *testing.T) {
 					"repo":         "does-not-exists-really"},
 				defParams,
 				defEnv},
-			wantErr: `resource source configuration and git repository are incompatible.
-Git remote: "git@github.com:pix4d/cogito-test-read-write.git"
-Resource config: host: github.com, owner: "pix4d", repo: "does-not-exists-really". wrong git remote`,
+			wantErr: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: git@github.com:pix4d/cogito-test-read-write.git
+    owner: pix4d
+     repo: cogito-test-read-write
+
+Cogito SOURCE configuration:
+    owner: pix4d
+     repo: does-not-exists-really`,
 		},
 	}
 
@@ -656,17 +663,31 @@ func TestCheckRepoDirFailure(t *testing.T) {
 			name:    "repo with unrelated HTTPS remote",
 			dir:     "a-repo",
 			repoURL: httpsRemote("owner", "repo"),
-			wantErrWild: `resource source configuration and git repository are incompatible.
-Git remote: "https://github.com/owner/repo.git"
-Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: https://github.com/owner/repo.git
+    owner: owner
+     repo: repo
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
 		},
 		{
 			name:    "repo with unrelated SSH remote or wrong source config",
 			dir:     "a-repo",
 			repoURL: sshRemote("owner", "repo"),
-			wantErrWild: `resource source configuration and git repository are incompatible.
-Git remote: "git@github.com:owner/repo.git"
-Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: git@github.com:owner/repo.git
+    owner: owner
+     repo: repo
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
 		},
 		{
 			name:        "invalid git pseudo URL in .git/config",

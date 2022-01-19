@@ -319,8 +319,12 @@ func collectInputDirs(dir string) ([]string, error) {
 	return dirs, nil
 }
 
-// Check if dir is a git repository, of the form owner/repo, with an origin accessed
-// over HTTP, HTTPS or SSH.
+// checkRepoDir validates wether DIR, assumed to be received as input of a put step,
+// contains a git repository usable with the Cogito source configuration:
+// - DIR is indeed a git repository.
+// - The repo configuration contains a "remote origin" section.
+// - The remote origin url can be parsed following the Github conventions.
+// - The result of the parse matches OWNER and REPO.
 func checkRepoDir(dir, owner, repo string) error {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
@@ -339,11 +343,11 @@ func checkRepoDir(dir, owner, repo string) error {
 	//
 	const section = `remote "origin"`
 	const key = "url"
-	remote := cfg.StringFromSection(section, key, "")
-	if remote == "" {
+	url := cfg.StringFromSection(section, key, "")
+	if url == "" {
 		return fmt.Errorf(".git/config: key [%s]/%s: not found", section, key)
 	}
-	gu, err := parseGitPseudoURL(remote)
+	gu, err := parseGitPseudoURL(url)
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
@@ -352,10 +356,18 @@ func checkRepoDir(dir, owner, repo string) error {
 	for i, l := range left {
 		r := right[i]
 		if !strings.EqualFold(l, r) {
-			return fmt.Errorf(`resource source configuration and git repository are incompatible.
-Git remote: %q
-Resource config: host: github.com, owner: %q, repo: %q. wrong git remote`,
-				remote, owner, repo)
+			return fmt.Errorf(`the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: %s
+    owner: %s
+     repo: %s
+
+Cogito SOURCE configuration:
+    owner: %s
+     repo: %s`,
+				url, gu.Owner, gu.Repo,
+				owner, repo)
 		}
 	}
 	return nil
