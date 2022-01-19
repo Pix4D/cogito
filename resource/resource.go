@@ -4,12 +4,14 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
@@ -243,19 +245,34 @@ func stringify2(xs map[string]string) string {
 
 func validateSource(source oc.Source) error {
 	// Any missing source key?
-	for wantKey := range mandatorySourceKeys {
-		if _, ok := source[wantKey].(string); !ok {
-			return fmt.Errorf("missing source key '%s'", wantKey)
+	missing := make([]string, 0, len(mandatorySourceKeys))
+	for key := range mandatorySourceKeys {
+		if _, ok := source[key].(string); !ok {
+			missing = append(missing, key)
 		}
 	}
 
 	// Any unknown source key?
+	unknown := make([]string, 0, len(source))
 	for key := range source {
 		_, ok1 := mandatorySourceKeys[key]
 		_, ok2 := optionalSourceKeys[key]
 		if !ok1 && !ok2 {
-			return fmt.Errorf("unknown source key '%s'", key)
+			unknown = append(unknown, key)
 		}
+	}
+
+	errMsg := make([]string, 0, 2)
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		errMsg = append(errMsg, fmt.Sprintf("missing source keys: %s", missing))
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		errMsg = append(errMsg, fmt.Sprintf("unknown source keys: %s", unknown))
+	}
+	if len(errMsg) > 0 {
+		return errors.New(strings.Join(errMsg, "; "))
 	}
 
 	return nil

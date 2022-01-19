@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"testing"
 
@@ -82,40 +81,30 @@ func TestCheckSuccess(t *testing.T) {
 
 func TestCheckFailure(t *testing.T) {
 	testCases := []struct {
-		name         string
-		inSource     oc.Source
-		inVersion    oc.Version
-		wantVersions []oc.Version
-		wantErr      error
+		name      string
+		inSource  oc.Source
+		inVersion oc.Version
+		wantErr   string
 	}{
 		{
-			name:         "missing mandatory sources",
-			inSource:     oc.Source{},
-			inVersion:    defVersion,
-			wantVersions: nil,
-			wantErr:      &missingSourceKeyError{},
+			name:      "missing mandatory source keys",
+			inSource:  oc.Source{},
+			inVersion: defVersion,
+			wantErr:   "missing source keys: [access_token owner repo]",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := Resource{}
+			res := Resource{}
 
-			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
+			_, err := res.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
 			}
-
-			gotErrType := reflect.TypeOf(err)
-			wantErrType := reflect.TypeOf(tc.wantErr)
-			if gotErrType != wantErrType {
-				t.Fatalf("err: have %v (%v);\nwant %v (%v)",
-					gotErrType, err, wantErrType, tc.wantErr)
-			}
-
-			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
-				t.Fatalf("version: (-want +have):\n%s", diff)
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -321,25 +310,12 @@ func TestOutMockFailure(t *testing.T) {
 		wantErr  string
 	}{
 		{
-			name:     "missing mandatory source key",
+			name:     "missing mandatory source keys",
 			source:   oc.Source{},
 			params:   defParams,
 			env:      defEnv,
 			wantBody: nil,
-			wantErr:  "missing source key 'owner'",
-		},
-		{
-			name: "unknown source key",
-			source: oc.Source{
-				"access_token": "x",
-				"owner":        "a",
-				"repo":         "b",
-				"pizza":        "napoli",
-			},
-			params:   defParams,
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "unknown source key 'pizza'",
+			wantErr:  "missing source keys: [access_token owner repo]",
 		},
 		{
 			name:     "missing mandatory parameters",
@@ -932,6 +908,107 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 
 			if err == nil {
 				t.Fatalf("have: <no error>; want: %v", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValidateSourceSuccess(t *testing.T) {
+	testCases := []struct {
+		name   string
+		source oc.Source
+	}{
+		{
+			name: "all mandatory keys, no optional",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        "dummy-owner",
+				"repo":         "dummy-repo",
+			},
+		},
+		// FIXME
+		// {
+		// 	name: "all mandatory and optional keys",
+		// 	source: oc.Source{
+		// 		"access_token": "dummy-token",
+		// 		"owner":        "dummy-owner",
+		// 		"repo":         "dummy-repo",
+		// 	},
+		// },
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			err := validateSource(tc.source)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestValidateSourceFailure(t *testing.T) {
+	testCases := []struct {
+		name    string
+		source  oc.Source
+		wantErr string
+	}{
+		{
+			name:    "zero keys",
+			source:  oc.Source{},
+			wantErr: "missing source keys: [access_token owner repo]",
+		},
+		{
+			name: "missing mandatory keys",
+			source: oc.Source{
+				"repo": "dummy-repo",
+			},
+			wantErr: "missing source keys: [access_token owner]",
+		},
+		{
+			name: "all mandatory keys, one unknown key",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        "dummy-owner",
+				"repo":         "dummy-repo",
+
+				"pizza": "napoli",
+			},
+			wantErr: "unknown source keys: [pizza]",
+		},
+		{
+			name: "one missing mandatory key, one unknown key",
+			source: oc.Source{
+				"owner": "dummy-owner",
+				"repo":  "dummy-repo",
+
+				"pizza": "napoli",
+			},
+			wantErr: "missing source keys: [access_token]; unknown source keys: [pizza]",
+		},
+		{
+			name: "wrong type is reported as missing (better than crashing)",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        3,
+				"repo":         "dummy-repo",
+			},
+			wantErr: "missing source keys: [owner]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			err := validateSource(tc.source)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
