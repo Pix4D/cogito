@@ -695,6 +695,21 @@ Cogito SOURCE configuration:
 			repoURL:     "foo://bar",
 			wantErrWild: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
 		},
+		{
+			name:    "PR resource mimicking the git resource (see PR #46)",
+			dir:     "a-repo",
+			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git
+    owner: smiling
+     repo: butterfly
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
+		},
 	}
 
 	for _, tc := range testCases {

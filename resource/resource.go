@@ -319,7 +319,7 @@ func collectInputDirs(dir string) ([]string, error) {
 	return dirs, nil
 }
 
-// checkRepoDir validates wether DIR, assumed to be received as input of a put step,
+// checkRepoDir validates whether DIR, assumed to be received as input of a put step,
 // contains a git repository usable with the Cogito source configuration:
 // - DIR is indeed a git repository.
 // - The repo configuration contains a "remote origin" section.
