@@ -10,7 +10,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"testing"
 
@@ -32,15 +31,14 @@ var (
 			"BUILD_JOB_NAME":   "a-job"})
 )
 
-func TestCheck(t *testing.T) {
+func TestCheckSuccess(t *testing.T) {
 	cfg := help.FakeTestCfg
 
-	var testCases = []struct {
+	testCases := []struct {
 		name         string
 		inSource     oc.Source
 		inVersion    oc.Version
 		wantVersions []oc.Version
-		wantErr      error
 	}{
 		{
 			name: "happy path",
@@ -51,7 +49,6 @@ func TestCheck(t *testing.T) {
 			},
 			inVersion:    defVersion,
 			wantVersions: defVersions,
-			wantErr:      nil,
 		},
 		{
 			name: "do not return a nil version the first time it runs (see Concourse PR #4442)",
@@ -62,14 +59,6 @@ func TestCheck(t *testing.T) {
 			},
 			inVersion:    oc.Version{},
 			wantVersions: defVersions,
-			wantErr:      nil,
-		},
-		{
-			name:         "missing mandatory sources",
-			inSource:     oc.Source{},
-			inVersion:    defVersion,
-			wantVersions: nil,
-			wantErr:      &missingSourceError{},
 		},
 	}
 
@@ -79,15 +68,43 @@ func TestCheck(t *testing.T) {
 
 			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
-			gotErrType := reflect.TypeOf(err)
-			wantErrType := reflect.TypeOf(tc.wantErr)
-			if gotErrType != wantErrType {
-				t.Fatalf("err: got %v (%v);\nwant %v (%v)",
-					gotErrType, err, wantErrType, tc.wantErr)
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 
 			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
-				t.Fatalf("version: (-want +got):\n%s", diff)
+				t.Fatalf("version: (-want +have):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestCheckFailure(t *testing.T) {
+	testCases := []struct {
+		name      string
+		inSource  oc.Source
+		inVersion oc.Version
+		wantErr   string
+	}{
+		{
+			name:      "missing mandatory source keys",
+			inSource:  oc.Source{},
+			inVersion: defVersion,
+			wantErr:   "missing source keys: [access_token owner repo]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			res := Resource{}
+
+			_, err := res.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -135,7 +152,7 @@ func TestIn(t *testing.T) {
 	}
 }
 
-func TestOut(t *testing.T) {
+func TestOutMockSuccess(t *testing.T) {
 	cfg := help.FakeTestCfg
 
 	defSource := oc.Source{
@@ -151,99 +168,71 @@ func TestOut(t *testing.T) {
 	}
 	defDir := "a-repo"
 
-	type in struct {
-		source oc.Source
-		params oc.Params
-		env    oc.Environment
-	}
-	type want struct {
-		version  oc.Version
-		metadata oc.Metadata
-		body     map[string]string
-		err      error
-	}
-	var testCases = []struct {
-		name string
-		in   in
-		want want
+	testCases := []struct {
+		name         string
+		source       oc.Source
+		params       oc.Params
+		env          oc.Environment
+		wantVersion  oc.Version
+		wantMetadata oc.Metadata
+		wantBody     map[string]string
 	}{
 		{
-			"valid mandatory sources",
-			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil, nil},
+			name:         "valid mandatory sources and parameters",
+			source:       defSource,
+			params:       defParams,
+			env:          defEnv,
+			wantVersion:  defVersion,
+			wantMetadata: defMeta,
+			wantBody:     nil,
 		},
 		{
-			"missing mandatory sources",
-			in{oc.Source{}, defParams, defEnv},
-			want{nil, nil, nil, &missingSourceError{}},
+			name:         "do not return a nil version the first time it runs (see Concourse PR #4442)",
+			source:       defSource,
+			params:       defParams,
+			env:          defEnv,
+			wantVersion:  defVersion,
+			wantMetadata: defMeta,
+			wantBody:     nil,
 		},
 		{
-			"unknown source",
-			in{oc.Source{"access_token": "x", "owner": "a", "repo": "b", "pizza": "napoli"},
-				defParams, defEnv},
-			want{nil, nil, nil, &unknownSourceError{}},
-		},
-		{
-			"valid mandatory parameters",
-			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil, nil},
-		},
-		{
-			"completely missing mandatory parameters",
-			in{defSource, oc.Params{}, defEnv},
-			want{nil, nil, nil, &missingParamError{}},
-		},
-		{
-			"invalid state parameter",
-			in{defSource, oc.Params{"state": "hello"}, defEnv},
-			want{nil, nil, nil, &invalidParamError{}},
-		},
-		{
-			"unknown parameter",
-			in{defSource, oc.Params{"state": "pending", "pizza": "margherita"}, defEnv},
-			want{nil, nil, nil, &unknownParamError{}},
-		},
-		{
-			"do not return a nil version the first time it runs (see Concourse PR #4442)",
-			in{defSource, defParams, defEnv},
-			want{defVersion, defMeta, nil, nil},
-		},
-		{
-			"source: optional: context_prefix",
-			in{
-				oc.Source{
-					"access_token":   cfg.Token,
-					"owner":          cfg.Owner,
-					"repo":           cfg.Repo,
-					"context_prefix": "cocco"},
-				defParams,
-				defEnv,
-			},
-			want{
-				defVersion,
-				defMeta,
-				map[string]string{"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME")},
-				nil,
+			name: "source: optional: context_prefix",
+			source: oc.Source{
+				"access_token":   cfg.Token,
+				"owner":          cfg.Owner,
+				"repo":           cfg.Repo,
+				"context_prefix": "cocco"},
+			params:       defParams,
+			env:          defEnv,
+			wantVersion:  defVersion,
+			wantMetadata: defMeta,
+			wantBody: map[string]string{
+				"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME"),
 			},
 		},
 		{
-			"put step: default context",
-			in{defSource, defParams, defEnv},
-			want{
-				defVersion,
-				defMeta,
-				map[string]string{"context": defEnv.Get("BUILD_JOB_NAME")},
-				nil,
+			name:         "put step: default context",
+			source:       defSource,
+			params:       defParams,
+			env:          defEnv,
+			wantVersion:  defVersion,
+			wantMetadata: defMeta,
+			wantBody: map[string]string{
+				"context": defEnv.Get("BUILD_JOB_NAME"),
 			},
 		},
 		{
-			"put step: optional: context",
-			in{defSource, oc.Params{"state": "error", "context": "bello"}, defEnv},
-			want{
-				defVersion,
-				defMeta,
-				map[string]string{"context": "bello"},
-				nil,
+			name:   "put step: optional: context",
+			source: defSource,
+			params: oc.Params{
+				"state":   "error",
+				"context": "bello",
+			},
+			env:          defEnv,
+			wantVersion:  defVersion,
+			wantMetadata: defMeta,
+			wantBody: map[string]string{
+				"context": "bello",
 			},
 		},
 	}
@@ -258,15 +247,15 @@ func TestOut(t *testing.T) {
 					w.WriteHeader(http.StatusCreated)
 					fmt.Fprintln(w, "Anything goes...")
 
-					if tc.want.body != nil {
+					if tc.wantBody != nil {
 						buf, _ := io.ReadAll(r.Body)
 						var bm map[string]string
 						if err := json.Unmarshal(buf, &bm); err != nil {
 							t.Fatalf("parsing JSON body: %v", err)
 						}
-						for k, v := range tc.want.body {
+						for k, v := range tc.wantBody {
 							if bm[k] != v {
-								t.Errorf("\nbody[%q]: got: %q; want: %q", k, bm[k], v)
+								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
 							}
 						}
 					}
@@ -280,23 +269,127 @@ func TestOut(t *testing.T) {
 				github.API = savedAPI
 			}()
 
-			r := Resource{}
-			version, metadata, err := r.Out(
-				inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+			res := Resource{}
+			version, metadata, err := res.Out(
+				inDir, tc.source, tc.params, tc.env, silentLog)
 
-			gotErrType := reflect.TypeOf(err)
-			wantErrType := reflect.TypeOf(tc.want.err)
-			if gotErrType != wantErrType {
-				t.Fatalf("\ngot: %v (%v)\nwant: %v (%v)",
-					gotErrType, err, wantErrType, tc.want.err)
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 
-			if diff := cmp.Diff(tc.want.version, version); diff != "" {
-				t.Errorf("version: (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantVersion, version); diff != "" {
+				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(tc.want.metadata, metadata); diff != "" {
-				t.Errorf("metadata: (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.wantMetadata, metadata); diff != "" {
+				t.Errorf("metadata: (-want +have):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestOutMockFailure(t *testing.T) {
+	cfg := help.FakeTestCfg
+
+	defSource := oc.Source{
+		"access_token": cfg.Token,
+		"owner":        cfg.Owner,
+		"repo":         cfg.Repo,
+	}
+	defParams := oc.Params{
+		"state": "error",
+	}
+	defDir := "a-repo"
+
+	var testCases = []struct {
+		name     string
+		source   oc.Source
+		params   oc.Params
+		env      oc.Environment
+		wantBody map[string]string
+		wantErr  string
+	}{
+		{
+			name:     "missing mandatory source keys",
+			source:   oc.Source{},
+			params:   defParams,
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "missing source keys: [access_token owner repo]",
+		},
+		{
+			name:     "missing mandatory parameters",
+			source:   defSource,
+			params:   oc.Params{},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "missing put parameter 'state'",
+		},
+		{
+			name:   "invalid state parameter",
+			source: defSource,
+			params: oc.Params{
+				"state": "hello",
+			},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "invalid put parameter 'state: hello'",
+		},
+		{
+			name:   "unknown parameter",
+			source: defSource,
+			params: oc.Params{
+				"state": "pending",
+				"pizza": "margherita",
+			},
+			env:      defEnv,
+			wantBody: nil,
+			wantErr:  "unknown put parameter 'pizza'",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			defer teardown(t)
+
+			ts := httptest.NewServer(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(http.StatusCreated)
+					fmt.Fprintln(w, "Anything goes...")
+
+					if tc.wantBody != nil {
+						buf, _ := io.ReadAll(r.Body)
+						var bm map[string]string
+						if err := json.Unmarshal(buf, &bm); err != nil {
+							t.Fatalf("parsing JSON body: %v", err)
+						}
+						for k, v := range tc.wantBody {
+							if bm[k] != v {
+								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
+							}
+						}
+					}
+				}),
+			)
+
+			savedAPI := github.API
+			github.API = ts.URL
+			defer func() {
+				ts.Close()
+				github.API = savedAPI
+			}()
+
+			res := Resource{}
+			_, _, err := res.Out(
+				inDir, tc.source, tc.params, tc.env, silentLog)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
+			}
+
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -449,8 +542,8 @@ func TestTargetURL(t *testing.T) {
 				buildN = tc.buildN
 			}
 
-			if got := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); got != tc.want {
-				t.Fatalf("\ngot:  %s\nwant: %s", got, tc.want)
+			if have := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); have != tc.want {
+				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
 			}
 		})
 	}
@@ -487,11 +580,11 @@ func TestCollectInputDirs(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dirs, err := collectInputDirs(tc.dir)
 			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("sut(%v): error: got %v; want %v", tc.dir, err, tc.wantErr)
+				t.Errorf("sut(%v): error: have %v; want %v", tc.dir, err, tc.wantErr)
 			}
 			gotN := len(dirs)
 			if gotN != tc.wantN {
-				t.Errorf("sut(%v): len(dirs): got %v; want %v", tc.dir, gotN, tc.wantN)
+				t.Errorf("sut(%v): len(dirs): have %v; want %v", tc.dir, gotN, tc.wantN)
 			}
 		})
 	}
@@ -544,7 +637,7 @@ func TestCheckRepoDirFailure(t *testing.T) {
 	testCases := []struct {
 		name      string
 		dir       string
-		repoURL   string
+		repoURL   string // repoURL to put in file <dir>/.git/config
 		wantErrRe string // regexp
 	}{
 		{
@@ -554,13 +647,13 @@ func TestCheckRepoDirFailure(t *testing.T) {
 			wantErrRe: `parsing .git/config: open (\S+)/not-a-repo/.git/config: no such file or directory`,
 		},
 		{
-			name:      "bad .git/config",
+			name:      "bad file .git/config",
 			dir:       "repo-bad-git-config",
 			repoURL:   "dummyurl",
-			wantErrRe: `.git/config: key 'remote "origin"/url': key not found`,
+			wantErrRe: `.git/config: key \[remote "origin"\]/url: not found`,
 		},
 		{
-			name:    "repo with wrong HTTPS remote",
+			name:    "repo with unrelated HTTPS remote",
 			dir:     "a-repo",
 			repoURL: httpsRemote("owner", "repo"),
 			wantErrRe: `resource source configuration and git repository are incompatible.
@@ -568,7 +661,7 @@ Git remote: "https://github.com/owner/repo.git"
 Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
 		},
 		{
-			name:    "repo with wrong SSH remote or wrong source config",
+			name:    "repo with unrelated SSH remote or wrong source config",
 			dir:     "a-repo",
 			repoURL: sshRemote("owner", "repo"),
 			wantErrRe: `resource source configuration and git repository are incompatible.
@@ -597,14 +690,16 @@ Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong gi
 			have := err.Error()
 			re := regexp.MustCompile(tc.wantErrRe)
 			if !re.MatchString(have) {
-				diff := cmp.Diff(tc.wantErrRe, have)
-				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
+				if diff := cmp.Diff(tc.wantErrRe, have); diff != "" {
+					t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
+				}
+				t.Fatalf("error msg regexp\nhave: %s\nwant: %s", have, tc.wantErrRe)
 			}
 		})
 	}
 }
 
-func TestGitCommitSuccess(t *testing.T) {
+func TestGitGetCommitSuccess(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 	const defHead = "ref: refs/heads/a-branch-FIXME"
 
@@ -633,7 +728,7 @@ func TestGitCommitSuccess(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			sha, err := GitCommit(filepath.Join(dir, tc.dir))
+			sha, err := GitGetCommit(filepath.Join(dir, tc.dir))
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -645,7 +740,7 @@ func TestGitCommitSuccess(t *testing.T) {
 	}
 }
 
-func TestGitCommitFailure(t *testing.T) {
+func TestGitGetCommitFailure(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 
 	testCases := []struct {
@@ -676,7 +771,7 @@ func TestGitCommitFailure(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := GitCommit(filepath.Join(dir, tc.dir))
+			_, err := GitGetCommit(filepath.Join(dir, tc.dir))
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
@@ -692,7 +787,8 @@ func TestGitCommitFailure(t *testing.T) {
 	}
 }
 
-// Per-subtest setup and teardown.
+// setup creates a directory containing a git repository according to the parameters.
+// It returns the path to the directory and a teardown function.
 func setup(
 	t *testing.T,
 	dir string,
@@ -726,14 +822,17 @@ func setup(
 	return inDir, teardown
 }
 
+// sshRemote returns a github SSH URL
 func sshRemote(owner, repo string) string {
 	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
 }
 
+// httpsRemote returns a github HTTPS URL
 func httpsRemote(owner, repo string) string {
 	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
 }
 
+// httpRemote returns a github HTTP URL
 func httpRemote(owner, repo string) string {
 	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
 }
@@ -769,7 +868,7 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
-				t.Errorf("gitURL: (-want +got):\n%s", diff)
+				t.Errorf("gitURL: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -809,6 +908,107 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 
 			if err == nil {
 				t.Fatalf("have: <no error>; want: %v", tc.wantErr)
+			}
+			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
+				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestValidateSourceSuccess(t *testing.T) {
+	testCases := []struct {
+		name   string
+		source oc.Source
+	}{
+		{
+			name: "all mandatory keys, no optional",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        "dummy-owner",
+				"repo":         "dummy-repo",
+			},
+		},
+		// FIXME
+		// {
+		// 	name: "all mandatory and optional keys",
+		// 	source: oc.Source{
+		// 		"access_token": "dummy-token",
+		// 		"owner":        "dummy-owner",
+		// 		"repo":         "dummy-repo",
+		// 	},
+		// },
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			err := validateSource(tc.source)
+
+			if err != nil {
+				t.Fatalf("\nhave: %s\nwant: <no error>", err)
+			}
+		})
+	}
+}
+
+func TestValidateSourceFailure(t *testing.T) {
+	testCases := []struct {
+		name    string
+		source  oc.Source
+		wantErr string
+	}{
+		{
+			name:    "zero keys",
+			source:  oc.Source{},
+			wantErr: "missing source keys: [access_token owner repo]",
+		},
+		{
+			name: "missing mandatory keys",
+			source: oc.Source{
+				"repo": "dummy-repo",
+			},
+			wantErr: "missing source keys: [access_token owner]",
+		},
+		{
+			name: "all mandatory keys, one unknown key",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        "dummy-owner",
+				"repo":         "dummy-repo",
+
+				"pizza": "napoli",
+			},
+			wantErr: "unknown source keys: [pizza]",
+		},
+		{
+			name: "one missing mandatory key, one unknown key",
+			source: oc.Source{
+				"owner": "dummy-owner",
+				"repo":  "dummy-repo",
+
+				"pizza": "napoli",
+			},
+			wantErr: "missing source keys: [access_token]; unknown source keys: [pizza]",
+		},
+		{
+			name: "wrong type is reported as missing (better than crashing)",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        3,
+				"repo":         "dummy-repo",
+			},
+			wantErr: "missing source keys: [owner]",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+
+			err := validateSource(tc.source)
+
+			if err == nil {
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Errorf("error message mismatch: (-want +have):\n%s", diff)

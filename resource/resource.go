@@ -4,12 +4,14 @@
 package resource
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
@@ -39,59 +41,18 @@ var (
 		"success": {},
 	}
 
-	mandatorySources = map[string]struct{}{
+	mandatorySourceKeys = map[string]struct{}{
 		"owner":        {},
 		"repo":         {},
 		"access_token": {},
 	}
 
-	optionalSources = map[string]struct{}{
+	optionalSourceKeys = map[string]struct{}{
 		"log_level":      {},
 		"log_url":        {},
 		"context_prefix": {},
 	}
 )
-
-type missingSourceError struct {
-	S string
-}
-
-func (e *missingSourceError) Error() string {
-	return fmt.Sprintf("missing required source key %q", e.S)
-}
-
-type unknownSourceError struct {
-	Param string
-}
-
-func (e *unknownSourceError) Error() string {
-	return fmt.Sprintf("unknown source %q", e.Param)
-}
-
-type missingParamError struct {
-	S string
-}
-
-func (e *missingParamError) Error() string {
-	return fmt.Sprintf("missing parameter %q", e.S)
-}
-
-type invalidParamError struct {
-	Param string
-	Value string
-}
-
-func (e *invalidParamError) Error() string {
-	return fmt.Sprintf("invalid parameter %q: %q", e.Param, e.Value)
-}
-
-type unknownParamError struct {
-	Param string
-}
-
-func (e *unknownParamError) Error() string {
-	return fmt.Sprintf("unknown parameter %q", e.Param)
-}
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
 // This is useful to understand in the Concourse UI and logs which resource it is, since log
@@ -114,7 +75,7 @@ func (r *Resource) Check(
 	log.Debugf("check: started")
 	defer log.Debugf("check: finished")
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, err
 	}
 
@@ -141,7 +102,7 @@ func (r *Resource) In(
 	log.Debugf("in: params:\n%s", stringify1(params))
 	log.Debugf("in: env:\n%s", stringify2(env.GetAll()))
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, nil, err
 	}
 
@@ -169,11 +130,11 @@ func (r *Resource) Out(
 	log.Debugf("out: params:\n%s", stringify1(params))
 	log.Debugf("out: env:\n%s", stringify2(env.GetAll()))
 
-	if err := validateSources(source); err != nil {
+	if err := validateSource(source); err != nil {
 		return nil, nil, err
 	}
 
-	if err := outValidateParams(params); err != nil {
+	if err := validateOutParams(params); err != nil {
 		return nil, nil, err
 	}
 	state, _ := params["state"].(string)
@@ -197,13 +158,15 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	ref, err := GitCommit(repoDir)
+	ref, err := GitGetCommit(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
 	log.Debugf("out: parsed ref %q", ref)
 
+	//
 	// Finally, post the status to GitHub.
+	//
 	token, _ := source["access_token"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
@@ -280,46 +243,61 @@ func stringify2(xs map[string]string) string {
 	return bld.String()
 }
 
-func validateSources(source oc.Source) error {
-	// Any missing source?
-	for wantS := range mandatorySources {
-		if _, ok := source[wantS].(string); !ok {
-			return &missingSourceError{wantS}
+func validateSource(source oc.Source) error {
+	// Any missing source key?
+	missing := make([]string, 0, len(mandatorySourceKeys))
+	for key := range mandatorySourceKeys {
+		if _, ok := source[key].(string); !ok {
+			missing = append(missing, key)
 		}
 	}
 
-	// Any unknown source?
-	for s := range source {
-		_, ok1 := mandatorySources[s]
-		_, ok2 := optionalSources[s]
+	// Any unknown source key?
+	unknown := make([]string, 0, len(source))
+	for key := range source {
+		_, ok1 := mandatorySourceKeys[key]
+		_, ok2 := optionalSourceKeys[key]
 		if !ok1 && !ok2 {
-			return &unknownSourceError{s}
+			unknown = append(unknown, key)
 		}
+	}
+
+	errMsg := make([]string, 0, 2)
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		errMsg = append(errMsg, fmt.Sprintf("missing source keys: %s", missing))
+	}
+	if len(unknown) > 0 {
+		sort.Strings(unknown)
+		errMsg = append(errMsg, fmt.Sprintf("unknown source keys: %s", unknown))
+	}
+	if len(errMsg) > 0 {
+		return errors.New(strings.Join(errMsg, "; "))
 	}
 
 	return nil
 }
 
-func outValidateParams(params oc.Params) error {
+func validateOutParams(params oc.Params) error {
 	// Any missing parameter?
-	for wantP := range outMandatoryParams {
-		if _, ok := params[wantP].(string); !ok {
-			return &missingParamError{wantP}
+	for wantParam := range outMandatoryParams {
+		if _, ok := params[wantParam].(string); !ok {
+			return fmt.Errorf("missing put parameter '%s'", wantParam)
 		}
 	}
 
 	// Any invalid parameter?
 	state, _ := params["state"].(string)
 	if _, ok := outValidStates[state]; !ok {
-		return &invalidParamError{"state", state}
+		return fmt.Errorf("invalid put parameter 'state: %s'", state)
 	}
 
 	// Any unknown parameter?
-	for p := range params {
-		_, ok1 := outMandatoryParams[p]
-		_, ok2 := outOptionalParams[p]
+	for param := range params {
+		_, ok1 := outMandatoryParams[param]
+		_, ok2 := outOptionalParams[param]
 		if !ok1 && !ok2 {
-			return &unknownParamError{p}
+			return fmt.Errorf("unknown put parameter '%s'", param)
 		}
 	}
 
@@ -363,7 +341,7 @@ func checkRepoDir(dir, owner, repo string) error {
 	const key = "url"
 	remote := cfg.StringFromSection(section, key, "")
 	if remote == "" {
-		return fmt.Errorf(".git/config: key '%s/%s': key not found", section, key)
+		return fmt.Errorf(".git/config: key [%s]/%s: not found", section, key)
 	}
 	gu, err := parseGitPseudoURL(remote)
 	if err != nil {
@@ -435,8 +413,8 @@ func parseGitPseudoURL(url string) (gitURL, error) {
 	return gu, nil
 }
 
-// GitCommit looks into a git repository and extracts the commit SHA of the HEAD.
-func GitCommit(repoPath string) (string, error) {
+// GitGetCommit looks into a git repository and extracts the commit SHA of the HEAD.
+func GitGetCommit(repoPath string) (string, error) {
 	dotGitPath := filepath.Join(repoPath, ".git")
 
 	headPath := filepath.Join(dotGitPath, "HEAD")

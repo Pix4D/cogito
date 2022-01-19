@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Return more user-friendly errors from the github/status API.
+- Return more user-friendly errors when validating the configuration.
 
 ## [v0.6.1] - 2022-01-06
 
