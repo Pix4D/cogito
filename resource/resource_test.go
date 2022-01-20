@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -695,7 +696,7 @@ Cogito SOURCE configuration:
 			name:        "invalid git pseudo URL in .git/config",
 			dir:         "a-repo",
 			repoURL:     "foo://bar",
-			wantErrWild: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
+			wantErrWild: `.git/config: remote: invalid git URL foo://bar: invalid scheme: foo`,
 		},
 		{
 			name:    "PR resource mimicking the git resource (see PR #46)",
@@ -878,19 +879,44 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 		wantGU gitURL
 	}{
 		{
-			name:   "valid SSH URL",
-			inURL:  "git@github.com:Pix4D/cogito.git",
-			wantGU: gitURL{"ssh", "github.com", "Pix4D", "cogito"},
+			name:  "valid SSH URL",
+			inURL: "git@github.com:Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "ssh",
+					User:   url.User("git"),
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 		{
-			name:   "valid HTTPS URL",
-			inURL:  "https://github.com/Pix4D/cogito.git",
-			wantGU: gitURL{"https", "github.com", "Pix4D", "cogito"},
+			name:  "valid HTTPS URL",
+			inURL: "https://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 		{
-			name:   "valid HTTP URL",
-			inURL:  "http://github.com/Pix4D/cogito.git",
-			wantGU: gitURL{"http", "github.com", "Pix4D", "cogito"},
+			name:  "valid HTTP URL",
+			inURL: "http://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 	}
 
@@ -901,7 +927,10 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
-			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
+			if diff := cmp.Diff(tc.wantGU, gitUrl, cmp.Comparer(
+				func(x, y *url.Userinfo) bool {
+					return x.String() == y.String()
+				})); diff != "" {
 				t.Errorf("gitURL: (-want +have):\n%s", diff)
 			}
 		})
@@ -917,7 +946,7 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 		{
 			name:    "totally invalid URL",
 			inURL:   "hello",
-			wantErr: "invalid git URL hello: no valid scheme",
+			wantErr: "invalid git URL hello: missing scheme",
 		},
 		{
 			name:    "invalid SSH URL",
@@ -927,12 +956,12 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 		{
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+			wantErr: `parse "https://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
 		},
 		{
 			name:    "invalid HTTP URL",
 			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+			wantErr: `parse "http://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
 		},
 	}
 

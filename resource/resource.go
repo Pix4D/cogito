@@ -354,7 +354,7 @@ func checkRepoDir(dir, owner, repo string) error {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
 	left := []string{"github.com", owner, repo}
-	right := []string{gu.Host, gu.Owner, gu.Repo}
+	right := []string{gu.URL.Host, gu.Owner, gu.Repo}
 	for i, l := range left {
 		r := right[i]
 		if !strings.EqualFold(l, r) {
@@ -376,54 +376,60 @@ Cogito SOURCE configuration:
 }
 
 type gitURL struct {
-	Scheme string // "ssh", "https" or "http"
-	Host   string
-	Owner  string
-	Repo   string
+	URL   *url.URL
+	Owner string
+	Repo  string
 }
 
-// Three types of pseudo URLs:
-//     git@github.com:Pix4D/cogito.git
-// https://github.com/Pix4D/cogito.git
-//  http://github.com/Pix4D/cogito.git
-func parseGitPseudoURL(url string) (gitURL, error) {
-	var path string
-	gu := gitURL{}
-
-	switch {
-	// example: git@github.com:Pix4D/cogito.git
-	case strings.HasPrefix(url, "git@"):
-		gu.Scheme = "ssh"
-		path = url[4:]
-		if strings.Count(path, ":") != 1 {
-			return gitURL{}, fmt.Errorf("invalid git SSH URL %s: want exactly one ':'", url)
+// parseGitPseudoURL attempts to parse rawURL as a git remote URL compatible with the
+// Github naming conventions.
+//
+// It supports the following types of git pseudo URLs:
+// - ssh:   git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
+//          ssh://git@github.com/Pix4D/cogito.git
+// - https: https://github.com/Pix4D/cogito.git
+// - http:  http://github.com/Pix4D/cogito.git
+func parseGitPseudoURL(rawURL string) (gitURL, error) {
+	workURL := rawURL
+	// If ssh pseudo URL, we need to massage the rawURL ourselves :-(
+	if strings.HasPrefix(workURL, "git@") {
+		if strings.Count(workURL, ":") != 1 {
+			return gitURL{}, fmt.Errorf("invalid git SSH URL %s: want exactly one ':'", rawURL)
 		}
-		path = strings.Replace(path, ":", "/", 1)
-
-	// example: https://github.com/Pix4D/cogito.git
-	case strings.HasPrefix(url, "https://"):
-		gu.Scheme = "https"
-		path = url[8:]
-
-	// example: http://github.com/Pix4D/cogito.git
-	case strings.HasPrefix(url, "http://"):
-		gu.Scheme = "http"
-		path = url[7:]
-
-	default:
-		return gitURL{}, fmt.Errorf("invalid git URL %s: no valid scheme", url)
+		// Make the URL a real URL, ready to be parsed. For example:
+		// git@github.com:Pix4D/cogito.git -> ssh://git@github.com/Pix4D/cogito.git
+		workURL = "ssh://" + strings.Replace(workURL, ":", "/", 1)
 	}
 
-	// github.com/Pix4D/cogito.git
-	tokens := strings.Split(path, "/")
+	anyUrl, err := url.Parse(workURL)
+	if err != nil {
+		return gitURL{}, err
+	}
+
+	scheme := anyUrl.Scheme
+	if scheme == "" {
+		return gitURL{}, fmt.Errorf("invalid git URL %s: missing scheme", rawURL)
+	}
+	if scheme != "ssh" && scheme != "http" && scheme != "https" {
+		return gitURL{}, fmt.Errorf("invalid git URL %s: invalid scheme: %s", rawURL, scheme)
+	}
+
+	// Further parse the path component of the URL to see if it complies with the Github
+	// naming conventions.
+	// Example of compliant path: github.com/Pix4D/cogito.git
+	tokens := strings.Split(anyUrl.Path, "/")
 	if have, want := len(tokens), 3; have != want {
 		return gitURL{},
 			fmt.Errorf("invalid git URL: path: want: %d components; have: %d %s",
 				want, have, tokens)
 	}
-	gu.Host = tokens[0]
-	gu.Owner = tokens[1]
-	gu.Repo = strings.TrimSuffix(tokens[2], ".git")
+
+	// All OK. Fill our gitURL struct
+	gu := gitURL{
+		URL:   anyUrl,
+		Owner: tokens[1],
+		Repo:  strings.TrimSuffix(tokens[2], ".git"),
+	}
 	return gu, nil
 }
 
