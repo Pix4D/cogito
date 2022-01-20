@@ -186,7 +186,7 @@ func (r *Resource) Out(
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
 	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	targetURL := targetURL(atc, team, pipeline, job, buildN, instanceVars)
+	targetURL := ghTargetURL(atc, team, pipeline, job, buildN, instanceVars)
 	description := "Build " + buildN
 	log.Debugf(`out: posting:
   state: %v
@@ -210,7 +210,9 @@ func (r *Resource) Out(
 	return dummyVersion, metadata, nil
 }
 
-func targetURL(atc, team, pipeline, job, buildN, instanceVars string) string {
+// ghTargetURL builds an URL suitable to be used as the target_url parameter for the
+// Github commit status API.
+func ghTargetURL(atc, team, pipeline, job, buildN, instanceVars string) string {
 	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
 
 	targetURL := atc +

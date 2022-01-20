@@ -496,7 +496,7 @@ Cogito SOURCE configuration:
 	}
 }
 
-func TestTargetURL(t *testing.T) {
+func TestGhTargetURL(t *testing.T) {
 	testCases := []struct {
 		name         string
 		atc          string
@@ -549,7 +549,9 @@ func TestTargetURL(t *testing.T) {
 				buildN = tc.buildN
 			}
 
-			if have := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); have != tc.want {
+			have := ghTargetURL(atc, team, pipeline, job, buildN, tc.instanceVars)
+
+			if have != tc.want {
 				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
 			}
 		})
