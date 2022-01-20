@@ -10,10 +10,10 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"regexp"
 	"testing"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
+	"github.com/gertd/wild"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/Pix4D/cogito/github"
@@ -457,7 +457,7 @@ func TestOutIntegrationFailure(t *testing.T) {
 		wantErr string
 	}{
 		{
-			name: "backend reports failure",
+			name: "local validations fail",
 			in: in{
 				oc.Source{
 					"access_token": cfg.Token,
@@ -465,9 +465,16 @@ func TestOutIntegrationFailure(t *testing.T) {
 					"repo":         "does-not-exists-really"},
 				defParams,
 				defEnv},
-			wantErr: `resource source configuration and git repository are incompatible.
-Git remote: "git@github.com:pix4d/cogito-test-read-write.git"
-Resource config: host: github.com, owner: "pix4d", repo: "does-not-exists-really". wrong git remote`,
+			wantErr: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: git@github.com:pix4d/cogito-test-read-write.git
+    owner: pix4d
+     repo: cogito-test-read-write
+
+Cogito SOURCE configuration:
+    owner: pix4d
+     repo: does-not-exists-really`,
 		},
 	}
 
@@ -596,7 +603,7 @@ func TestCheckRepoDirSuccess(t *testing.T) {
 
 	testCases := []struct {
 		name    string
-		dir     string
+		dir     string // repoURL to put in file <dir>/.git/config
 		repoURL string
 	}{
 		{
@@ -635,44 +642,73 @@ func TestCheckRepoDirFailure(t *testing.T) {
 	const wantRepo = "butterfly"
 
 	testCases := []struct {
-		name      string
-		dir       string
-		repoURL   string // repoURL to put in file <dir>/.git/config
-		wantErrRe string // regexp
+		name        string
+		dir         string
+		repoURL     string // repoURL to put in file <dir>/.git/config
+		wantErrWild string // wildcard matching
 	}{
 		{
-			name:      "dir is not a repo",
-			dir:       "not-a-repo",
-			repoURL:   "dummyurl",
-			wantErrRe: `parsing .git/config: open (\S+)/not-a-repo/.git/config: no such file or directory`,
+			name:        "dir is not a repo",
+			dir:         "not-a-repo",
+			repoURL:     "dummyurl",
+			wantErrWild: `parsing .git/config: open */not-a-repo/.git/config: no such file or directory`,
 		},
 		{
-			name:      "bad file .git/config",
-			dir:       "repo-bad-git-config",
-			repoURL:   "dummyurl",
-			wantErrRe: `.git/config: key \[remote "origin"\]/url: not found`,
+			name:        "bad file .git/config",
+			dir:         "repo-bad-git-config",
+			repoURL:     "dummyurl",
+			wantErrWild: `.git/config: key [remote "origin"]/url: not found`,
 		},
 		{
 			name:    "repo with unrelated HTTPS remote",
 			dir:     "a-repo",
 			repoURL: httpsRemote("owner", "repo"),
-			wantErrRe: `resource source configuration and git repository are incompatible.
-Git remote: "https://github.com/owner/repo.git"
-Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: https://github.com/owner/repo.git
+    owner: owner
+     repo: repo
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
 		},
 		{
 			name:    "repo with unrelated SSH remote or wrong source config",
 			dir:     "a-repo",
 			repoURL: sshRemote("owner", "repo"),
-			wantErrRe: `resource source configuration and git repository are incompatible.
-Git remote: "git@github.com:owner/repo.git"
-Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong git remote`,
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: git@github.com:owner/repo.git
+    owner: owner
+     repo: repo
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
 		},
 		{
-			name:      "invalid git pseudo URL in .git/config",
-			dir:       "a-repo",
-			repoURL:   "foo://bar",
-			wantErrRe: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
+			name:        "invalid git pseudo URL in .git/config",
+			dir:         "a-repo",
+			repoURL:     "foo://bar",
+			wantErrWild: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
+		},
+		{
+			name:    "PR resource mimicking the git resource (see PR #46)",
+			dir:     "a-repo",
+			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
+			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git
+    owner: smiling
+     repo: butterfly
+
+Cogito SOURCE configuration:
+    owner: smiling
+     repo: butterfly`,
 		},
 	}
 
@@ -684,16 +720,13 @@ Resource config: host: github.com, owner: "smiling", repo: "butterfly". wrong gi
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
 
 			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrWild)
 			}
 
 			have := err.Error()
-			re := regexp.MustCompile(tc.wantErrRe)
-			if !re.MatchString(have) {
-				if diff := cmp.Diff(tc.wantErrRe, have); diff != "" {
-					t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
-				}
-				t.Fatalf("error msg regexp\nhave: %s\nwant: %s", have, tc.wantErrRe)
+			if !wild.Match(tc.wantErrWild, have, false) {
+				diff := cmp.Diff(tc.wantErrWild, have)
+				t.Fatalf("error msg wildcard mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -744,25 +777,25 @@ func TestGitGetCommitFailure(t *testing.T) {
 	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
 
 	testCases := []struct {
-		name      string
-		dir       string
-		repoURL   string
-		head      string
-		wantErrRe string // regexp
+		name        string
+		dir         string
+		repoURL     string
+		head        string
+		wantErrWild string // wildcard matching
 	}{
 		{
-			name:      "missing HEAD",
-			dir:       "not-a-repo",
-			repoURL:   "dummy",
-			head:      "dummy",
-			wantErrRe: `git commit: read HEAD: open (\S+)/not-a-repo/.git/HEAD: no such file or directory`,
+			name:        "missing HEAD",
+			dir:         "not-a-repo",
+			repoURL:     "dummy",
+			head:        "dummy",
+			wantErrWild: `git commit: read HEAD: open */not-a-repo/.git/HEAD: no such file or directory`,
 		},
 		{
-			name:      "invalid format for HEAD",
-			dir:       "a-repo",
-			repoURL:   "dummyURL",
-			head:      "this is a bad head",
-			wantErrRe: `git commit: invalid HEAD format: "this is a bad head"`,
+			name:        "invalid format for HEAD",
+			dir:         "a-repo",
+			repoURL:     "dummyURL",
+			head:        "this is a bad head",
+			wantErrWild: `git commit: invalid HEAD format: "this is a bad head"`,
 		},
 	}
 
@@ -774,14 +807,13 @@ func TestGitGetCommitFailure(t *testing.T) {
 			_, err := GitGetCommit(filepath.Join(dir, tc.dir))
 
 			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrRe)
+				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrWild)
 			}
 
 			have := err.Error()
-			re := regexp.MustCompile(tc.wantErrRe)
-			if !re.MatchString(have) {
-				diff := cmp.Diff(tc.wantErrRe, have)
-				t.Fatalf("error msg regexp mismatch: (-want +have):\n%s", diff)
+			if !wild.Match(tc.wantErrWild, have, false) {
+				diff := cmp.Diff(tc.wantErrWild, have)
+				t.Fatalf("error msg wildcard mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
