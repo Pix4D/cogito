@@ -624,6 +624,11 @@ func TestCheckRepoDirSuccess(t *testing.T) {
 			dir:     "a-repo",
 			repoURL: httpRemote(wantOwner, wantRepo),
 		},
+		{
+			name:    "PR resource but with basic auth in URL (see PR #46)",
+			dir:     "a-repo",
+			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -697,21 +702,6 @@ Cogito SOURCE configuration:
 			dir:         "a-repo",
 			repoURL:     "foo://bar",
 			wantErrWild: `.git/config: remote: invalid git URL foo://bar: invalid scheme: foo`,
-		},
-		{
-			name:    "PR resource mimicking the git resource (see PR #46)",
-			dir:     "a-repo",
-			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
-			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
-
-Git repository configuration (received as 'inputs:' in this PUT step):
-      url: https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git
-    owner: smiling
-     repo: butterfly
-
-Cogito SOURCE configuration:
-    owner: smiling
-     repo: butterfly`,
 		},
 	}
 
