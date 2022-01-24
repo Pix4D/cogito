@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED - xxxx-xx-xx
 
+## [v0.6.2] - 2022-01-24
+
 ### Added
 
 - Support the case where the git remote URL contains basic auth information (this doesn't happen with the Concourse git resource, but can happen with a PR resource, see #46 for a discussion).
@@ -153,3 +155,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.5.1]: https://github.com/Pix4D/cogito/releases/tag/v0.5.1
 [v0.6.0]: https://github.com/Pix4D/cogito/releases/tag/v0.6.0
 [v0.6.1]: https://github.com/Pix4D/cogito/releases/tag/v0.6.1
+[v0.6.2]: https://github.com/Pix4D/cogito/releases/tag/v0.6.2
