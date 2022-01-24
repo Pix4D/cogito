@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -496,7 +497,7 @@ Cogito SOURCE configuration:
 	}
 }
 
-func TestTargetURL(t *testing.T) {
+func TestGhTargetURL(t *testing.T) {
 	testCases := []struct {
 		name         string
 		atc          string
@@ -549,7 +550,9 @@ func TestTargetURL(t *testing.T) {
 				buildN = tc.buildN
 			}
 
-			if have := targetURL(atc, team, pipeline, job, buildN, tc.instanceVars); have != tc.want {
+			have := ghTargetURL(atc, team, pipeline, job, buildN, tc.instanceVars)
+
+			if have != tc.want {
 				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
 			}
 		})
@@ -620,6 +623,11 @@ func TestCheckRepoDirSuccess(t *testing.T) {
 			name:    "repo with good HTTP remote",
 			dir:     "a-repo",
 			repoURL: httpRemote(wantOwner, wantRepo),
+		},
+		{
+			name:    "PR resource but with basic auth in URL (see PR #46)",
+			dir:     "a-repo",
+			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
 		},
 	}
 
@@ -693,22 +701,7 @@ Cogito SOURCE configuration:
 			name:        "invalid git pseudo URL in .git/config",
 			dir:         "a-repo",
 			repoURL:     "foo://bar",
-			wantErrWild: `.git/config: remote: invalid git URL foo://bar: no valid scheme`,
-		},
-		{
-			name:    "PR resource mimicking the git resource (see PR #46)",
-			dir:     "a-repo",
-			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
-			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
-
-Git repository configuration (received as 'inputs:' in this PUT step):
-      url: https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git
-    owner: smiling
-     repo: butterfly
-
-Cogito SOURCE configuration:
-    owner: smiling
-     repo: butterfly`,
+			wantErrWild: `.git/config: remote: invalid git URL foo://bar: invalid scheme: foo`,
 		},
 	}
 
@@ -876,19 +869,44 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 		wantGU gitURL
 	}{
 		{
-			name:   "valid SSH URL",
-			inURL:  "git@github.com:Pix4D/cogito.git",
-			wantGU: gitURL{"ssh", "github.com", "Pix4D", "cogito"},
+			name:  "valid SSH URL",
+			inURL: "git@github.com:Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "ssh",
+					User:   url.User("git"),
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 		{
-			name:   "valid HTTPS URL",
-			inURL:  "https://github.com/Pix4D/cogito.git",
-			wantGU: gitURL{"https", "github.com", "Pix4D", "cogito"},
+			name:  "valid HTTPS URL",
+			inURL: "https://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "https",
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 		{
-			name:   "valid HTTP URL",
-			inURL:  "http://github.com/Pix4D/cogito.git",
-			wantGU: gitURL{"http", "github.com", "Pix4D", "cogito"},
+			name:  "valid HTTP URL",
+			inURL: "http://github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "http",
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
 		},
 	}
 
@@ -899,7 +917,10 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
-			if diff := cmp.Diff(tc.wantGU, gitUrl); diff != "" {
+			if diff := cmp.Diff(tc.wantGU, gitUrl, cmp.Comparer(
+				func(x, y *url.Userinfo) bool {
+					return x.String() == y.String()
+				})); diff != "" {
 				t.Errorf("gitURL: (-want +have):\n%s", diff)
 			}
 		})
@@ -915,7 +936,7 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 		{
 			name:    "totally invalid URL",
 			inURL:   "hello",
-			wantErr: "invalid git URL hello: no valid scheme",
+			wantErr: "invalid git URL hello: missing scheme",
 		},
 		{
 			name:    "invalid SSH URL",
@@ -925,12 +946,12 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 		{
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+			wantErr: `parse "https://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
 		},
 		{
 			name:    "invalid HTTP URL",
 			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantErr: "invalid git URL: path: want: 3 components; have: 2 [github.com:Pix4D cogito.git]",
+			wantErr: `parse "http://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
 		},
 	}
 

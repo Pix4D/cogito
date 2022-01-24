@@ -7,10 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED - xxxx-xx-xx
 
+### Added
+
+- Support the case where the git remote URL contains basic auth information (this doesn't happen with the Concourse git resource, but can happen with a PR resource, see #46 for a discussion).
+  Thanks @Mike-Dax for the initial implementation (#46).
+
+### Changed
+
+- Extensive code and tests refactoring.
+
 ### Fixed
 
 - Return more user-friendly errors from the github/status API.
-- Return more user-friendly errors when validating the configuration.
+- Return more user-friendly errors when validating the Cogito and git configuration.
 
 ## [v0.6.1] - 2022-01-06
 
