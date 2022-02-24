@@ -1,6 +1,7 @@
-# cogito
+# cogito-gitea
 
-[![Travis Build Status](https://travis-ci.org/Pix4D/cogito.svg?branch=master)](https://travis-ci.org/Pix4D/cogito)
+Forked!
+This fork is going to port over functionality to gitea.
 
 Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update the GitHub status of a commit during a build. The name is a humble homage to [René Descartes].
 
