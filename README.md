@@ -123,7 +123,7 @@ With reference to the [GitHub status API], the `POST` parameters (`state`, `targ
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
-- `github_host`: The host name of the github instance (to support GitHub Enterprise (GHE)). The resource has only tested against GHE version 2.x, but should work for version 3.x too. Default: `github.com`
+- `github_host`: The host name of the github instance (to support GitHub Enterprise (GHE)). The resource has only been tested against GHE version 2.x, but should work for version 3.x too. Default: `github.com`
 - `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
 ## Suggestions
