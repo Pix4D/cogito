@@ -636,7 +636,7 @@ func TestCheckRepoDirSuccess(t *testing.T) {
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo, "github.com")
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -710,7 +710,7 @@ Cogito SOURCE configuration:
 		defer teardown(t)
 
 		t.Run(tc.name, func(t *testing.T) {
-			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
+			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo, "github.com")
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrWild)
