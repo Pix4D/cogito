@@ -263,11 +263,11 @@ func TestOutMockSuccess(t *testing.T) {
 				}),
 			)
 
-			savedAPI := github.API
-			github.API = ts.URL
+			savedAPI := github.HOST
+			github.HOST = ts.URL
 			defer func() {
 				ts.Close()
-				github.API = savedAPI
+				github.HOST = savedAPI
 			}()
 
 			res := Resource{}
@@ -374,11 +374,11 @@ func TestOutMockFailure(t *testing.T) {
 				}),
 			)
 
-			savedAPI := github.API
-			github.API = ts.URL
+			savedAPI := github.HOST
+			github.HOST = ts.URL
 			defer func() {
 				ts.Close()
-				github.API = savedAPI
+				github.HOST = savedAPI
 			}()
 
 			res := Resource{}

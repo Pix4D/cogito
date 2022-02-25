@@ -139,7 +139,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	ghStatus := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	ghStatus := github.NewStatus(github.HOST, cfg.Token, cfg.Owner, cfg.Repo, context)
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -214,7 +214,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
 				tc.sha = cfg.SHA
 			}
 
-			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy-context")
+			status := github.NewStatus(github.HOST, tc.token, tc.owner, tc.repo, "dummy-context")
 			err := status.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 			if err == nil {

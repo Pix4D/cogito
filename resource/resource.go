@@ -48,9 +48,10 @@ var (
 	}
 
 	optionalSourceKeys = map[string]struct{}{
-		"log_level":      {},
-		"log_url":        {},
-		"context_prefix": {},
+		"log_level":       {},
+		"log_url":         {},
+		"context_prefix":  {},
+		"github_host": {},
 	}
 )
 
@@ -153,8 +154,13 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
+	githubHost := github.HOST // default
+	if hostname, ok := source["github_host"].(string); ok {
+		githubHost = hostname
+	}
+
 	repoDir := filepath.Join(inputDirectory, inputDirs[0])
-	if err := checkRepoDir(repoDir, owner, repo); err != nil {
+	if err := checkRepoDir(repoDir, owner, repo, githubHost); err != nil {
 		return nil, nil, err
 	}
 
@@ -180,7 +186,12 @@ func (r *Resource) Out(
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
-	status := github.NewStatus(github.API, token, owner, repo, context)
+	apiServer := fmt.Sprintf("https://api.%s", github.HOST) // default
+	if hostname, ok := source["github_host"].(string); ok {
+		apiServer = fmt.Sprintf("https://api.%s", hostname)
+	}
+
+	status := github.NewStatus(apiServer, token, owner, repo, context)
 
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
@@ -327,7 +338,7 @@ func collectInputDirs(dir string) ([]string, error) {
 // - The repo configuration contains a "remote origin" section.
 // - The remote origin url can be parsed following the Github conventions.
 // - The result of the parse matches OWNER and REPO.
-func checkRepoDir(dir, owner, repo string) error {
+func checkRepoDir(dir, owner, repo, githubHost string) error {
 	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return fmt.Errorf("parsing .git/config: abspath: %w", err)
@@ -353,7 +364,8 @@ func checkRepoDir(dir, owner, repo string) error {
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
-	left := []string{"github.com", owner, repo}
+
+	left := []string{githubHost, owner, repo}
 	right := []string{gu.URL.Host, gu.Owner, gu.Repo}
 	for i, l := range left {
 		r := right[i]
@@ -367,7 +379,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
 
 Cogito SOURCE configuration:
     owner: %s
-     repo: %s`,
+    repo: %s`,
 				url, gu.Owner, gu.Repo,
 				owner, repo)
 		}

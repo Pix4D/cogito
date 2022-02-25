@@ -26,16 +26,16 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
 
-// API is the GitHub API endpoint.
+// HOST is the GitHub hostname.
 // Can be overridden by tests to "mock" with net/http/httptest:
 //   ts := httptest.NewServer(...)
-//   savedAPI := github.API
-//   github.API = ts.URL
+//   savedAPI := github.HOST
+//   github.HOST = ts.URL
 //   defer func() {
 //	     ts.Close()
-//	     github.API = savedAPI
+//	     github.HOST = savedAPI
 //   }()
-var API = "https://api.github.com"
+var HOST = "github.com"
 
 type status struct {
 	server  string
