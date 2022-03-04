@@ -29,11 +29,11 @@ func (e *StatusError) Error() string {
 // HOST is the GitHub hostname.
 // Can be overridden by tests to "mock" with net/http/httptest:
 //   ts := httptest.NewServer(...)
-//   savedAPI := github.HOST
+//   savedHost := github.HOST
 //   github.HOST = ts.URL
 //   defer func() {
 //	     ts.Close()
-//	     github.HOST = savedAPI
+//	     github.HOST = savedHost
 //   }()
 var HOST = "github.com"
 

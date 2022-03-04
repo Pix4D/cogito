@@ -48,10 +48,10 @@ var (
 	}
 
 	optionalSourceKeys = map[string]struct{}{
-		"log_level":       {},
-		"log_url":         {},
-		"context_prefix":  {},
-		"github_host": {},
+		"log_level":      {},
+		"log_url":        {},
+		"context_prefix": {},
+		"github_host":    {},
 	}
 )
 
@@ -186,10 +186,7 @@ func (r *Resource) Out(
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
-	apiServer := fmt.Sprintf("https://api.%s", github.HOST) // default
-	if hostname, ok := source["github_host"].(string); ok {
-		apiServer = fmt.Sprintf("https://api.%s", hostname)
-	}
+	apiServer := fmt.Sprintf("https://api.%s", github.HOST)
 
 	status := github.NewStatus(apiServer, token, owner, repo, context)
 
@@ -379,7 +376,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
 
 Cogito SOURCE configuration:
     owner: %s
-    repo: %s`,
+     repo: %s`,
 				url, gu.Owner, gu.Repo,
 				owner, repo)
 		}
