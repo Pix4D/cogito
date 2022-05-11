@@ -18,13 +18,9 @@ vars:
   DOCKER_FULL_NAME: "{{.DOCKER_BASE_NAME}}:{{.DOCKER_TAG}}"
   BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
-  GOTESTSUM:
-    sh: "echo $(which gotestsum 2> /dev/null)"
-  TESTRUNNER: "{{if .GOTESTSUM}}{{base .GOTESTSUM}} --{{else}}go test{{end}}"
   #
-  GOLANGCI_VERSION: v1.43.0
-  GOTESTSUM_VERSION: v1.7.0
-  GOLINES_VERSION: v0.7.0
+  GOLANGCI_VERSION: v1.46.0
+  GOLINES_VERSION: v0.9.0
 
 tasks:
 
@@ -32,7 +28,6 @@ tasks:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
       - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
 
   lint:
@@ -59,18 +54,18 @@ tasks:
   test:unit:
     desc: Run the unit tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 -short -coverprofile=coverage.out ./..."
+      - go test -count=1 -short -coverprofile=coverage.out ./...
 
   test:integration:
     desc: Run the integration tests.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./..."
+      - go test -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./...
     env: *test-env
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      - "{{.TESTRUNNER}} -count=1 -coverprofile=coverage.out ./..."
+      - go test -count=1 -coverprofile=coverage.out ./...
     env: *test-env
 
   browser:
