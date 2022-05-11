@@ -59,7 +59,7 @@ tasks:
   test:integration:
     desc: Run the integration tests.
     cmds:
-      - go test -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./...
+      - go test -count=1 -run 'Test.*Integration.*' -coverprofile=coverage.out ./...
     env: *test-env
 
   test:all:
