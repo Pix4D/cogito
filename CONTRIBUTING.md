@@ -21,7 +21,6 @@ In case of doubts about how to tackle testing something, feel free to ask.
 ## Optional
 
 * [gopass] to securely store secrets for integration tests.
-* [gotestsum], for more human-friendly test output. If found in `$PATH`, it will be used in place of `go test`.
 
 # Using Task (replacement of make)
 
@@ -310,5 +309,4 @@ This code is licensed according to the MIT license (see file [LICENSE](./LICENSE
 
 
 [Task]: https://taskfile.dev/
-[gotestsum]: https://github.com/gotestyourself/gotestsum
 [gopass]: https://github.com/gopasspw/gopass

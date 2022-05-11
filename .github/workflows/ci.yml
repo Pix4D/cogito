@@ -6,7 +6,7 @@ name: ci
 
 env:
   go-version: 1.18.x
-  task-version: v3.7.3
+  task-version: v3.12.1
 
 jobs:
   all:
