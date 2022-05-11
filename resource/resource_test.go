@@ -396,7 +396,7 @@ func TestOutMockFailure(t *testing.T) {
 	}
 }
 
-func TestOutIntegrationSuccess(t *testing.T) {
+func TestOutSuccessIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
@@ -437,7 +437,7 @@ func TestOutIntegrationSuccess(t *testing.T) {
 	}
 }
 
-func TestOutIntegrationFailure(t *testing.T) {
+func TestOutFailureIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}

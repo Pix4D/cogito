@@ -133,7 +133,7 @@ cogito/
 We are finally ready to run the integration tests:
 
 ```
-$ task test:integration
+$ task test:all
 ```
 
 The integration tests have the following logic:
@@ -173,7 +173,7 @@ Simply have a look at the contents of [.github/workflows/ci.yml](.github/workflo
 Run the tests
 
 ```console
-$ task test:unit test:integration
+$ task test:all
 ```
 
 Build the Docker image

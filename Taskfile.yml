@@ -41,7 +41,7 @@ tasks:
       - golines --max-len=99 --write-output .
 
   test:env:
-    desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run '^TestFooIntegration' ./pkg/update"
+    desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
     cmds:
       - '{{ .CLI_ARGS }}'
     env: &test-env
@@ -55,12 +55,6 @@ tasks:
     desc: Run the unit tests.
     cmds:
       - go test -count=1 -short -coverprofile=coverage.out ./...
-
-  test:integration:
-    desc: Run the integration tests.
-    cmds:
-      - go test -count=1 -run 'Test.*Integration$' -coverprofile=coverage.out ./...
-    env: *test-env
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.

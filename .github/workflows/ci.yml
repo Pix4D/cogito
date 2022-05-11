@@ -29,8 +29,7 @@ jobs:
       - run: task ci:setup
       - run: task lint
       - run: task build
-      - run: task test:unit
-      - run: task test:integration
+      - run: task test:all
         env:
           COGITO_TEST_OAUTH_TOKEN: ${{ secrets.COGITO_TEST_OAUTH_TOKEN }}
       - run: task docker:build
