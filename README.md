@@ -1,7 +1,5 @@
 # cogito
 
-[![Travis Build Status](https://travis-ci.org/Pix4D/cogito.svg?branch=master)](https://travis-ci.org/Pix4D/cogito)
-
 Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update the GitHub status of a commit during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
