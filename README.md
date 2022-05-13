@@ -107,7 +107,7 @@ jobs:
 
 With reference to the [GitHub status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
 
-![Screenshot of GitHub UI](gh-ui-decorated.png)
+![Screenshot of GitHub UI](doc/gh-ui-decorated.png)
 
 # Source Configuration
 

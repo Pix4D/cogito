@@ -264,13 +264,19 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
   --instance-var branch=another-branch
 ```
 
-## refreshing the resource image when using instanced vars
+## Refreshing the resource image when using instanced vars
 
 ```
 $ task docker-build docker-push &&
     fly -t cogito check-resource-type -r cogito-test/branch:stable/cogito &&
     fly -t cogito check-resource-type -r cogito-test/branch:another-branch/cogito
 ```
+
+## Solving Concourse error: version is missing from previous step
+
+![screenshot of version is missing error](doc/version-is-missing.png)
+
+If you get the confusing `version is missing from previous step` error in cogito put, while using a pipeline like `cogito.yml` that uses as Docker tag the name of the branch, it simply means that you forgot to push for the first time the cogito Docker image.
 
 # Setting up GitHub Action CI
 
