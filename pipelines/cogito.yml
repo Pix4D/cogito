@@ -13,23 +13,10 @@ meta:
       put: gh-status
       inputs: [repo.git]
       params: {state: error}
-
-  task-config: &task-config
-    config:
-      platform: linux
-      image_resource:
-        type: registry-image
-        source: { repository: alpine }
-      run:
-        path: /bin/sh
-        args:
-          - -c
-          - |
-            set -o errexit
-            set -x
-            echo "How many? Like the stars."
-            exit 0
-
+    on_abort:
+      put: gh-status
+      inputs: [repo.git]
+      params: {state: error}
 
 resource_types:
 
@@ -73,8 +60,20 @@ jobs:
       - put: gh-status
         inputs: [repo.git]
         params: {state: pending}
-      - task: maybe-fail
-        <<: *task-config
+      - task: will-fail
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: { repository: alpine }
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                set -o errexit
+                echo Hello from autocat
+                exit 1
 
   - name: motormouse
     <<: *gh-status-handlers
@@ -84,5 +83,17 @@ jobs:
       - put: gh-status
         inputs: [repo.git]
         params: {state: pending}
-      - task: maybe-fail
-        <<: *task-config
+      - task: will-succeed
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: { repository: alpine }
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                set -o errexit
+                echo Hello from motormouse
+                exit 0
