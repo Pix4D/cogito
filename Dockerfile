@@ -2,9 +2,7 @@ FROM golang:1.18-alpine as builder
 
 ARG BUILD_INFO
 
-ENV GOPATH=/root/go
-
-RUN apk --no-cache add build-base
+ENV GOPATH=/root/go CGO_ENABLED=0
 
 WORKDIR /code
 
