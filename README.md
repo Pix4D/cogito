@@ -1,6 +1,6 @@
 # cogito
 
-Cogito (**Co**ncourse **git** status res**o**urce) is a [Concourse resource] to update the GitHub status of a commit during a build. The name is a humble homage to [René Descartes].
+Cogito (**CO**ncourse **GIT** status res**O**urce) is a [Concourse resource] to update the GitHub commit status during a build. The name is a humble homage to [René Descartes].
 
 Written in Go, it has the following characteristics:
 
@@ -49,23 +49,23 @@ See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and f
 resource_types:
 - name: cogito
   type: registry-image
-  check_every: 1h
+  check_every: 24h
   source:
     repository: pix4d/cogito
 
 resources:
 - name: gh-status
   type: cogito
-  check_every: 1h
+  check_every: 24h
   source:
-    owner: ((your-github-user-or-organization))
+    owner: ((github-owner))
     repo: ((your-repo-name))
-    access_token: ((your-OAuth-personal-access-token))
+    access_token: ((github-PAT))
 
 - name: the-repo
   type: git
   source:
-    uri: https://github.com/((your-github-user-or-organization))/((your-repo-name))
+    uri: https://github.com/((github-owner))/((your-repo-name))
     branch: ((branch))
 
 jobs:
@@ -81,6 +81,10 @@ jobs:
     on_error:
       put: gh-status
       inputs: [the-repo]
+      params: {state: error}
+    on_abort:
+      put: gh-status
+      inputs: [repo.git]
       params: {state: error}
     plan:
       - get: the-repo
@@ -105,7 +109,7 @@ jobs:
 
 # Effects on GitHub
 
-With reference to the [GitHub status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
+With reference to the [GitHub Commit status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
 
 ![Screenshot of GitHub UI](doc/gh-ui-decorated.png)
 
@@ -129,15 +133,17 @@ We suggest to set a long interval for `check_interval`, for example 1 hour, as s
 
 # The check step
 
-It is currently a no-op and will always return the same version, `dummy`.
+No-op. Will always return the same version, `dummy`.
 
 # The get step
 
-It is currently a no-op.
+No-op.
 
 # The put step
 
-Sets or updates the GitHub status for a given commit, following the [GitHub status API].
+Sets the GitHub commit status for a given commit, following the [GitHub Commit status API].
+
+The same commit can have multiple statuses, differentiated by `context`.
 
 ## Required params
 
@@ -159,7 +165,7 @@ on_success:
   params: {state: success}
 ```
 
-As all the other GitHub status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the status.
+As all the other GitHub commit status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the commit status.
 
 It requires only one put input to help you have an efficient pipeline, since if the "put inputs" list is not set explicitly, Concourse will stream all inputs used by the job to this resource, which can have a big performance impact. From the ["put inputs"] documentation:
 
@@ -175,7 +181,7 @@ To better understand from where `the-repo` comes from, see the full example at t
 
 Follow the instructions at [GitHub personal access token] to create a personal access token.
 
-Give to it the absolute minimum permissions to get the job done. This resource only needs the `repo:status` scope, as explained at [GitHub status API].
+Give to it the absolute minimum permissions to get the job done. This resource only needs the `repo:status` scope, as explained at [GitHub Commit status API].
 
 NOTE: The token is security-sensitive. Treat it as you would treat a password. Do not encode it in the pipeline YAML and do not store it in a YAML file. Use one of the Concourse-supported credentials managers, see [Concourse credential managers].
 
@@ -201,7 +207,7 @@ In case of rate limiting, the error message in the output of the `put` step will
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
 
-[GitHub status API]: https://developer.github.com/v3/repos/statuses/
+[GitHub Commit status API]: https://developer.github.com/v3/repos/statuses/
 [GitHub API v3]: https://developer.github.com/v3/
 [GitHub personal access token]: https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line
 

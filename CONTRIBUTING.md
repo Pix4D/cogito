@@ -230,6 +230,8 @@ $ task docker-build docker-push &&
   fly -t cogito trigger-job -j cogito-test/autocat -w
 ```
 
+Command `check-resource-type` can sometimes not be enough (Details: [registry-image-resource 316](https://github.com/concourse/registry-image-resource/issues/316)). Concourse 7.8.0 will ship a new fly command, [`clear-versions`](https://github.com/concourse/concourse/pull/8196), that should be more reliable. Waiting for this release, a workaround that often works is to issue a new tag for the Docker image. Following the suggested workflow, this is achieved by renaming the branch.
+
 On each `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
 
 ```text
