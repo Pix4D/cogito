@@ -167,71 +167,35 @@ func TestOutMockSuccess(t *testing.T) {
 	defMeta := oc.Metadata{oc.NameVal{
 		Name: "state", Value: "error"},
 	}
-	defDir := "a-repo"
+	defWantBody := map[string]string{
+		"context": defEnv.Get("BUILD_JOB_NAME"),
+	}
+
+	testDir := "a-repo"
 
 	testCases := []struct {
-		name         string
-		source       oc.Source
-		params       oc.Params
-		env          oc.Environment
-		wantVersion  oc.Version
-		wantMetadata oc.Metadata
-		wantBody     map[string]string
+		name     string
+		source   oc.Source
+		params   oc.Params
+		wantBody map[string]string
 	}{
 		{
-			name:         "valid mandatory sources and parameters",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody:     nil,
-		},
-		{
-			name:         "do not return a nil version the first time it runs (see Concourse PR #4442)",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody:     nil,
+			name: "valid mandatory source and params",
 		},
 		{
 			name: "source: optional: context_prefix",
-			source: oc.Source{
-				"access_token":   cfg.Token,
-				"owner":          cfg.Owner,
-				"repo":           cfg.Repo,
+			source: help.MergeMap(defSource, oc.Source{
 				"context_prefix": "cocco"},
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
+			),
 			wantBody: map[string]string{
 				"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME"),
 			},
 		},
 		{
-			name:         "put step: default context",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody: map[string]string{
-				"context": defEnv.Get("BUILD_JOB_NAME"),
-			},
-		},
-		{
-			name:   "put step: optional: context",
-			source: defSource,
-			params: oc.Params{
-				"state":   "error",
+			name: "params: optional: context",
+			params: help.MergeMap(defParams, oc.Params{
 				"context": "bello",
-			},
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
+			}),
 			wantBody: map[string]string{
 				"context": "bello",
 			},
@@ -240,24 +204,35 @@ func TestOutMockSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
+
+			if tc.source == nil {
+				tc.source = defSource
+			}
+			if tc.params == nil {
+				tc.params = defParams
+			}
+			if tc.wantBody == nil {
+				tc.wantBody = defWantBody
+			}
 
 			ts := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					fmt.Fprintln(w, "Anything goes...")
 
-					if tc.wantBody != nil {
-						buf, _ := io.ReadAll(r.Body)
-						var bm map[string]string
-						if err := json.Unmarshal(buf, &bm); err != nil {
-							t.Fatalf("parsing JSON body: %v", err)
-						}
-						for k, v := range tc.wantBody {
-							if bm[k] != v {
-								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
-							}
+					buf, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Fatalf("reading body: %v", err)
+					}
+					var bm map[string]string
+					if err := json.Unmarshal(buf, &bm); err != nil {
+						t.Fatalf("parsing JSON body: %v", err)
+					}
+					for k, v := range tc.wantBody {
+						if bm[k] != v {
+							t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
 						}
 					}
 				}),
@@ -271,18 +246,19 @@ func TestOutMockSuccess(t *testing.T) {
 			}()
 
 			res := Resource{}
+
 			version, metadata, err := res.Out(
-				inDir, tc.source, tc.params, tc.env, silentLog)
+				inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 
-			if diff := cmp.Diff(tc.wantVersion, version); diff != "" {
+			if diff := cmp.Diff(defVersion, version); diff != "" {
 				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(tc.wantMetadata, metadata); diff != "" {
+			if diff := cmp.Diff(defMeta, metadata); diff != "" {
 				t.Errorf("metadata: (-want +have):\n%s", diff)
 			}
 		})
@@ -300,31 +276,26 @@ func TestOutMockFailure(t *testing.T) {
 	defParams := oc.Params{
 		"state": "error",
 	}
-	defDir := "a-repo"
 
-	var testCases = []struct {
-		name     string
-		source   oc.Source
-		params   oc.Params
-		env      oc.Environment
-		wantBody map[string]string
-		wantErr  string
+	testDir := "a-repo"
+
+	testCases := []struct {
+		name    string
+		source  oc.Source
+		params  oc.Params
+		wantErr string
 	}{
 		{
-			name:     "missing mandatory source keys",
-			source:   oc.Source{},
-			params:   defParams,
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "missing source keys: [access_token owner repo]",
+			name:    "missing mandatory source keys",
+			source:  oc.Source{},
+			params:  defParams,
+			wantErr: "missing source keys: [access_token owner repo]",
 		},
 		{
-			name:     "missing mandatory parameters",
-			source:   defSource,
-			params:   oc.Params{},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "missing put parameter 'state'",
+			name:    "missing mandatory parameters",
+			source:  defSource,
+			params:  oc.Params{},
+			wantErr: "missing put parameter 'state'",
 		},
 		{
 			name:   "invalid state parameter",
@@ -332,9 +303,7 @@ func TestOutMockFailure(t *testing.T) {
 			params: oc.Params{
 				"state": "hello",
 			},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "invalid put parameter 'state: hello'",
+			wantErr: "invalid put parameter 'state: hello'",
 		},
 		{
 			name:   "unknown parameter",
@@ -343,34 +312,19 @@ func TestOutMockFailure(t *testing.T) {
 				"state": "pending",
 				"pizza": "margherita",
 			},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "unknown put parameter 'pizza'",
+			wantErr: "unknown put parameter 'pizza'",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			ts := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					fmt.Fprintln(w, "Anything goes...")
-
-					if tc.wantBody != nil {
-						buf, _ := io.ReadAll(r.Body)
-						var bm map[string]string
-						if err := json.Unmarshal(buf, &bm); err != nil {
-							t.Fatalf("parsing JSON body: %v", err)
-						}
-						for k, v := range tc.wantBody {
-							if bm[k] != v {
-								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
-							}
-						}
-					}
 				}),
 			)
 
@@ -382,8 +336,9 @@ func TestOutMockFailure(t *testing.T) {
 			}()
 
 			res := Resource{}
+
 			_, _, err := res.Out(
-				inDir, tc.source, tc.params, tc.env, silentLog)
+				inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
@@ -404,12 +359,11 @@ func TestOutSuccessIntegration(t *testing.T) {
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
-	defDir := "a-repo"
+	testDir := "a-repo"
 
 	type in struct {
 		source oc.Source
 		params oc.Params
-		env    oc.Environment
 	}
 
 	testCases := []struct {
@@ -418,17 +372,17 @@ func TestOutSuccessIntegration(t *testing.T) {
 	}{
 		{
 			name: "backend reports success",
-			in:   in{defSource, defParams, defEnv},
+			in:   in{defSource, defParams},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -444,12 +398,11 @@ func TestOutFailureIntegration(t *testing.T) {
 	cfg := help.SkipTestIfNoEnvVars(t)
 
 	defParams := oc.Params{"state": "error"}
-	defDir := "a-repo"
+	testDir := "a-repo"
 
 	type in struct {
 		source oc.Source
 		params oc.Params
-		env    oc.Environment
 	}
 
 	testCases := []struct {
@@ -465,7 +418,7 @@ func TestOutFailureIntegration(t *testing.T) {
 					"owner":        cfg.Owner,
 					"repo":         "does-not-exists-really"},
 				defParams,
-				defEnv},
+			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
@@ -481,11 +434,11 @@ Cogito SOURCE configuration:
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+			inDir, teardown := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 			defer teardown(t)
 
 			r := Resource{}
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)

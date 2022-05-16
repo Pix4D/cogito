@@ -176,3 +176,16 @@ func SkipTestIfNoEnvVars(t *testing.T) TestCfg {
 
 	return TestCfg{token, owner, repo, SHA}
 }
+
+// MergeMap returns a new map, the merge of of b over a, meaning that duplicated keys in
+// b will overwrite keys in a.
+func MergeMap(a, b map[string]any) map[string]any {
+	c := make(map[string]any, len(a)+len(b))
+	for k, v := range a {
+		c[k] = v
+	}
+	for k, v := range b {
+		c[k] = v
+	}
+	return c
+}
