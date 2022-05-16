@@ -109,6 +109,14 @@ $ gopass insert cogito/test_repo_name  # The repo name (without the trailing .gi
 $ gopass insert cogito/test_commit_sha
 ```
 
+## Add Google Chat webhook
+
+If you are not using this feature, just add an empty string. This will allow to use the sample pipeline cogito.yml without modification.
+
+```console
+$ gopass insert cogito/test_gchat_webhook
+```
+
 ### Verify your setup
 
 ```console
@@ -122,6 +130,7 @@ cogito/
 ├── docker_org
 ├── docker_token
 ├── docker_username
+├── test_gchat_webhook
 ├── test_commit_sha
 ├── test_oauth_token
 ├── test_repo_name
@@ -216,11 +225,12 @@ $ fly -t cogito login --concourse-url=http://localhost:8080 --open-browser
 
 ```
 $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
+  -y branch=stable \
   -y github-owner=(gopass show cogito/test_repo_owner) \
   -y repo-name=(gopass show cogito/test_repo_name) \
   -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
   -y tag=(git branch --show-current) \
-  -y branch=stable
+  -y gchat_webhook=(gopass show cogito/test_gchat_webhook)
 ```
 
 ```
