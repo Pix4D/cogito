@@ -412,7 +412,7 @@ func TestOutFailureIntegration(t *testing.T) {
 				oc.Source{
 					"access_token": cfg.Token,
 					"owner":        cfg.Owner,
-					"repo":         "does-not-exists-really"},
+					"repo":         "does-not-exist-really"},
 				defParams,
 			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
@@ -424,7 +424,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
 
 Cogito SOURCE configuration:
     owner: pix4d
-     repo: does-not-exists-really`,
+     repo: does-not-exist-really`,
 		},
 	}
 
