@@ -347,22 +347,23 @@ func TestOutSuccessIntegration(t *testing.T) {
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
-	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
-	defParams := oc.Params{"state": "error"}
+	defSource := oc.Source{
+		"access_token": cfg.Token,
+		"owner":        cfg.Owner,
+		"repo":         cfg.Repo,
+	}
+	defParams := oc.Params{
+		"state": "error",
+	}
 	testDir := "a-repo"
 
-	type in struct {
+	testCases := []struct {
+		name   string
 		source oc.Source
 		params oc.Params
-	}
-
-	testCases := []struct {
-		name string
-		in   in
 	}{
 		{
 			name: "backend reports success",
-			in:   in{defSource, defParams},
 		},
 	}
 
@@ -370,8 +371,15 @@ func TestOutSuccessIntegration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
+			if tc.source == nil {
+				tc.source = defSource
+			}
+			if tc.params == nil {
+				tc.params = defParams
+			}
+
 			r := New()
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
+			_, _, err := r.Out(inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -386,27 +394,23 @@ func TestOutFailureIntegration(t *testing.T) {
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
-	defParams := oc.Params{"state": "error"}
-	testDir := "a-repo"
-
-	type in struct {
-		source oc.Source
-		params oc.Params
+	defParams := oc.Params{
+		"state": "error",
 	}
+	testDir := "a-repo"
 
 	testCases := []struct {
 		name    string
-		in      in
+		source  oc.Source
+		params  oc.Params
 		wantErr string
 	}{
 		{
 			name: "local validations fail",
-			in: in{
-				oc.Source{
-					"access_token": cfg.Token,
-					"owner":        cfg.Owner,
-					"repo":         "does-not-exist-really"},
-				defParams,
+			source: oc.Source{
+				"access_token": cfg.Token,
+				"owner":        cfg.Owner,
+				"repo":         "does-not-exist-really",
 			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
 
@@ -425,8 +429,12 @@ Cogito SOURCE configuration:
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
+			if tc.params == nil {
+				tc.params = defParams
+			}
+
 			r := New()
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
+			_, _, err := r.Out(inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)
