@@ -152,11 +152,9 @@ var FakeTestCfg = TestCfg{
 	SHA:   "0123456789012345678901234567890123456789",
 }
 
-// SkipTestIfNoEnvVars is used to decide wether to run an end-to-end test or not.
+// SkipTestIfNoEnvVars is used to decide whether to run an end-to-end test or not.
 // The decision is based on the presence or absence of environment variables detailed
-// in the README file.
-// Requiring the testing.T parameter is done on purpose to combat the temptation to use this
-// function in production :-)
+// in the CONTRIBUTING file.
 func SkipTestIfNoEnvVars(t *testing.T) TestCfg {
 	t.Helper()
 
@@ -175,4 +173,17 @@ func SkipTestIfNoEnvVars(t *testing.T) TestCfg {
 	}
 
 	return TestCfg{token, owner, repo, SHA}
+}
+
+// MergeMap returns a new map, the merge of b over a, meaning that duplicated keys in
+// a will be overwritten by the corresponding keys in b.
+func MergeMap(a, b map[string]any) map[string]any {
+	c := make(map[string]any, len(a)+len(b))
+	for k, v := range a {
+		c[k] = v
+	}
+	for k, v := range b {
+		c[k] = v
+	}
+	return c
 }

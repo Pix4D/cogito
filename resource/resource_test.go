@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -167,71 +166,35 @@ func TestOutMockSuccess(t *testing.T) {
 	defMeta := oc.Metadata{oc.NameVal{
 		Name: "state", Value: "error"},
 	}
-	defDir := "a-repo"
+	defWantBody := map[string]string{
+		"context": defEnv.Get("BUILD_JOB_NAME"),
+	}
+
+	testDir := "a-repo"
 
 	testCases := []struct {
-		name         string
-		source       oc.Source
-		params       oc.Params
-		env          oc.Environment
-		wantVersion  oc.Version
-		wantMetadata oc.Metadata
-		wantBody     map[string]string
+		name     string
+		source   oc.Source
+		params   oc.Params
+		wantBody map[string]string
 	}{
 		{
-			name:         "valid mandatory sources and parameters",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody:     nil,
-		},
-		{
-			name:         "do not return a nil version the first time it runs (see Concourse PR #4442)",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody:     nil,
+			name: "valid mandatory source and params",
 		},
 		{
 			name: "source: optional: context_prefix",
-			source: oc.Source{
-				"access_token":   cfg.Token,
-				"owner":          cfg.Owner,
-				"repo":           cfg.Repo,
+			source: help.MergeMap(defSource, oc.Source{
 				"context_prefix": "cocco"},
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
+			),
 			wantBody: map[string]string{
 				"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME"),
 			},
 		},
 		{
-			name:         "put step: default context",
-			source:       defSource,
-			params:       defParams,
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
-			wantBody: map[string]string{
-				"context": defEnv.Get("BUILD_JOB_NAME"),
-			},
-		},
-		{
-			name:   "put step: optional: context",
-			source: defSource,
-			params: oc.Params{
-				"state":   "error",
+			name: "params: optional: context",
+			params: help.MergeMap(defParams, oc.Params{
 				"context": "bello",
-			},
-			env:          defEnv,
-			wantVersion:  defVersion,
-			wantMetadata: defMeta,
+			}),
 			wantBody: map[string]string{
 				"context": "bello",
 			},
@@ -240,24 +203,34 @@ func TestOutMockSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
-			defer teardown(t)
+			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
+
+			if tc.source == nil {
+				tc.source = defSource
+			}
+			if tc.params == nil {
+				tc.params = defParams
+			}
+			if tc.wantBody == nil {
+				tc.wantBody = defWantBody
+			}
 
 			ts := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					fmt.Fprintln(w, "Anything goes...")
 
-					if tc.wantBody != nil {
-						buf, _ := io.ReadAll(r.Body)
-						var bm map[string]string
-						if err := json.Unmarshal(buf, &bm); err != nil {
-							t.Fatalf("parsing JSON body: %v", err)
-						}
-						for k, v := range tc.wantBody {
-							if bm[k] != v {
-								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
-							}
+					buf, err := io.ReadAll(r.Body)
+					if err != nil {
+						t.Fatalf("reading body: %v", err)
+					}
+					var bm map[string]string
+					if err := json.Unmarshal(buf, &bm); err != nil {
+						t.Fatalf("parsing JSON body: %v", err)
+					}
+					for k, v := range tc.wantBody {
+						if bm[k] != v {
+							t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
 						}
 					}
 				}),
@@ -271,18 +244,19 @@ func TestOutMockSuccess(t *testing.T) {
 			}()
 
 			res := Resource{}
+
 			version, metadata, err := res.Out(
-				inDir, tc.source, tc.params, tc.env, silentLog)
+				inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
 			}
 
-			if diff := cmp.Diff(tc.wantVersion, version); diff != "" {
+			if diff := cmp.Diff(defVersion, version); diff != "" {
 				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(tc.wantMetadata, metadata); diff != "" {
+			if diff := cmp.Diff(defMeta, metadata); diff != "" {
 				t.Errorf("metadata: (-want +have):\n%s", diff)
 			}
 		})
@@ -300,31 +274,26 @@ func TestOutMockFailure(t *testing.T) {
 	defParams := oc.Params{
 		"state": "error",
 	}
-	defDir := "a-repo"
 
-	var testCases = []struct {
-		name     string
-		source   oc.Source
-		params   oc.Params
-		env      oc.Environment
-		wantBody map[string]string
-		wantErr  string
+	testDir := "a-repo"
+
+	testCases := []struct {
+		name    string
+		source  oc.Source
+		params  oc.Params
+		wantErr string
 	}{
 		{
-			name:     "missing mandatory source keys",
-			source:   oc.Source{},
-			params:   defParams,
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "missing source keys: [access_token owner repo]",
+			name:    "missing mandatory source keys",
+			source:  oc.Source{},
+			params:  defParams,
+			wantErr: "missing source keys: [access_token owner repo]",
 		},
 		{
-			name:     "missing mandatory parameters",
-			source:   defSource,
-			params:   oc.Params{},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "missing put parameter 'state'",
+			name:    "missing mandatory parameters",
+			source:  defSource,
+			params:  oc.Params{},
+			wantErr: "missing put parameter 'state'",
 		},
 		{
 			name:   "invalid state parameter",
@@ -332,9 +301,7 @@ func TestOutMockFailure(t *testing.T) {
 			params: oc.Params{
 				"state": "hello",
 			},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "invalid put parameter 'state: hello'",
+			wantErr: "invalid put parameter 'state: hello'",
 		},
 		{
 			name:   "unknown parameter",
@@ -343,34 +310,18 @@ func TestOutMockFailure(t *testing.T) {
 				"state": "pending",
 				"pizza": "margherita",
 			},
-			env:      defEnv,
-			wantBody: nil,
-			wantErr:  "unknown put parameter 'pizza'",
+			wantErr: "unknown put parameter 'pizza'",
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
-			defer teardown(t)
+			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
 			ts := httptest.NewServer(
 				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusCreated)
 					fmt.Fprintln(w, "Anything goes...")
-
-					if tc.wantBody != nil {
-						buf, _ := io.ReadAll(r.Body)
-						var bm map[string]string
-						if err := json.Unmarshal(buf, &bm); err != nil {
-							t.Fatalf("parsing JSON body: %v", err)
-						}
-						for k, v := range tc.wantBody {
-							if bm[k] != v {
-								t.Errorf("\nbody[%q]: have: %q; want: %q", k, bm[k], v)
-							}
-						}
-					}
 				}),
 			)
 
@@ -382,8 +333,9 @@ func TestOutMockFailure(t *testing.T) {
 			}()
 
 			res := Resource{}
+
 			_, _, err := res.Out(
-				inDir, tc.source, tc.params, tc.env, silentLog)
+				inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
@@ -404,12 +356,11 @@ func TestOutSuccessIntegration(t *testing.T) {
 
 	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
 	defParams := oc.Params{"state": "error"}
-	defDir := "a-repo"
+	testDir := "a-repo"
 
 	type in struct {
 		source oc.Source
 		params oc.Params
-		env    oc.Environment
 	}
 
 	testCases := []struct {
@@ -418,17 +369,16 @@ func TestOutSuccessIntegration(t *testing.T) {
 	}{
 		{
 			name: "backend reports success",
-			in:   in{defSource, defParams, defEnv},
+			in:   in{defSource, defParams},
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
-			defer teardown(t)
+			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
 			r := Resource{}
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -444,12 +394,11 @@ func TestOutFailureIntegration(t *testing.T) {
 	cfg := help.SkipTestIfNoEnvVars(t)
 
 	defParams := oc.Params{"state": "error"}
-	defDir := "a-repo"
+	testDir := "a-repo"
 
 	type in struct {
 		source oc.Source
 		params oc.Params
-		env    oc.Environment
 	}
 
 	testCases := []struct {
@@ -463,9 +412,9 @@ func TestOutFailureIntegration(t *testing.T) {
 				oc.Source{
 					"access_token": cfg.Token,
 					"owner":        cfg.Owner,
-					"repo":         "does-not-exists-really"},
+					"repo":         "does-not-exist-really"},
 				defParams,
-				defEnv},
+			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
@@ -475,17 +424,16 @@ Git repository configuration (received as 'inputs:' in this PUT step):
 
 Cogito SOURCE configuration:
     owner: pix4d
-     repo: does-not-exists-really`,
+     repo: does-not-exist-really`,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			inDir, teardown := setup(t, defDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
-			defer teardown(t)
+			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
 			r := Resource{}
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, tc.in.env, silentLog)
+			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)
@@ -632,8 +580,7 @@ func TestCheckRepoDirSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
-		defer teardown(t)
+		inDir := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
 
 		t.Run(tc.name, func(t *testing.T) {
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
@@ -706,8 +653,7 @@ Cogito SOURCE configuration:
 	}
 
 	for _, tc := range testCases {
-		inDir, teardown := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
-		defer teardown(t)
+		inDir := setup(t, tc.dir, tc.repoURL, "dummySHA", "dummyHead")
 
 		t.Run(tc.name, func(t *testing.T) {
 			err := checkRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
@@ -750,8 +696,7 @@ func TestGitGetCommitSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
-		defer teardown(t)
+		dir := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
 
 		t.Run(tc.name, func(t *testing.T) {
 			sha, err := GitGetCommit(filepath.Join(dir, tc.dir))
@@ -793,8 +738,7 @@ func TestGitGetCommitFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		dir, teardown := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
-		defer teardown(t)
+		dir := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
 
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := GitGetCommit(filepath.Join(dir, tc.dir))
@@ -812,39 +756,43 @@ func TestGitGetCommitFailure(t *testing.T) {
 	}
 }
 
-// setup creates a directory containing a git repository according to the parameters.
-// It returns the path to the directory and a teardown function.
+// setup creates a temporary directory by rendering the templated contents of dir
+// (assumed to be below testdata) with values from the remaining arguments and returns
+// the path to the directory.
+// The temporary directory is registered for removal via t.Cleanup.
+// If any operation fails, setup terminates the test by calling t.Fatal.
 func setup(
 	t *testing.T,
-	dir string,
-	inRepoURL string,
-	inCommitSHA string,
-	inHead string,
-) (
-	string,
-	func(t *testing.T),
-) {
-	// Make a temp dir to be the resource work directory
-	inDir, err := ioutil.TempDir("", "cogito-test-")
+	testDir string,
+	repoURL string,
+	commitSHA string,
+	head string,
+) string {
+	inDir, err := os.MkdirTemp("", "cogito-test-")
 	if err != nil {
-		t.Fatal("Temp dir", err)
+		t.Fatal("setup: MkdirTemp", err)
 	}
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll(inDir); err != nil {
+			t.Fatal("setup: cleanup: RemoveAll:", err)
+		}
+	})
+
+	// Prepare the template data.
 	tdata := make(help.TemplateData)
-	tdata["repo_url"] = inRepoURL
-	tdata["commit_sha"] = inCommitSHA
-	tdata["head"] = inHead
+	tdata["repo_url"] = repoURL
+	tdata["commit_sha"] = commitSHA
+	tdata["head"] = head
 	tdata["branch_name"] = "a-branch-FIXME"
 
 	// Copy the testdata over
-	err = help.CopyDir(inDir, filepath.Join("testdata", dir), help.DotRenamer, tdata)
+	err = help.CopyDir(inDir, filepath.Join("testdata", testDir), help.DotRenamer, tdata)
 	if err != nil {
 		t.Fatal("CopyDir:", err)
 	}
 
-	teardown := func(t *testing.T) {
-		defer os.RemoveAll(inDir)
-	}
-	return inDir, teardown
+	return inDir
 }
 
 // sshRemote returns a github SSH URL

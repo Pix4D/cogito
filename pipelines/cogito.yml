@@ -49,7 +49,6 @@ resources:
   source:
     # Optional, for debugging only.
     log_level: debug
-    # log_url: ((concourse_cognito_logs))
     owner: ((github-owner))
     repo: ((repo-name))
     access_token: ((oauth-personal-access-token))

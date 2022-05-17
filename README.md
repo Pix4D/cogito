@@ -129,7 +129,7 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 ## Suggestions
 
-We suggest to set a long interval for `check_interval`, for example 1 hour, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
+We suggest to set a long interval for `check_interval`, for example 24 hours, as shown in the example above. This helps to reduce the number of check containers in a busy Concourse deployment and, for this resource, has no adverse effects.
 
 # The check step
 
