@@ -214,8 +214,9 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
 				tc.sha = cfg.SHA
 			}
 
-			status := github.NewCommitStatus(github.API, tc.token, tc.owner, tc.repo, "dummy-context")
-			err := status.Add(tc.sha, state, "dummy-url", "dummy-desc")
+			ghStatus := github.NewCommitStatus(github.API, tc.token, tc.owner, tc.repo,
+				"dummy-context")
+			err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 			if err == nil {
 				t.Fatal("\nhave: <no error>\nwant: <some error>")

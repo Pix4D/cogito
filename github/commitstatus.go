@@ -27,15 +27,7 @@ func (e *StatusError) Error() string {
 }
 
 // API is the GitHub API endpoint.
-// Can be overridden by tests to "mock" with net/http/httptest:
-//   ts := httptest.NewServer(...)
-//   savedAPI := github.API
-//   github.API = ts.URL
-//   defer func() {
-//	     ts.Close()
-//	     github.API = savedAPI
-//   }()
-var API = "https://api.github.com"
+const API = "https://api.github.com"
 
 type CommitStatus struct {
 	server  string

@@ -16,7 +16,6 @@ import (
 	"github.com/gertd/wild"
 	"github.com/google/go-cmp/cmp"
 
-	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/help"
 )
 
@@ -64,7 +63,7 @@ func TestCheckSuccess(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := Resource{}
+			r := New()
 
 			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
@@ -96,7 +95,7 @@ func TestCheckFailure(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res := Resource{}
+			res := New()
 
 			_, err := res.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
 
@@ -133,7 +132,7 @@ func TestIn(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r := Resource{}
+			r := New()
 
 			version, metadata, err := r.In(
 				"/tmp", defSource, oc.Params{}, tc.inVersion, defEnv, silentLog,
@@ -236,14 +235,11 @@ func TestOutMockSuccess(t *testing.T) {
 				}),
 			)
 
-			savedAPI := github.API
-			github.API = ts.URL
 			defer func() {
 				ts.Close()
-				github.API = savedAPI
 			}()
 
-			res := Resource{}
+			res := NewWith(ts.URL)
 
 			version, metadata, err := res.Out(
 				inDir, tc.source, tc.params, defEnv, silentLog)
@@ -325,14 +321,11 @@ func TestOutMockFailure(t *testing.T) {
 				}),
 			)
 
-			savedAPI := github.API
-			github.API = ts.URL
 			defer func() {
 				ts.Close()
-				github.API = savedAPI
 			}()
 
-			res := Resource{}
+			res := NewWith(ts.URL)
 
 			_, _, err := res.Out(
 				inDir, tc.source, tc.params, defEnv, silentLog)
@@ -377,7 +370,7 @@ func TestOutSuccessIntegration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
-			r := Resource{}
+			r := New()
 			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err != nil {
@@ -432,7 +425,7 @@ Cogito SOURCE configuration:
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
-			r := Resource{}
+			r := New()
 			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
 
 			if err == nil {
