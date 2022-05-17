@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED - xxxx-xx-xx
 
+### Somehow breaking
+
+- Rename github.NewStatus() to github.NewCommitStatus(). This impacts only Go source code using the github package; it does NOT impact the cogito Concourse resource in any way.
+
 ### Changed
 
 - Update to Go 1.18

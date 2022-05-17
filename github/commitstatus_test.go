@@ -41,7 +41,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		defer ts.Close()
 
 		t.Run(tc.name, func(t *testing.T) {
-			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -108,7 +108,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 
 		t.Run(tc.name, func(t *testing.T) {
 			wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-			ghStatus := github.NewStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 			if err == nil {
@@ -139,7 +139,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	ghStatus := github.NewStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	ghStatus := github.NewCommitStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -214,7 +214,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
 				tc.sha = cfg.SHA
 			}
 
-			status := github.NewStatus(github.API, tc.token, tc.owner, tc.repo, "dummy-context")
+			status := github.NewCommitStatus(github.API, tc.token, tc.owner, tc.repo, "dummy-context")
 			err := status.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 			if err == nil {

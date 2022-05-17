@@ -180,7 +180,7 @@ func (r *Resource) Out(
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
-	status := github.NewStatus(github.API, token, owner, repo, context)
+	commitStatus := github.NewCommitStatus(github.API, token, owner, repo, context)
 
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
@@ -198,7 +198,7 @@ func (r *Resource) Out(
   description: %v`,
 		state, owner, repo, ref, context, targetURL, description)
 
-	err = status.Add(ref, state, targetURL, description)
+	err = commitStatus.Add(ref, state, targetURL, description)
 	if err != nil {
 		return nil, nil, err
 	}
