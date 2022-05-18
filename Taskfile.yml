@@ -50,6 +50,8 @@ tasks:
         sh: 'echo {{default "$(gopass show cogito/test_oauth_token)" .COGITO_TEST_OAUTH_TOKEN}}'
       COGITO_TEST_REPO_NAME: '{{default "cogito-test-read-write" .COGITO_TEST_REPO_NAME}}'
       COGITO_TEST_REPO_OWNER: '{{default "pix4d" .COGITO_TEST_REPO_OWNER}}'
+      COGITO_TEST_GCHAT_HOOK:
+        sh: gopass show cogito/test_gchat_webhook
 
   test:unit:
     desc: Run the unit tests.
