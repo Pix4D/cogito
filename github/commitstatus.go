@@ -1,7 +1,7 @@
-// Package github implements the GitHub status API, following the GitHub REST API v3.
+// Package github implements the GitHub APIs used by Cogito (Commit status API).
 //
-// See the README file for additional information, caveats about GitHub API and imposed limits,
-// and reference to official documentation.
+// See the README and CONTRIBUTING files for additional information, caveats about GitHub
+// API and imposed limits, and reference to official documentation.
 package github
 
 import (
@@ -27,17 +27,9 @@ func (e *StatusError) Error() string {
 }
 
 // API is the GitHub API endpoint.
-// Can be overridden by tests to "mock" with net/http/httptest:
-//   ts := httptest.NewServer(...)
-//   savedAPI := github.API
-//   github.API = ts.URL
-//   defer func() {
-//	     ts.Close()
-//	     github.API = savedAPI
-//   }()
-var API = "https://api.github.com"
+const API = "https://api.github.com"
 
-type status struct {
+type CommitStatus struct {
 	server  string
 	token   string
 	owner   string
@@ -45,17 +37,17 @@ type status struct {
 	context string
 }
 
-// NewStatus returns a status object associated to a specific GitHub owner and repo.
+// NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner and repo.
 // Parameter token is the personal OAuth token of a user that has write access to the repo. It
 // only needs the repo:status scope.
 // Parameter context is what created the status, for example "JOBNAME", or "PIPELINENAME/JOBNAME".
 // Be careful when using PIPELINENAME: if that name is ephemeral, it will make it impossible to
 // use GitHub repository branch protection rules.
+//
 // See also:
-// * https://docs.github.com/en/rest/reference/commits#create-a-commit-status
-// * README file
-func NewStatus(server, token, owner, repo, context string) status {
-	return status{server, token, owner, repo, context}
+// https://docs.github.com/en/rest/commits/statuses#about-the-commit-statuses-api
+func NewCommitStatus(server, token, owner, repo, context string) CommitStatus {
+	return CommitStatus{server, token, owner, repo, context}
 }
 
 // Add adds a commit state to the given sha, decorating it with targetURL and optional description.
@@ -65,7 +57,9 @@ func NewStatus(server, token, owner, repo, context string) status {
 // that generated this state.
 // Parameter description (optional) gives more information about the status.
 // The returned error contains some diagnostic information to help troubleshooting.
-func (s status) Add(sha, state, targetURL, description string) error {
+//
+// See also: https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
+func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
 

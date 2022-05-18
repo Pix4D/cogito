@@ -62,7 +62,28 @@ func BuildInfo() string {
 }
 
 // Resource satisfies the ofcourse.Resource interface.
-type Resource struct{}
+type Resource struct {
+	githubAPI string
+}
+
+// New returns a new Resource object using the default GitHub API endpoint.
+func New() *Resource {
+	return NewWith(github.API)
+}
+
+// NewWith returns a new Resource object with a custom Github API endpoint.
+//
+// Can be used by tests to "mock" with net/http/httptest:
+//   ts := httptest.NewServer(...)
+//   defer func() {
+// 	     ts.Close()
+//   }()
+//   res := resource.newWith(ts.URL)
+func NewWith(githubAPI string) *Resource {
+	return &Resource{
+		githubAPI: githubAPI,
+	}
+}
 
 // Check satisfies ofcourse.Resource.Check(), corresponding to the /opt/resource/check command.
 func (r *Resource) Check(
@@ -180,7 +201,7 @@ func (r *Resource) Out(
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
-	status := github.NewStatus(github.API, token, owner, repo, context)
+	commitStatus := github.NewCommitStatus(r.githubAPI, token, owner, repo, context)
 
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
@@ -198,7 +219,7 @@ func (r *Resource) Out(
   description: %v`,
 		state, owner, repo, ref, context, targetURL, description)
 
-	err = status.Add(ref, state, targetURL, description)
+	err = commitStatus.Add(ref, state, targetURL, description)
 	if err != nil {
 		return nil, nil, err
 	}

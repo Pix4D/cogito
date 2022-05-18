@@ -6,5 +6,5 @@ import (
 )
 
 func main() {
-	ofcourse.Out(&resource.Resource{})
+	ofcourse.Out(resource.New())
 }

@@ -189,7 +189,7 @@ See also the section [The end-to-end tests](./CONTRIBUTING.md#the-end-to-end-tes
 
 # Caveat: GitHub rate limiting
 
-From [GitHub API v3]
+From [GitHub REST API]:
 
 > Rate limiting
 >
@@ -207,8 +207,8 @@ In case of rate limiting, the error message in the output of the `put` step will
 
 This code is licensed according to the MIT license (see file [LICENSE](./LICENSE)).
 
-[GitHub Commit status API]: https://developer.github.com/v3/repos/statuses/
-[GitHub API v3]: https://developer.github.com/v3/
+[GitHub Commit status API]: https://docs.github.com/en/rest/commits/statuses
+[GitHub REST API]: https://docs.github.com/en/rest
 [GitHub personal access token]: https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line
 
 [Concourse credential managers]: https://concourse-ci.org/creds.html.
