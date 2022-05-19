@@ -95,6 +95,8 @@ func (r *Resource) Check(
 	log.Debugf("check: started")
 	defer log.Debugf("check: finished")
 
+	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
+
 	if err := validateSource(source); err != nil {
 		return nil, err
 	}
@@ -119,8 +121,8 @@ func (r *Resource) In(
 	log.Debugf("in: started")
 	defer log.Debugf("in: finished")
 
-	log.Debugf("in: params:\n%s", stringify1(params))
-	log.Debugf("in: env:\n%s", stringify2(env.GetAll()))
+	log.Debugf("in: params:\n%s", stringify(params))
+	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
 
 	if err := validateSource(source); err != nil {
 		return nil, nil, err
@@ -147,8 +149,8 @@ func (r *Resource) Out(
 	log.Debugf("out: started")
 	defer log.Debugf("out: finished")
 
-	log.Debugf("out: params:\n%s", stringify1(params))
-	log.Debugf("out: env:\n%s", stringify2(env.GetAll()))
+	log.Debugf("out: params:\n%s", stringify(params))
+	log.Debugf("out: env:\n%s", stringify(env.GetAll()))
 
 	if err := validateSource(source); err != nil {
 		return nil, nil, err
@@ -230,15 +232,7 @@ func (r *Resource) Out(
 	return dummyVersion, metadata, nil
 }
 
-func stringify1(xs map[string]interface{}) string {
-	var bld strings.Builder
-	for k, v := range xs {
-		fmt.Fprintf(&bld, "  %s: %v\n", k, v)
-	}
-	return bld.String()
-}
-
-func stringify2(xs map[string]string) string {
+func stringify[T any](xs map[string]T) string {
 	var bld strings.Builder
 	for k, v := range xs {
 		fmt.Fprintf(&bld, "  %s: %v\n", k, v)
