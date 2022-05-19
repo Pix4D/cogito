@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/url"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -229,25 +228,6 @@ func (r *Resource) Out(
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
 	return dummyVersion, metadata, nil
-}
-
-// ghTargetURL builds an URL suitable to be used as the target_url parameter for the
-// Github commit status API.
-func ghTargetURL(atc, team, pipeline, job, buildN, instanceVars string) string {
-	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
-
-	targetURL := atc +
-		path.Join("/teams", team, "pipelines", pipeline, "jobs", job, "builds", buildN)
-	// targetURL := fmt.Sprintf("%s/teams/%s/pipelines/%s/jobs/%s/builds/%s",
-	// 	atc, team, pipeline, job, buildN)
-
-	// BUILD_PIPELINE_INSTANCE_VARS: {"branch":"stable"}
-	// https://ci.example.com/teams/main/pipelines/cogito/jobs/autocat/builds/3?vars=%7B%22branch%22%3A%22stable%22%7D
-	if instanceVars != "" {
-		targetURL = fmt.Sprintf("%s?vars=%s", targetURL, url.QueryEscape(instanceVars))
-	}
-
-	return targetURL
 }
 
 func stringify1(xs map[string]interface{}) string {
