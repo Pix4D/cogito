@@ -55,7 +55,7 @@ func TestGhTargetURL(t *testing.T) {
 				buildN = tc.buildN
 			}
 
-			have := ghTargetURL(atc, team, pipeline, job, buildN, tc.instanceVars)
+			have := concourseBuildURL(atc, team, pipeline, job, buildN, tc.instanceVars)
 
 			if have != tc.want {
 				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)

@@ -91,10 +91,10 @@ func (r *Resource) Check(
 	env oc.Environment,
 	log *oc.Logger,
 ) ([]oc.Version, error) {
-	log.Infof(BuildInfo())
 	log.Debugf("check: started")
 	defer log.Debugf("check: finished")
 
+	log.Infof(BuildInfo())
 	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
 
 	if err := validateSource(source); err != nil {
@@ -110,17 +110,17 @@ func (r *Resource) Check(
 
 // In satisfies ofcourse.Resource.In(), corresponding to the /opt/resource/in command.
 func (r *Resource) In(
-	outputDirectory string,
+	outputDir string,
 	source oc.Source,
 	params oc.Params,
 	version oc.Version,
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Infof(BuildInfo())
 	log.Debugf("in: started")
 	defer log.Debugf("in: finished")
 
+	log.Infof(BuildInfo())
 	log.Debugf("in: params:\n%s", stringify(params))
 	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
 
@@ -139,16 +139,16 @@ func (r *Resource) In(
 
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.
 func (r *Resource) Out(
-	inputDirectory string, // All the pipeline `inputs:` are below here.
+	inputDir string, // All the resource "put inputs" are below this directory.
 	source oc.Source,
 	params oc.Params,
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Infof(BuildInfo())
 	log.Debugf("out: started")
 	defer log.Debugf("out: finished")
 
+	log.Infof(BuildInfo())
 	log.Debugf("out: params:\n%s", stringify(params))
 	log.Debugf("out: env:\n%s", stringify(env.GetAll()))
 
@@ -159,12 +159,11 @@ func (r *Resource) Out(
 	if err := validateOutParams(params); err != nil {
 		return nil, nil, err
 	}
-	state, _ := params["state"].(string)
 
 	owner, _ := source["owner"].(string)
 	repo, _ := source["repo"].(string)
 
-	inputDirs, err := collectInputDirs(inputDirectory)
+	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -175,56 +174,35 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	repoDir := filepath.Join(inputDirectory, inputDirs[0])
+	repoDir := filepath.Join(inputDir, inputDirs[0])
 	if err := checkRepoDir(repoDir, owner, repo); err != nil {
 		return nil, nil, err
 	}
 
-	ref, err := GitGetCommit(repoDir)
+	gitRef, err := GitGetCommit(repoDir)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Debugf("out: parsed ref %q", ref)
+	log.Debugf("out: parsed ref %q", gitRef)
 
-	//
-	// Finally, post the status to GitHub.
-	//
-	token, _ := source["access_token"].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
-
-	context := job // default
-	if v, ok := params["context"].(string); ok {
-		context = v
-	}
-
-	if prefix, ok := source["context_prefix"].(string); ok {
-		context = fmt.Sprintf("%s/%s", prefix, context)
-	}
-
-	commitStatus := github.NewCommitStatus(r.githubAPI, token, owner, repo, context)
-
 	atc := env.Get("ATC_EXTERNAL_URL")
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
+	state, _ := params["state"].(string)
 	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	targetURL := ghTargetURL(atc, team, pipeline, job, buildN, instanceVars)
-	description := "Build " + buildN
-	log.Debugf(`out: posting:
-  state: %v
-  owner: %v
-  repo: %v
-  ref: %v
-  context: %v
-  targetURL: %v
-  description: %v`,
-		state, owner, repo, ref, context, targetURL, description)
+	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
 
-	err = commitStatus.Add(ref, state, targetURL, description)
+	//
+	// Post the status to GitHub.
+	//
+	err = postGitHubCommitStatus(r.githubAPI, gitRef, pipeline, job, buildN, state,
+		buildURL, source, params, env, log)
 	if err != nil {
 		return nil, nil, err
 	}
-	log.Infof("out: GitHub state %s for ref %s posted successfully", state, ref[0:9])
+	log.Infof("out: GitHub state %s for ref %s posted successfully", state, gitRef[0:9])
 
 	metadata := oc.Metadata{}
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
