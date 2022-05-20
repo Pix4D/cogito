@@ -135,7 +135,13 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 ## Effects on Google Chat
 
-WRITEME ADD SCREENSHOT
+- Create a Gchat space per pipeline or per group of related pipelines.
+- At space creation time (cannot be changed afterwards) select threaded messages.
+- In the upper left, click on the drop down menu with the name of the space.
+- Click on Manage webhooks.
+- Create a webhook and securely store it in your Concourse secret management system.
+
+![Screenshot of Google Chat UI](doc/cogito-gchat.png)
 
 # Source Configuration
 

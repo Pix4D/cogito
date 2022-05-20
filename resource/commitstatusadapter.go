@@ -9,7 +9,7 @@ import (
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 )
 
-func postGitHubCommitStatus(
+func gitHubCommitStatus(
 	ghAPI string,
 	gitRef string,
 	pipeline string,

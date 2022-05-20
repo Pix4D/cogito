@@ -39,6 +39,7 @@ resources:
     owner: ((github-owner))
     repo: ((repo-name))
     access_token: ((oauth-personal-access-token))
+    gchat_webhook: ((gchat_webhook))
 
 - name: repo.git
   type: git

@@ -42,9 +42,10 @@ $ task test:unit
 
 # Integration tests
 
-There are two types of integration tests:
+There are the following integration tests:
 
 * tests upon GitHub
+* tests upon Google Chat
 * tests upon the Docker image as resource inside Concourse
 
 # Integration tests upon GitHub
@@ -110,6 +111,8 @@ $ gopass insert cogito/test_commit_sha
 ```
 
 ## Add Google Chat webhook
+
+Pix4D team member: see Google chat space "cogito-test", which is already configured.
 
 If you are not using this feature, just add an empty string. This will allow to use the sample pipeline cogito.yml without modification.
 
@@ -203,6 +206,12 @@ Push the Docker image. This will always generate a Docker image with a tag corre
 $ task docker:push
 ```
 
+Handy shortcut (will stop on first error)
+
+```console
+$ task test:all docker:build docker:smoke docker:push
+```
+
 # Integration tests: test the Docker image as resource inside Concourse
 
 Have a look at the sample pipeline in [pipelines/cogito.yml](pipelines/cogito.yml).
@@ -234,9 +243,8 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
 ```
 
 ```
-$ task docker-build docker-push &&
+$ task test:all docker:build docker:smoke docker:push &&
   fly -t cogito check-resource-type -r cogito-test/cogito &&
-  sleep 5 &&
   fly -t cogito trigger-job -j cogito-test/autocat -w
 ```
 
@@ -279,7 +287,7 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
 ## Refreshing the resource image when using instanced vars
 
 ```
-$ task docker-build docker-push &&
+$ task docker:build docker:smoke docker:push &&
     fly -t cogito check-resource-type -r cogito-test/branch:stable/cogito &&
     fly -t cogito check-resource-type -r cogito-test/branch:another-branch/cogito
 ```
