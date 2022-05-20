@@ -347,22 +347,23 @@ func TestOutSuccessIntegration(t *testing.T) {
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
-	defSource := oc.Source{"access_token": cfg.Token, "owner": cfg.Owner, "repo": cfg.Repo}
-	defParams := oc.Params{"state": "error"}
+	defSource := oc.Source{
+		"access_token": cfg.Token,
+		"owner":        cfg.Owner,
+		"repo":         cfg.Repo,
+	}
+	defParams := oc.Params{
+		"state": "error",
+	}
 	testDir := "a-repo"
 
-	type in struct {
+	testCases := []struct {
+		name   string
 		source oc.Source
 		params oc.Params
-	}
-
-	testCases := []struct {
-		name string
-		in   in
 	}{
 		{
 			name: "backend reports success",
-			in:   in{defSource, defParams},
 		},
 	}
 
@@ -370,8 +371,15 @@ func TestOutSuccessIntegration(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
+			if tc.source == nil {
+				tc.source = defSource
+			}
+			if tc.params == nil {
+				tc.params = defParams
+			}
+
 			r := New()
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
+			_, _, err := r.Out(inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -386,27 +394,23 @@ func TestOutFailureIntegration(t *testing.T) {
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
 
-	defParams := oc.Params{"state": "error"}
-	testDir := "a-repo"
-
-	type in struct {
-		source oc.Source
-		params oc.Params
+	defParams := oc.Params{
+		"state": "error",
 	}
+	testDir := "a-repo"
 
 	testCases := []struct {
 		name    string
-		in      in
+		source  oc.Source
+		params  oc.Params
 		wantErr string
 	}{
 		{
 			name: "local validations fail",
-			in: in{
-				oc.Source{
-					"access_token": cfg.Token,
-					"owner":        cfg.Owner,
-					"repo":         "does-not-exist-really"},
-				defParams,
+			source: oc.Source{
+				"access_token": cfg.Token,
+				"owner":        cfg.Owner,
+				"repo":         "does-not-exist-really",
 			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
 
@@ -425,76 +429,18 @@ Cogito SOURCE configuration:
 		t.Run(tc.name, func(t *testing.T) {
 			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
 
+			if tc.params == nil {
+				tc.params = defParams
+			}
+
 			r := New()
-			_, _, err := r.Out(inDir, tc.in.source, tc.in.params, defEnv, silentLog)
+			_, _, err := r.Out(inDir, tc.source, tc.params, defEnv, silentLog)
 
 			if err == nil {
 				t.Fatalf("have: <no error>\nwant: %s", tc.wantErr)
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestGhTargetURL(t *testing.T) {
-	testCases := []struct {
-		name         string
-		atc          string
-		team         string
-		pipeline     string
-		job          string
-		buildN       string
-		instanceVars string
-		want         string
-	}{
-		{
-			name: "all defaults",
-			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42",
-		},
-		{
-			name:         "instanced vars 1",
-			instanceVars: `{"branch":"stable"}`,
-			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
-		},
-		{
-			name:         "instanced vars 2",
-			instanceVars: `{"branch":"stable","foo":"bar"}`,
-			want:         "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			if tc.want == "" {
-				t.Fatal("tc.want: empty")
-			}
-
-			atc := "https://ci.example.com"
-			if tc.atc != "" {
-				atc = tc.atc
-			}
-			team := "devs"
-			if tc.team != "" {
-				team = tc.team
-			}
-			pipeline := "magritte"
-			if tc.pipeline != "" {
-				pipeline = tc.pipeline
-			}
-			job := "paint"
-			if tc.job != "" {
-				job = tc.job
-			}
-			buildN := "42"
-			if tc.buildN != "" {
-				buildN = tc.buildN
-			}
-
-			have := ghTargetURL(atc, team, pipeline, job, buildN, tc.instanceVars)
-
-			if have != tc.want {
-				t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
 			}
 		})
 	}
