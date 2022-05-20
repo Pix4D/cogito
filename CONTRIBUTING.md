@@ -302,17 +302,25 @@ If you get the confusing `version is missing from previous step` error in cogito
 
 Update the expired secrets as follows.
 
-## Regenerate your personal access token (PAT)
+## Regenerate your GitHub personal access token (PAT)
 
 1. Go to [Settings | Tokens](https://github.com/settings/tokens) for your account.
 2. Create or regenerate a token with name `test-cogito`, with scope "repo:status". Set an expiration of 90 days.
 3. Copy the token.
 
-## Update the CI secret with your PAT
+## Regenerate a Google Chat hook
 
-1. Go to [Settings | Secrets | Actions](https://github.com/Pix4D/cogito/settings/secrets/actions)
-2. Click on Update for secret `COGITO_TEST_OAUTH_TOKEN`.
-3. Paste the PAT you generated in the previous section.
+1. Go to the space
+2. Click on Manage webhook
+3. Add or update the webhook, copy it
+
+## Update the CI secrets
+
+- Go to [Settings | Secrets | Actions](https://github.com/Pix4D/cogito/settings/secrets/actions)
+- Click on Update for secret `COGITO_TEST_OAUTH_TOKEN`.
+    - Paste the GitHub PAT you generated in the previous section.
+- Click on Update for secret `COGITO_TEST_GCHAT_HOOK`.
+    - Paste the ghcat webhook you generated in the previous section.
 
 ## Check that it works
 
