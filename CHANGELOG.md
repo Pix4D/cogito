@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED - [v0.7.0] - 2022-XX-XX
+## [v0.7.0] - 2022-05-24
 
 ### Added
 
@@ -13,11 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Somehow breaking
 
-- Rename github.NewStatus() to github.NewCommitStatus(). This impacts only Go source code using the github package; it does NOT impact the cogito Concourse resource in any way.
+- Rename `github.NewStatus` to `github.NewCommitStatus`. This impacts only Go source code using the github package; it does NOT impact the cogito Concourse resource in any way.
 
 ### Changed
 
-- Update to Go 1.18
+- Update to Go 1.18.
+- Code cleanups.
 
 ## [v0.6.2] - 2022-01-24
 
@@ -168,3 +169,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.6.0]: https://github.com/Pix4D/cogito/releases/tag/v0.6.0
 [v0.6.1]: https://github.com/Pix4D/cogito/releases/tag/v0.6.1
 [v0.6.2]: https://github.com/Pix4D/cogito/releases/tag/v0.6.2
+[v0.7.0]: https://github.com/Pix4D/cogito/releases/tag/v0.7.0
