@@ -55,6 +55,9 @@ var (
 		//
 		"gchat_webhook": {},
 	}
+
+	// States that will trigger a chat notification. By default: all except "pending".
+	statesToNotifyChat = []string{"error", "failure", "success"}
 )
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
@@ -218,7 +221,8 @@ func (r *Resource) Out(
 	//
 	// Post the status to GChat.
 	//
-	if webhook, ok := source["gchat_webhook"].(string); ok && webhook != "" {
+	if webhook, ok := source["gchat_webhook"].(string); ok &&
+		webhook != "" && shouldNotifyChat(state) {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
@@ -241,6 +245,15 @@ func (r *Resource) Out(
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
 	return dummyVersion, metadata, nil
+}
+
+func shouldNotifyChat(state string) bool {
+	for _, x := range statesToNotifyChat {
+		if state == x {
+			return true
+		}
+	}
+	return false
 }
 
 // stringify returns a formatted string (one k/v per line) of map xs.
