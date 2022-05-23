@@ -154,7 +154,8 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 ## Optional keys
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
-- `gchat_webhook`. Default: empty. URL of a [Google Chat webhook]. A notification about the build status will be sent to the associated chat channel, using the pipeline name as thread ID. By default the build statuses that will trigger a notification are `error` and `failure`. See section [Effects on Google Chat](#effects-on-google-chat) (since v0.7.0).
+- `gchat_webhook`. Default: empty. URL of a [Google Chat webhook].
+    A notification about the build status will be sent to the associated chat channel, using a thread key composed by the pipeline name and commit hash. By default the build statuses that will trigger a notification are `error` and `failure`. See section [Effects on Google Chat](#effects-on-google-chat) (since v0.7.0).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 

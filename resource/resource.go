@@ -226,7 +226,7 @@ func (r *Resource) Out(
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		err := GChatMessage(ctx, webhook, pipeline, job, state, buildURL)
+		err := GChatMessage(ctx, webhook, gitRef, pipeline, job, state, buildURL)
 		if err != nil {
 			sinkErrors["google chat"] = err
 		} else {

@@ -16,9 +16,13 @@ func TestTextMessageIntegration(t *testing.T) {
 	if len(gchatUrl) == 0 {
 		t.Skip("Skipping integration test. See CONTRIBUTING for how to enable.")
 	}
-	threadKey := "banana"
 	ts := time.Now().Format("2006-01-02 15:04:05 MST")
-	text := fmt.Sprintf("%s message oink! 🐷 sent to thread %s", ts, threadKey)
+	user := os.Getenv("USER")
+	if user == "" {
+		user = "unknown"
+	}
+	threadKey := "banana-" + user
+	text := fmt.Sprintf("%s message oink! 🐷 sent to thread %s by user %s", ts, threadKey, user)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 

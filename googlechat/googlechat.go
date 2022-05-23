@@ -27,7 +27,9 @@ import (
 func TextMessage(ctx context.Context, theURL string, threadKey string, text string) error {
 	// threadKey is encoded as a URL parameter.
 	if threadKey != "" {
-		theURL = fmt.Sprintf("%s&threadKey=%s", theURL, threadKey)
+		params := url.Values{}
+		params.Add("threadKey", threadKey)
+		theURL = fmt.Sprintf("%s&%s", theURL, params.Encode())
 	}
 
 	// Payload is just a JSON object with one key.
