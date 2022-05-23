@@ -2,6 +2,8 @@
 
 Cogito (**CO**ncourse **GIT** status res**O**urce) is a [Concourse resource] to update the GitHub commit status during a build. The name is a humble homage to [René Descartes].
 
+Optionally, it also sends a message to a chat system (currently supported: Google Chat). This allows to reduce the verbosity of a Concourse pipeline and especially to reduce the number of resource containers in a Concourse deployment, thus reducing load.
+
 Written in Go, it has the following characteristics:
 
 - As lightweight as possible (Docker Alpine image).
@@ -40,8 +42,9 @@ Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.P
 - The `latest` tag always points to the  latest release, not to the tip of master, so it is quite stable.
 - Alternatively, you can pin the resource to a specific release tag `MAJOR.MINOR.PATCH`.
 
+# Examples
 
-# Example
+## Only Github commit status
 
 See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
 
@@ -107,11 +110,38 @@ jobs:
                 echo "Hello world!"
 ```
 
-# Effects on GitHub
+## Github commit status plus chat notification
+
+The absolute minimum is adding key `gchat_webhook` to the `source` configuration of the previous example:
+
+```yaml
+- name: gh-status
+  type: cogito
+  check_every: 24h
+  source:
+    owner: ((github-owner))
+    repo: ((your-repo-name))
+    access_token: ((github-PAT))
+    gchat_webhook: ((gchat_webhook))
+```
+
+# Effects
+
+## Effects on GitHub
 
 With reference to the [GitHub Commit status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
 
 ![Screenshot of GitHub UI](doc/gh-ui-decorated.png)
+
+## Effects on Google Chat
+
+- Create a Gchat space per pipeline or per group of related pipelines.
+- At space creation time (cannot be changed afterwards) select threaded messages.
+- In the upper left, click on the drop down menu with the name of the space.
+- Click on Manage webhooks.
+- Create a webhook and securely store it in your Concourse secret management system.
+
+![Screenshot of Google Chat UI](doc/cogito-gchat.png)
 
 # Source Configuration
 
@@ -124,6 +154,8 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 ## Optional keys
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
+- `gchat_webhook`. Default: empty. URL of a [Google Chat webhook].
+    A notification about the build status will be sent to the associated chat channel, using a thread key composed by the pipeline name and commit hash. By default the build statuses that will trigger a notification are `error` and `failure`. See section [Effects on Google Chat](#effects-on-google-chat) (since v0.7.0).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
@@ -142,8 +174,9 @@ No-op.
 # The put step
 
 Sets the GitHub commit status for a given commit, following the [GitHub Commit status API].
+The same commit can have multiple statuses, differentiated by parameter `context`.
 
-The same commit can have multiple statuses, differentiated by `context`.
+If the `source` block has the optional key `gchat_webhook`, then it will also send a message to the configured chat space, based on the `state` parameter.
 
 ## Required params
 
@@ -212,3 +245,5 @@ This code is licensed according to the MIT license (see file [LICENSE](./LICENSE
 [GitHub personal access token]: https://help.github.com/en/articles/creating-a-personal-access-token-for-the-command-line
 
 [Concourse credential managers]: https://concourse-ci.org/creds.html.
+
+[Google Chat webhook]: https://developers.google.com/chat/how-tos/webhooks

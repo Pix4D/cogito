@@ -346,6 +346,7 @@ func TestOutSuccessIntegration(t *testing.T) {
 		t.Skip("skipping integration test")
 	}
 	cfg := help.SkipTestIfNoEnvVars(t)
+	gchatHook := os.Getenv("COGITO_TEST_GCHAT_HOOK")
 
 	defSource := oc.Source{
 		"access_token": cfg.Token,
@@ -363,7 +364,13 @@ func TestOutSuccessIntegration(t *testing.T) {
 		params oc.Params
 	}{
 		{
-			name: "backend reports success",
+			name: "github backend reports success",
+		},
+		{
+			name: "github and gchat backends report success",
+			source: help.MergeMap(defSource, oc.Source{
+				"gchat_webhook": gchatHook,
+			}),
 		},
 	}
 
@@ -869,15 +876,20 @@ func TestValidateSourceSuccess(t *testing.T) {
 				"repo":         "dummy-repo",
 			},
 		},
-		// FIXME
-		// {
-		// 	name: "all mandatory and optional keys",
-		// 	source: oc.Source{
-		// 		"access_token": "dummy-token",
-		// 		"owner":        "dummy-owner",
-		// 		"repo":         "dummy-repo",
-		// 	},
-		// },
+		{
+			name: "all mandatory and optional keys",
+			source: oc.Source{
+				"access_token": "dummy-token",
+				"owner":        "dummy-owner",
+				"repo":         "dummy-repo",
+				//
+				"log_level":      "dummy",
+				"log_url":        "dummy",
+				"context_prefix": "dummy",
+				//
+				"gchat_webhook": "dummy",
+			},
+		},
 	}
 
 	for _, tc := range testCases {

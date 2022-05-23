@@ -42,9 +42,10 @@ $ task test:unit
 
 # Integration tests
 
-There are two types of integration tests:
+There are the following integration tests:
 
 * tests upon GitHub
+* tests upon Google Chat
 * tests upon the Docker image as resource inside Concourse
 
 # Integration tests upon GitHub
@@ -109,6 +110,16 @@ $ gopass insert cogito/test_repo_name  # The repo name (without the trailing .gi
 $ gopass insert cogito/test_commit_sha
 ```
 
+## Add Google Chat webhook
+
+Pix4D team member: see Google chat space "cogito-test", which is already configured.
+
+If you are not using this feature, just add an empty string. This will allow to use the sample pipeline cogito.yml without modification.
+
+```console
+$ gopass insert cogito/test_gchat_webhook
+```
+
 ### Verify your setup
 
 ```console
@@ -122,6 +133,7 @@ cogito/
 ├── docker_org
 ├── docker_token
 ├── docker_username
+├── test_gchat_webhook
 ├── test_commit_sha
 ├── test_oauth_token
 ├── test_repo_name
@@ -194,6 +206,12 @@ Push the Docker image. This will always generate a Docker image with a tag corre
 $ task docker:push
 ```
 
+Handy shortcut (will stop on first error)
+
+```console
+$ task test:all docker:build docker:smoke docker:push
+```
+
 # Integration tests: test the Docker image as resource inside Concourse
 
 Have a look at the sample pipeline in [pipelines/cogito.yml](pipelines/cogito.yml).
@@ -216,17 +234,17 @@ $ fly -t cogito login --concourse-url=http://localhost:8080 --open-browser
 
 ```
 $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
+  -y branch=stable \
   -y github-owner=(gopass show cogito/test_repo_owner) \
   -y repo-name=(gopass show cogito/test_repo_name) \
   -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
   -y tag=(git branch --show-current) \
-  -y branch=stable
+  -y gchat_webhook=(gopass show cogito/test_gchat_webhook)
 ```
 
 ```
-$ task docker-build docker-push &&
+$ task test:all docker:build docker:smoke docker:push &&
   fly -t cogito check-resource-type -r cogito-test/cogito &&
-  sleep 5 &&
   fly -t cogito trigger-job -j cogito-test/autocat -w
 ```
 
@@ -269,7 +287,7 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
 ## Refreshing the resource image when using instanced vars
 
 ```
-$ task docker-build docker-push &&
+$ task docker:build docker:smoke docker:push &&
     fly -t cogito check-resource-type -r cogito-test/branch:stable/cogito &&
     fly -t cogito check-resource-type -r cogito-test/branch:another-branch/cogito
 ```
@@ -284,17 +302,25 @@ If you get the confusing `version is missing from previous step` error in cogito
 
 Update the expired secrets as follows.
 
-## Regenerate your personal access token (PAT)
+## Regenerate your GitHub personal access token (PAT)
 
 1. Go to [Settings | Tokens](https://github.com/settings/tokens) for your account.
 2. Create or regenerate a token with name `test-cogito`, with scope "repo:status". Set an expiration of 90 days.
 3. Copy the token.
 
-## Update the CI secret with your PAT
+## Regenerate a Google Chat hook
 
-1. Go to [Settings | Secrets | Actions](https://github.com/Pix4D/cogito/settings/secrets/actions)
-2. Click on Update for secret `COGITO_TEST_OAUTH_TOKEN`.
-3. Paste the PAT you generated in the previous section.
+1. Go to the space
+2. Click on Manage webhook
+3. Add or update the webhook, copy it
+
+## Update the CI secrets
+
+- Go to [Settings | Secrets | Actions](https://github.com/Pix4D/cogito/settings/secrets/actions)
+- Click on Update for secret `COGITO_TEST_OAUTH_TOKEN`.
+    - Paste the GitHub PAT you generated in the previous section.
+- Click on Update for secret `COGITO_TEST_GCHAT_HOOK`.
+    - Paste the ghcat webhook you generated in the previous section.
 
 ## Check that it works
 
