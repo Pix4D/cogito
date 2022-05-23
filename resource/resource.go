@@ -56,8 +56,8 @@ var (
 		"gchat_webhook": {},
 	}
 
-	// States that will trigger a chat notification. By default: all except "pending".
-	statesToNotifyChat = []string{"error", "failure", "success"}
+	// States that will trigger a chat notification.
+	statesToNotifyChat = []string{"error", "failure"}
 )
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
