@@ -24,6 +24,11 @@ import (
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
 var buildinfo = "unknown"
 
+const (
+	access_token  = "access_token"
+	gchat_webhook = "gchat_webhook"
+)
+
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
@@ -43,9 +48,9 @@ var (
 	}
 
 	mandatorySourceKeys = map[string]struct{}{
-		"owner":        {},
-		"repo":         {},
-		"access_token": {},
+		"owner":      {},
+		"repo":       {},
+		access_token: {},
 	}
 
 	optionalSourceKeys = map[string]struct{}{
@@ -53,7 +58,12 @@ var (
 		"log_url":        {},
 		"context_prefix": {},
 		//
-		"gchat_webhook": {},
+		gchat_webhook: {},
+	}
+
+	secretKeys = map[string]struct{}{
+		access_token:  {},
+		gchat_webhook: {},
 	}
 
 	// States that will trigger a chat notification.
@@ -102,7 +112,8 @@ func (r *Resource) Check(
 	defer log.Debugf("check: finished")
 
 	log.Infof(BuildInfo())
-	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
+	log.Debugf("check: source:\n%s", stringify(redact(source, secretKeys)))
+	log.Debugf("check: env:\n%s", stringify(env.GetAll()))
 
 	if err := validateSource(source); err != nil {
 		return nil, err
@@ -128,6 +139,7 @@ func (r *Resource) In(
 	defer log.Debugf("in: finished")
 
 	log.Infof(BuildInfo())
+	log.Debugf("in: source:\n%s", stringify(redact(source, secretKeys)))
 	log.Debugf("in: params:\n%s", stringify(params))
 	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
 
@@ -156,6 +168,7 @@ func (r *Resource) Out(
 	defer log.Debugf("out: finished")
 
 	log.Infof(BuildInfo())
+	log.Debugf("out: source:\n%s", stringify(redact(source, secretKeys)))
 	log.Debugf("out: params:\n%s", stringify(params))
 	log.Debugf("out: env:\n%s", stringify(env.GetAll()))
 

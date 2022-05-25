@@ -23,3 +23,25 @@ func stringify[T any](xs map[string]T) string {
 
 	return bld.String()
 }
+
+// redact makes a copy of dirty and, for each k/v pair of it, if k matches one of the
+// keys in secrets AND v is a string, it redacts v. It returns the redacted copy.
+// WARNING: it is able to redact only string values!
+func redact(dirty map[string]any, secrets map[string]struct{}) map[string]any {
+	clean := make(map[string]any, len(dirty))
+
+	for k, v := range dirty {
+		clean[k] = v
+
+		if _, found := secrets[k]; !found {
+			continue
+		}
+
+		// Attempt to redact.
+		if s, ok := v.(string); ok && len(s) > 0 {
+			clean[k] = "REDACTED"
+		}
+	}
+
+	return clean
+}

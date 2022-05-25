@@ -45,7 +45,7 @@ func gitHubCommitStatus(
   repo: %v
   ref: %v
   context: %v
-  targetURL: %v
+  buildURL: %v
   description: %v`,
 		state, owner, repo, gitRef, context, buildURL, description)
 
