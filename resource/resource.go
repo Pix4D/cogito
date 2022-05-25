@@ -203,15 +203,6 @@ func (r *Resource) Out(
 	}
 	log.Debugf("out: parsed ref %q", gitRef)
 
-	pipeline := env.Get("BUILD_PIPELINE_NAME")
-	job := env.Get("BUILD_JOB_NAME")
-	atc := env.Get("ATC_EXTERNAL_URL")
-	team := env.Get("BUILD_TEAM_NAME")
-	buildN := env.Get("BUILD_NAME")
-	state, _ := params["state"].(string)
-	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
-
 	//
 	// Post the status to all sinks and collect the sinkErrors.
 	//
@@ -220,15 +211,10 @@ func (r *Resource) Out(
 	//
 	// Post the status to GitHub Commit status sink.
 	//
-	err = gitHubCommitStatus(r.githubAPI, gitRef, pipeline, job, buildN, state, buildURL,
-		source, params, env, log)
+	err = gitHubCommitStatus(source, params, env, log, gitRef, r.githubAPI)
 	if err != nil {
 		sinkErrors["github commit status"] = err
-	} else {
-		log.Infof("out: GitHub commit status %s for ref %s posted successfully", state,
-			gitRef[0:9])
 	}
-
 	//
 	// Post the status to chat sink.
 	//
@@ -243,6 +229,7 @@ func (r *Resource) Out(
 		return nil, nil, fmt.Errorf("out: %s", stringify(sinkErrors))
 	}
 
+	state, _ := params["state"].(string)
 	metadata := oc.Metadata{}
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
