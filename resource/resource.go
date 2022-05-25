@@ -4,7 +4,6 @@
 package resource
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,7 +12,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/sasbury/mini"
@@ -220,7 +218,7 @@ func (r *Resource) Out(
 	var sinkErrors = map[string]error{}
 
 	//
-	// Post the status to GitHub.
+	// Post the status to GitHub Commit status sink.
 	//
 	err = gitHubCommitStatus(r.githubAPI, gitRef, pipeline, job, buildN, state, buildURL,
 		source, params, env, log)
@@ -232,20 +230,11 @@ func (r *Resource) Out(
 	}
 
 	//
-	// Post the status to GChat.
+	// Post the status to chat sink.
 	//
-	if webhook, ok := source["gchat_webhook"].(string); ok &&
-		webhook != "" && shouldNotifyChat(state) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		err := GChatMessage(ctx, webhook, gitRef, pipeline, job, state, buildURL)
-		if err != nil {
-			sinkErrors["google chat"] = err
-		} else {
-			log.Infof("out: Google Chat state %s for %s/%s posted successfully", state,
-				pipeline, job)
-		}
+	err = sendToChat(source, params, env, log, gitRef)
+	if err != nil {
+		sinkErrors["google chat"] = err
 	}
 
 	// We treat all sinks as equal: it is enough for one to fail to cause the put
@@ -258,15 +247,6 @@ func (r *Resource) Out(
 	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
 
 	return dummyVersion, metadata, nil
-}
-
-func shouldNotifyChat(state string) bool {
-	for _, x := range statesToNotifyChat {
-		if state == x {
-			return true
-		}
-	}
-	return false
 }
 
 func validateSource(source oc.Source) error {

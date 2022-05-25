@@ -1,12 +1,10 @@
-package resource_test
+package resource
 
 import (
 	"context"
 	"os"
 	"testing"
 	"time"
-
-	"github.com/Pix4D/cogito/resource"
 )
 
 func TestChatAdapterMock(t *testing.T) {
@@ -44,7 +42,7 @@ func TestChatAdapterIntegration(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
-			err := resource.GChatMessage(ctx, gchatUrl, gitRef, tc.pipeline, job, tc.state,
+			err := gChatMessage(ctx, gchatUrl, gitRef, tc.pipeline, job, tc.state,
 				buildURL)
 
 			if err != nil {
