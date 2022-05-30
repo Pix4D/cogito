@@ -4,7 +4,6 @@
 package resource
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,7 +12,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/sasbury/mini"
@@ -24,40 +22,63 @@ import (
 // Baked in at build time with the linker. See the Taskfile and the Dockerfile.
 var buildinfo = "unknown"
 
+const (
+	accessTokenKey  = "access_token"
+	gchatWebhookKey = "gchat_webhook"
+
+	contextKey       = "context"
+	contextPrefixKey = "context_prefix"
+	logLevelKey      = "log_level"
+	logUrlKey        = "log_url"
+	ownerKey         = "owner"
+	repoKey          = "repo"
+	stateKey         = "state"
+
+	errorState   = "error"
+	failureState = "failure"
+	pendingState = "pending"
+	successState = "success"
+)
+
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	outMandatoryParams = map[string]struct{}{
-		"state": {},
+		stateKey: {},
 	}
 
 	outOptionalParams = map[string]struct{}{
-		"context": {},
+		contextKey: {},
 	}
 
 	outValidStates = map[string]struct{}{
-		"error":   {},
-		"failure": {},
-		"pending": {},
-		"success": {},
+		errorState:   {},
+		failureState: {},
+		pendingState: {},
+		successState: {},
 	}
 
 	mandatorySourceKeys = map[string]struct{}{
-		"owner":        {},
-		"repo":         {},
-		"access_token": {},
+		ownerKey:       {},
+		repoKey:        {},
+		accessTokenKey: {},
 	}
 
 	optionalSourceKeys = map[string]struct{}{
-		"log_level":      {},
-		"log_url":        {},
-		"context_prefix": {},
+		logLevelKey:      {},
+		logUrlKey:        {},
+		contextPrefixKey: {},
 		//
-		"gchat_webhook": {},
+		gchatWebhookKey: {},
+	}
+
+	secretKeys = map[string]struct{}{
+		accessTokenKey:  {},
+		gchatWebhookKey: {},
 	}
 
 	// States that will trigger a chat notification.
-	statesToNotifyChat = []string{"error", "failure"}
+	statesToNotifyChat = []string{errorState, failureState}
 )
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
@@ -102,7 +123,8 @@ func (r *Resource) Check(
 	defer log.Debugf("check: finished")
 
 	log.Infof(BuildInfo())
-	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
+	log.Debugf("check: source:\n%s", stringify(redact(source, secretKeys)))
+	log.Debugf("check: env:\n%s", stringify(env.GetAll()))
 
 	if err := validateSource(source); err != nil {
 		return nil, err
@@ -128,6 +150,7 @@ func (r *Resource) In(
 	defer log.Debugf("in: finished")
 
 	log.Infof(BuildInfo())
+	log.Debugf("in: source:\n%s", stringify(redact(source, secretKeys)))
 	log.Debugf("in: params:\n%s", stringify(params))
 	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
 
@@ -156,6 +179,7 @@ func (r *Resource) Out(
 	defer log.Debugf("out: finished")
 
 	log.Infof(BuildInfo())
+	log.Debugf("out: source:\n%s", stringify(redact(source, secretKeys)))
 	log.Debugf("out: params:\n%s", stringify(params))
 	log.Debugf("out: env:\n%s", stringify(env.GetAll()))
 
@@ -167,8 +191,8 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	owner, _ := source["owner"].(string)
-	repo, _ := source["repo"].(string)
+	owner, _ := source[ownerKey].(string)
+	repo, _ := source[repoKey].(string)
 
 	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
@@ -192,47 +216,24 @@ func (r *Resource) Out(
 	}
 	log.Debugf("out: parsed ref %q", gitRef)
 
-	pipeline := env.Get("BUILD_PIPELINE_NAME")
-	job := env.Get("BUILD_JOB_NAME")
-	atc := env.Get("ATC_EXTERNAL_URL")
-	team := env.Get("BUILD_TEAM_NAME")
-	buildN := env.Get("BUILD_NAME")
-	state, _ := params["state"].(string)
-	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
-
 	//
 	// Post the status to all sinks and collect the sinkErrors.
 	//
 	var sinkErrors = map[string]error{}
 
 	//
-	// Post the status to GitHub.
+	// Post the status to GitHub Commit status sink.
 	//
-	err = gitHubCommitStatus(r.githubAPI, gitRef, pipeline, job, buildN, state, buildURL,
-		source, params, env, log)
+	err = gitHubCommitStatus(source, params, env, log, gitRef, r.githubAPI)
 	if err != nil {
 		sinkErrors["github commit status"] = err
-	} else {
-		log.Infof("out: GitHub commit status %s for ref %s posted successfully", state,
-			gitRef[0:9])
 	}
-
 	//
-	// Post the status to GChat.
+	// Post the status to chat sink.
 	//
-	if webhook, ok := source["gchat_webhook"].(string); ok &&
-		webhook != "" && shouldNotifyChat(state) {
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-
-		err := GChatMessage(ctx, webhook, gitRef, pipeline, job, state, buildURL)
-		if err != nil {
-			sinkErrors["google chat"] = err
-		} else {
-			log.Infof("out: Google Chat state %s for %s/%s posted successfully", state,
-				pipeline, job)
-		}
+	err = sendToChat(source, params, env, log, gitRef)
+	if err != nil {
+		sinkErrors["google chat"] = err
 	}
 
 	// We treat all sinks as equal: it is enough for one to fail to cause the put
@@ -241,37 +242,11 @@ func (r *Resource) Out(
 		return nil, nil, fmt.Errorf("out: %s", stringify(sinkErrors))
 	}
 
+	state, _ := params[stateKey].(string)
 	metadata := oc.Metadata{}
-	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
+	metadata = append(metadata, oc.NameVal{Name: stateKey, Value: state})
 
 	return dummyVersion, metadata, nil
-}
-
-func shouldNotifyChat(state string) bool {
-	for _, x := range statesToNotifyChat {
-		if state == x {
-			return true
-		}
-	}
-	return false
-}
-
-// stringify returns a formatted string (one k/v per line) of map xs.
-func stringify[T any](xs map[string]T) string {
-	// Sort the keys in alphabetical order.
-	keys := make([]string, 0, len(xs))
-	for k := range xs {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-
-	var bld strings.Builder
-
-	for _, k := range keys {
-		fmt.Fprintf(&bld, "  %s: %v\n", k, xs[k])
-	}
-
-	return bld.String()
 }
 
 func validateSource(source oc.Source) error {
@@ -318,7 +293,7 @@ func validateOutParams(params oc.Params) error {
 	}
 
 	// Any invalid parameter?
-	state, _ := params["state"].(string)
+	state, _ := params[stateKey].(string)
 	if _, ok := outValidStates[state]; !ok {
 		return fmt.Errorf("invalid put parameter 'state: %s'", state)
 	}

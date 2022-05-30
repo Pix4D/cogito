@@ -42,9 +42,9 @@ func TestCheckSuccess(t *testing.T) {
 		{
 			name: "happy path",
 			inSource: oc.Source{
-				"access_token": cfg.Token,
-				"owner":        cfg.Owner,
-				"repo":         cfg.Repo,
+				accessTokenKey: cfg.Token,
+				ownerKey:       cfg.Owner,
+				repoKey:        cfg.Repo,
 			},
 			inVersion:    defVersion,
 			wantVersions: defVersions,
@@ -52,9 +52,9 @@ func TestCheckSuccess(t *testing.T) {
 		{
 			name: "do not return a nil version the first time it runs (see Concourse PR #4442)",
 			inSource: oc.Source{
-				"access_token": cfg.Token,
-				"owner":        cfg.Owner,
-				"repo":         cfg.Repo,
+				accessTokenKey: cfg.Token,
+				ownerKey:       cfg.Owner,
+				repoKey:        cfg.Repo,
 			},
 			inVersion:    oc.Version{},
 			wantVersions: defVersions,
@@ -111,9 +111,9 @@ func TestCheckFailure(t *testing.T) {
 
 func TestIn(t *testing.T) {
 	defSource := oc.Source{
-		"access_token": "dummy",
-		"owner":        "dummy",
-		"repo":         "dummy",
+		accessTokenKey: "dummy",
+		ownerKey:       "dummy",
+		repoKey:        "dummy",
 	}
 
 	var testCases = []struct {
@@ -155,18 +155,18 @@ func TestOutMockSuccess(t *testing.T) {
 	cfg := help.FakeTestCfg
 
 	defSource := oc.Source{
-		"access_token": cfg.Token,
-		"owner":        cfg.Owner,
-		"repo":         cfg.Repo,
+		accessTokenKey: cfg.Token,
+		ownerKey:       cfg.Owner,
+		repoKey:        cfg.Repo,
 	}
 	defParams := oc.Params{
-		"state": "error",
+		stateKey: errorState,
 	}
 	defMeta := oc.Metadata{oc.NameVal{
-		Name: "state", Value: "error"},
+		Name: stateKey, Value: errorState},
 	}
 	defWantBody := map[string]string{
-		"context": defEnv.Get("BUILD_JOB_NAME"),
+		contextKey: defEnv.Get("BUILD_JOB_NAME"),
 	}
 
 	testDir := "a-repo"
@@ -183,19 +183,19 @@ func TestOutMockSuccess(t *testing.T) {
 		{
 			name: "source: optional: context_prefix",
 			source: help.MergeMap(defSource, oc.Source{
-				"context_prefix": "cocco"},
+				contextPrefixKey: "cocco"},
 			),
 			wantBody: map[string]string{
-				"context": "cocco/" + defEnv.Get("BUILD_JOB_NAME"),
+				contextKey: "cocco/" + defEnv.Get("BUILD_JOB_NAME"),
 			},
 		},
 		{
 			name: "params: optional: context",
 			params: help.MergeMap(defParams, oc.Params{
-				"context": "bello",
+				contextKey: "bello",
 			}),
 			wantBody: map[string]string{
-				"context": "bello",
+				contextKey: "bello",
 			},
 		},
 	}
@@ -263,12 +263,12 @@ func TestOutMockFailure(t *testing.T) {
 	cfg := help.FakeTestCfg
 
 	defSource := oc.Source{
-		"access_token": cfg.Token,
-		"owner":        cfg.Owner,
-		"repo":         cfg.Repo,
+		accessTokenKey: cfg.Token,
+		ownerKey:       cfg.Owner,
+		repoKey:        cfg.Repo,
 	}
 	defParams := oc.Params{
-		"state": "error",
+		stateKey: errorState,
 	}
 
 	testDir := "a-repo"
@@ -295,7 +295,7 @@ func TestOutMockFailure(t *testing.T) {
 			name:   "invalid state parameter",
 			source: defSource,
 			params: oc.Params{
-				"state": "hello",
+				stateKey: "hello",
 			},
 			wantErr: "invalid put parameter 'state: hello'",
 		},
@@ -303,8 +303,8 @@ func TestOutMockFailure(t *testing.T) {
 			name:   "unknown parameter",
 			source: defSource,
 			params: oc.Params{
-				"state": "pending",
-				"pizza": "margherita",
+				stateKey: pendingState,
+				"pizza":  "margherita",
 			},
 			wantErr: "unknown put parameter 'pizza'",
 		},
@@ -349,12 +349,12 @@ func TestOutSuccessIntegration(t *testing.T) {
 	gchatHook := os.Getenv("COGITO_TEST_GCHAT_HOOK")
 
 	defSource := oc.Source{
-		"access_token": cfg.Token,
-		"owner":        cfg.Owner,
-		"repo":         cfg.Repo,
+		accessTokenKey: cfg.Token,
+		ownerKey:       cfg.Owner,
+		repoKey:        cfg.Repo,
 	}
 	defParams := oc.Params{
-		"state": "error",
+		stateKey: errorState,
 	}
 	testDir := "a-repo"
 
@@ -402,7 +402,7 @@ func TestOutFailureIntegration(t *testing.T) {
 	cfg := help.SkipTestIfNoEnvVars(t)
 
 	defParams := oc.Params{
-		"state": "error",
+		stateKey: errorState,
 	}
 	testDir := "a-repo"
 
@@ -415,9 +415,9 @@ func TestOutFailureIntegration(t *testing.T) {
 		{
 			name: "local validations fail",
 			source: oc.Source{
-				"access_token": cfg.Token,
-				"owner":        cfg.Owner,
-				"repo":         "does-not-exist-really",
+				accessTokenKey: cfg.Token,
+				ownerKey:       cfg.Owner,
+				repoKey:        "does-not-exist-really",
 			},
 			wantErr: `the received git repository is incompatible with the Cogito configuration.
 
@@ -563,13 +563,13 @@ func TestCheckRepoDirFailure(t *testing.T) {
 		{
 			name:    "repo with unrelated HTTPS remote",
 			dir:     "a-repo",
-			repoURL: httpsRemote("owner", "repo"),
+			repoURL: httpsRemote("owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
-      url: https://github.com/owner/repo.git
-    owner: owner
-     repo: repo
+      url: https://github.com/owner-a/repo-a.git
+    owner: owner-a
+     repo: repo-a
 
 Cogito SOURCE configuration:
     owner: smiling
@@ -578,13 +578,13 @@ Cogito SOURCE configuration:
 		{
 			name:    "repo with unrelated SSH remote or wrong source config",
 			dir:     "a-repo",
-			repoURL: sshRemote("owner", "repo"),
+			repoURL: sshRemote("owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
-      url: git@github.com:owner/repo.git
-    owner: owner
-     repo: repo
+      url: git@github.com:owner-a/repo-a.git
+    owner: owner-a
+     repo: repo-a
 
 Cogito SOURCE configuration:
     owner: smiling
@@ -871,21 +871,21 @@ func TestValidateSourceSuccess(t *testing.T) {
 		{
 			name: "all mandatory keys, no optional",
 			source: oc.Source{
-				"access_token": "dummy-token",
-				"owner":        "dummy-owner",
-				"repo":         "dummy-repo",
+				accessTokenKey: "dummy-token",
+				ownerKey:       "dummy-owner",
+				repoKey:        "dummy-repo",
 			},
 		},
 		{
 			name: "all mandatory and optional keys",
 			source: oc.Source{
-				"access_token": "dummy-token",
-				"owner":        "dummy-owner",
-				"repo":         "dummy-repo",
+				accessTokenKey: "dummy-token",
+				ownerKey:       "dummy-owner",
+				repoKey:        "dummy-repo",
 				//
-				"log_level":      "dummy",
-				"log_url":        "dummy",
-				"context_prefix": "dummy",
+				logLevelKey:      "dummy",
+				logUrlKey:        "dummy",
+				contextPrefixKey: "dummy",
 				//
 				"gchat_webhook": "dummy",
 			},
@@ -918,16 +918,16 @@ func TestValidateSourceFailure(t *testing.T) {
 		{
 			name: "missing mandatory keys",
 			source: oc.Source{
-				"repo": "dummy-repo",
+				repoKey: "dummy-repo",
 			},
 			wantErr: "missing source keys: [access_token owner]",
 		},
 		{
 			name: "all mandatory keys, one unknown key",
 			source: oc.Source{
-				"access_token": "dummy-token",
-				"owner":        "dummy-owner",
-				"repo":         "dummy-repo",
+				accessTokenKey: "dummy-token",
+				ownerKey:       "dummy-owner",
+				repoKey:        "dummy-repo",
 
 				"pizza": "napoli",
 			},
@@ -936,8 +936,8 @@ func TestValidateSourceFailure(t *testing.T) {
 		{
 			name: "one missing mandatory key, one unknown key",
 			source: oc.Source{
-				"owner": "dummy-owner",
-				"repo":  "dummy-repo",
+				ownerKey: "dummy-owner",
+				repoKey:  "dummy-repo",
 
 				"pizza": "napoli",
 			},
@@ -946,9 +946,9 @@ func TestValidateSourceFailure(t *testing.T) {
 		{
 			name: "wrong type is reported as missing (better than crashing)",
 			source: oc.Source{
-				"access_token": "dummy-token",
-				"owner":        3,
-				"repo":         "dummy-repo",
+				accessTokenKey: "dummy-token",
+				ownerKey:       3,
+				repoKey:        "dummy-repo",
 			},
 			wantErr: "missing source keys: [owner]",
 		},
