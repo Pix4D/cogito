@@ -26,11 +26,11 @@ func TestChatAdapterIntegration(t *testing.T) {
 	}{
 		{
 			pipeline: "avocado",
-			state:    "success",
+			state:    successState,
 		},
 		{
 			pipeline: "coconut",
-			state:    "failure",
+			state:    failureState,
 		},
 	}
 

@@ -18,7 +18,7 @@ func sendToChat(
 	log *oc.Logger,
 	gitRef string,
 ) error {
-	state, _ := params["state"].(string)
+	state, _ := params[stateKey].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	atc := env.Get("ATC_EXTERNAL_URL")
@@ -77,13 +77,13 @@ func gChatMessage(
 
 	var icon string
 	switch state {
-	case "pending":
+	case pendingState:
 		icon = "🟡"
-	case "success":
+	case successState:
 		icon = "🟢"
-	case "failure":
+	case failureState:
 		icon = "🔴"
-	case "error":
+	case errorState:
 		icon = "🟠"
 	default:
 		icon = "❓"

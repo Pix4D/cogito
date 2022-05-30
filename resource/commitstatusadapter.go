@@ -17,7 +17,7 @@ func gitHubCommitStatus(
 	gitRef string,
 	ghAPI string,
 ) error {
-	state, _ := params["state"].(string)
+	state, _ := params[stateKey].(string)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	atc := env.Get("ATC_EXTERNAL_URL")
@@ -27,16 +27,16 @@ func gitHubCommitStatus(
 	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
 
 	description := "Build " + buildN
-	token, _ := source["access_token"].(string)
-	owner, _ := source["owner"].(string)
-	repo, _ := source["repo"].(string)
+	token, _ := source[accessTokenKey].(string)
+	owner, _ := source[ownerKey].(string)
+	repo, _ := source[repoKey].(string)
 
 	// Prepare API parameter "context".
 	context := job // default
-	if v, ok := params["context"].(string); ok {
+	if v, ok := params[contextKey].(string); ok {
 		context = v
 	}
-	if prefix, ok := source["context_prefix"].(string); ok {
+	if prefix, ok := source[contextPrefixKey].(string); ok {
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 

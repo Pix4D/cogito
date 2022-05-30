@@ -23,49 +23,62 @@ import (
 var buildinfo = "unknown"
 
 const (
-	access_token  = "access_token"
-	gchat_webhook = "gchat_webhook"
+	accessTokenKey  = "access_token"
+	gchatWebhookKey = "gchat_webhook"
+
+	contextKey       = "context"
+	contextPrefixKey = "context_prefix"
+	logLevelKey      = "log_level"
+	logUrlKey        = "log_url"
+	ownerKey         = "owner"
+	repoKey          = "repo"
+	stateKey         = "state"
+
+	errorState   = "error"
+	failureState = "failure"
+	pendingState = "pending"
+	successState = "success"
 )
 
 var (
 	dummyVersion = oc.Version{"ref": "dummy"}
 
 	outMandatoryParams = map[string]struct{}{
-		"state": {},
+		stateKey: {},
 	}
 
 	outOptionalParams = map[string]struct{}{
-		"context": {},
+		contextKey: {},
 	}
 
 	outValidStates = map[string]struct{}{
-		"error":   {},
-		"failure": {},
-		"pending": {},
-		"success": {},
+		errorState:   {},
+		failureState: {},
+		pendingState: {},
+		successState: {},
 	}
 
 	mandatorySourceKeys = map[string]struct{}{
-		"owner":      {},
-		"repo":       {},
-		access_token: {},
+		ownerKey:       {},
+		repoKey:        {},
+		accessTokenKey: {},
 	}
 
 	optionalSourceKeys = map[string]struct{}{
-		"log_level":      {},
-		"log_url":        {},
-		"context_prefix": {},
+		logLevelKey:      {},
+		logUrlKey:        {},
+		contextPrefixKey: {},
 		//
-		gchat_webhook: {},
+		gchatWebhookKey: {},
 	}
 
 	secretKeys = map[string]struct{}{
-		access_token:  {},
-		gchat_webhook: {},
+		accessTokenKey:  {},
+		gchatWebhookKey: {},
 	}
 
 	// States that will trigger a chat notification.
-	statesToNotifyChat = []string{"error", "failure"}
+	statesToNotifyChat = []string{errorState, failureState}
 )
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).
@@ -178,8 +191,8 @@ func (r *Resource) Out(
 		return nil, nil, err
 	}
 
-	owner, _ := source["owner"].(string)
-	repo, _ := source["repo"].(string)
+	owner, _ := source[ownerKey].(string)
+	repo, _ := source[repoKey].(string)
 
 	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
@@ -229,9 +242,9 @@ func (r *Resource) Out(
 		return nil, nil, fmt.Errorf("out: %s", stringify(sinkErrors))
 	}
 
-	state, _ := params["state"].(string)
+	state, _ := params[stateKey].(string)
 	metadata := oc.Metadata{}
-	metadata = append(metadata, oc.NameVal{Name: "state", Value: state})
+	metadata = append(metadata, oc.NameVal{Name: stateKey, Value: state})
 
 	return dummyVersion, metadata, nil
 }
@@ -280,7 +293,7 @@ func validateOutParams(params oc.Params) error {
 	}
 
 	// Any invalid parameter?
-	state, _ := params["state"].(string)
+	state, _ := params[stateKey].(string)
 	if _, ok := outValidStates[state]; !ok {
 		return fmt.Errorf("invalid put parameter 'state: %s'", state)
 	}
