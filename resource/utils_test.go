@@ -8,7 +8,7 @@ import (
 
 func TestRedact(t *testing.T) {
 	secrets := map[string]struct{}{
-		"redactme!": {},
+		"redactme": {},
 	}
 
 	testCases := []struct {
@@ -19,30 +19,30 @@ func TestRedact(t *testing.T) {
 		{
 			name: "redact one entry",
 			dirty: map[string]any{
-				"redactme!": "the secret",
-				"mango":     42,
+				"redactme": "the secret",
+				"mango":    42,
 			},
 			want: map[string]any{
-				"redactme!": "REDACTED",
-				"mango":     42,
+				"redactme": "REDACTED",
+				"mango":    42,
 			},
 		},
 		{
 			name: "cannot redact: value to redact is not a string",
 			dirty: map[string]any{
-				"redactme!": 1,
+				"redactme": 1,
 			},
 			want: map[string]any{
-				"redactme!": 1,
+				"redactme": 1,
 			},
 		},
 		{
 			name: "empty string is not redacted",
 			dirty: map[string]any{
-				"redactme!": "",
+				"redactme": "",
 			},
 			want: map[string]any{
-				"redactme!": "",
+				"redactme": "",
 			},
 		},
 	}
