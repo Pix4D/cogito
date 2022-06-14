@@ -44,7 +44,7 @@ Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.P
 
 # Examples
 
-## Only Github commit status
+## Only GitHub commit status
 
 See also [pipelines/cogito.yml](pipelines/cogito.yml) for a bigger example and for how to use YAML anchors to reduce as much as possible YAML verbosity.
 
@@ -110,7 +110,7 @@ jobs:
                 echo "Hello world!"
 ```
 
-## Github commit status plus chat notification
+## GitHub commit status plus chat notification
 
 The absolute minimum is adding key `gchat_webhook` to the `source` configuration of the previous example:
 
@@ -127,6 +127,20 @@ The absolute minimum is adding key `gchat_webhook` to the `source` configuration
 
 # Effects
 
+## Concourse build states, GitHub Commit status API and chat notifications
+
+There is only a partial matching between Concourse and GitHub Commit status API, so we map as good as we can according to this table: 
+
+| Concourse<br/> State | Color and meaning                                                                                         | GitHub<br/> Commit status API | Chat notification |
+|----------------------|-----------------------------------------------------------------------------------------------------------|-------------------------------|-------------------|
+| running              | 🟡 - running                                                                                              | pending                       | pending           |
+| success              | 🟢 - task exited 0                                                                                        | success                       | success           |
+| failure              | 🔴 - task exited non 0                                                                                    | failure                       | failure           |
+| error                | 🟠 - any other error besides failure or abort (pipeline configuration error, network error, timeout, ...) | error                         | error             |
+| abort                | 🟤 - human-initiated abort                                                                                | error                         | abort             |
+
+The colors are taken from the Concourse UI and are replicated to the chat message.
+
 ## Effects on GitHub
 
 With reference to the [GitHub Commit status API], the `POST` parameters (`state`, `target_url`, `description`, `context`) are set by Cogito and rendered by GitHub as follows:
@@ -137,7 +151,7 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 - Create a Gchat space per pipeline or per group of related pipelines.
 - At space creation time (cannot be changed afterwards) select threaded messages.
-- In the upper left, click on the drop down menu with the name of the space.
+- In the upper left, click on the drop-down menu with the name of the space.
 - Click on Manage webhooks.
 - Create a webhook and securely store it in your Concourse secret management system.
 
@@ -155,7 +169,7 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 - `context_prefix`: The prefix for the context (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `gchat_webhook`. Default: empty. URL of a [Google Chat webhook].
-    A notification about the build status will be sent to the associated chat channel, using a thread key composed by the pipeline name and commit hash. By default the build statuses that will trigger a notification are `error` and `failure`. See section [Effects on Google Chat](#effects-on-google-chat) (since v0.7.0).
+    A notification about the build status will be sent to the associated chat channel, using a thread key composed by the pipeline name and commit hash. By default, the build statuses that will trigger a notification are `error` and `failure`. See section [Effects on Google Chat](#effects-on-google-chat) (since v0.7.0).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
 
@@ -180,7 +194,7 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 
 ## Required params
 
-- `state`: The state to set. One of `error`, `failure`, `pending`, `success`.
+- `state`: The state to set. One of `error`, `failure`, `pending`, `success`, `abort`. Subject to the mapping explained in section [Effects](#effects).
 
 ## Optional params
 
@@ -218,7 +232,7 @@ Give to it the absolute minimum permissions to get the job done. This resource o
 
 NOTE: The token is security-sensitive. Treat it as you would treat a password. Do not encode it in the pipeline YAML and do not store it in a YAML file. Use one of the Concourse-supported credentials managers, see [Concourse credential managers].
 
-See also the section [The end-to-end tests](./CONTRIBUTING.md#the-end-to-end-tests) for how to securely store the token to run the end-to-end tests.
+See also the section [Integration tests](./CONTRIBUTING.md#integration-tests) for how to securely store the token to run the end-to-end tests.
 
 # Caveat: GitHub rate limiting
 
