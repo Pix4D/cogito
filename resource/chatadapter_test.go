@@ -25,12 +25,20 @@ func TestChatAdapterIntegration(t *testing.T) {
 		state    string
 	}{
 		{
-			pipeline: "avocado",
-			state:    successState,
+			pipeline: "coconut",
+			state:    errorState,
 		},
 		{
 			pipeline: "coconut",
 			state:    failureState,
+		},
+		{
+			pipeline: "coconut",
+			state:    pendingState,
+		},
+		{
+			pipeline: "coconut",
+			state:    successState,
 		},
 	}
 
