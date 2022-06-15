@@ -77,6 +77,8 @@ func gChatMessage(
 
 	var icon string
 	switch state {
+	case abortState:
+		icon = "🟤"
 	case errorState:
 		icon = "🟠"
 	case failureState:

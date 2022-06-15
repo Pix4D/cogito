@@ -175,6 +175,7 @@ func TestOutMockSuccess(t *testing.T) {
 		name     string
 		source   oc.Source
 		params   oc.Params
+		wantMeta oc.Metadata
 		wantBody map[string]string
 	}{
 		{
@@ -198,6 +199,19 @@ func TestOutMockSuccess(t *testing.T) {
 				contextKey: "bello",
 			},
 		},
+		{
+			name: "cogito states are converted to gh commit states",
+			params: oc.Params{
+				stateKey: abortState,
+			},
+			wantMeta: oc.Metadata{oc.NameVal{
+				Name: stateKey, Value: abortState},
+			},
+			wantBody: map[string]string{
+				contextKey: defEnv.Get("BUILD_JOB_NAME"),
+				stateKey:   errorState,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -209,6 +223,9 @@ func TestOutMockSuccess(t *testing.T) {
 			}
 			if tc.params == nil {
 				tc.params = defParams
+			}
+			if tc.wantMeta == nil {
+				tc.wantMeta = defMeta
 			}
 			if tc.wantBody == nil {
 				tc.wantBody = defWantBody
@@ -252,7 +269,7 @@ func TestOutMockSuccess(t *testing.T) {
 				t.Errorf("version: (-want +have):\n%s", diff)
 			}
 
-			if diff := cmp.Diff(defMeta, metadata); diff != "" {
+			if diff := cmp.Diff(tc.wantMeta, metadata); diff != "" {
 				t.Errorf("metadata: (-want +have):\n%s", diff)
 			}
 		})
