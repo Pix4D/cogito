@@ -23,6 +23,7 @@ RUN go test ./...  && \
     go install \
         -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" \
         ./cmd/check \
+        ./cmd/cogito \
         ./cmd/in \
         ./cmd/out
 
