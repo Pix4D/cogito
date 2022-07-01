@@ -386,7 +386,7 @@ func TestOutSuccessIntegration(t *testing.T) {
 		{
 			name: "github and gchat backends report success",
 			source: help.MergeMap(defSource, oc.Source{
-				"gchat_webhook": gchatHook,
+				gchatWebhookKey: gchatHook,
 			}),
 		},
 	}
@@ -904,7 +904,7 @@ func TestValidateSourceSuccess(t *testing.T) {
 				logUrlKey:        "dummy",
 				contextPrefixKey: "dummy",
 				//
-				"gchat_webhook": "dummy",
+				gchatWebhookKey: "dummy",
 			},
 		},
 	}

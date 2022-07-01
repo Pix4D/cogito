@@ -27,7 +27,7 @@ func sendToChat(
 	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
 	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
 
-	webhook, ok := source["gchat_webhook"].(string)
+	webhook, ok := source[gchatWebhookKey].(string)
 	if !ok || webhook == "" {
 		log.Debugf("not sending to chat; reason: feature not enabled")
 		return nil
