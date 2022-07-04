@@ -79,7 +79,7 @@ $ gopass insert cogito/test_oauth_token
 
 Do not use your DockerHub password, instead create a dedicated access token, see documentation at [dockerhub access tokens](https://docs.docker.com/docker-hub/access-tokens/). This allows to:
 
-1. Reduce exposure (principle of least privilege), since a token has less capabilities than an account password.
+1. Reduce exposure (principle of least privilege), since a token has fewer capabilities than an account password.
 2. Enable auditing of token usage.
 3. Enable token revocation.
 
@@ -151,8 +151,8 @@ $ task test:all
 The integration tests have the following logic:
 
 * If none of the environment variables are set, we skip the test.
-* If all of the environment variables are set, we run the test.
-* If some of the environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
+* If all the environment variables are set, we run the test.
+* If some environment variables are set and some not, we fail the test. We do this on purpose to signal to the user that the environment variables are misconfigured.
 
 ## Running a specific end-to-end test
 
@@ -330,13 +330,13 @@ Trigger a manual run of the CI to verify that everything works fine.
 
 ## Making a release
 
-A release is performed by the Github Action CI, triggered by a git tag of the form `v1.2.3`.
+A release is performed by the GitHub Action CI, triggered by a git tag of the form `v1.2.3`.
 
 - When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
 - Prepare the PR to also contain an updated CHANGELOG.
 - Merge the PR to master.
 - Create and then push a git tag.
-- Double-check that the Github Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
+- Double-check that the GitHub Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
 
 # License
 
