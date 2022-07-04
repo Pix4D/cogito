@@ -34,6 +34,7 @@ const (
 	repoKey          = "repo"
 	stateKey         = "state"
 
+	abortState   = "abort"
 	errorState   = "error"
 	failureState = "failure"
 	pendingState = "pending"
@@ -52,6 +53,7 @@ var (
 	}
 
 	outValidStates = map[string]struct{}{
+		abortState:   {},
 		errorState:   {},
 		failureState: {},
 		pendingState: {},
@@ -77,8 +79,8 @@ var (
 		gchatWebhookKey: {},
 	}
 
-	// States that will trigger a chat notification.
-	statesToNotifyChat = []string{errorState, failureState}
+	// States that will trigger a chat notification by default.
+	statesToNotifyChat = []string{abortState, errorState, failureState}
 )
 
 // BuildInfo returns human-readable build information (tag, git commit, date, ...).

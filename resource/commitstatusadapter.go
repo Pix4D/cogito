@@ -18,6 +18,7 @@ func gitHubCommitStatus(
 	ghAPI string,
 ) error {
 	state, _ := params[stateKey].(string)
+	state = ghAdaptState(state)
 	pipeline := env.Get("BUILD_PIPELINE_NAME")
 	job := env.Get("BUILD_JOB_NAME")
 	atc := env.Get("ATC_EXTERNAL_URL")
@@ -59,6 +60,15 @@ func gitHubCommitStatus(
 		gitRef[0:9])
 
 	return nil
+}
+
+// The states allowed by cogito are more than the states allowed by the GitHub Commit
+// status API. Adapt accordingly.
+func ghAdaptState(state string) string {
+	if state == abortState {
+		return errorState
+	}
+	return state
 }
 
 // concourseBuildURL builds an URL pointing to a specific build of a job in a pipeline.

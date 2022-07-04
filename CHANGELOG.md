@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Support state `abort`. If the state is `abort`, we map it to `error` when using the GitHub Commit status API, and we leave it as-is when sending a chat notification. See the example `on_abort` hook in the README and section [Build states mapping](README.md#build-states-mapping).
 - More debug logging: see clearly which features are enabled (GitHub Commit status, Google Chat notification) and the reason for skipping the sending of a chat message.
 
 ## [v0.7.0] - 2022-05-24

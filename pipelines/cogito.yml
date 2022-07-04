@@ -16,7 +16,7 @@ meta:
     on_abort:
       put: gh-status
       inputs: [repo.git]
-      params: {state: error}
+      params: {state: abort}
 
 resource_types:
 
