@@ -22,92 +22,12 @@ import (
 var (
 	silentLog = oc.NewLogger(oc.SilentLevel)
 
-	defVersion  = oc.Version{"ref": "dummy"}
-	defVersions = []oc.Version{defVersion}
-	defEnv      = oc.NewEnvironment(
+	defVersion = oc.Version{"ref": "dummy"}
+	defEnv     = oc.NewEnvironment(
 		map[string]string{
 			"ATC_EXTERNAL_URL": "https://cogito.invalid",
 			"BUILD_JOB_NAME":   "a-job"})
 )
-
-func TestCheckSuccess(t *testing.T) {
-	cfg := help.FakeTestCfg
-
-	testCases := []struct {
-		name         string
-		inSource     oc.Source
-		inVersion    oc.Version
-		wantVersions []oc.Version
-	}{
-		{
-			name: "happy path",
-			inSource: oc.Source{
-				accessTokenKey: cfg.Token,
-				ownerKey:       cfg.Owner,
-				repoKey:        cfg.Repo,
-			},
-			inVersion:    defVersion,
-			wantVersions: defVersions,
-		},
-		{
-			name: "do not return a nil version the first time it runs (see Concourse PR #4442)",
-			inSource: oc.Source{
-				accessTokenKey: cfg.Token,
-				ownerKey:       cfg.Owner,
-				repoKey:        cfg.Repo,
-			},
-			inVersion:    oc.Version{},
-			wantVersions: defVersions,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := New()
-
-			versions, err := r.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
-
-			if err != nil {
-				t.Fatalf("\nhave: %s\nwant: <no error>", err)
-			}
-
-			if diff := cmp.Diff(tc.wantVersions, versions); diff != "" {
-				t.Fatalf("version: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestCheckFailure(t *testing.T) {
-	testCases := []struct {
-		name      string
-		inSource  oc.Source
-		inVersion oc.Version
-		wantErr   string
-	}{
-		{
-			name:      "missing mandatory source keys",
-			inSource:  oc.Source{},
-			inVersion: defVersion,
-			wantErr:   "missing source keys: [access_token owner repo]",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			res := New()
-
-			_, err := res.Check(tc.inSource, tc.inVersion, defEnv, silentLog)
-
-			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
-			}
-			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
-				t.Errorf("error message mismatch: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
 
 func TestIn(t *testing.T) {
 	defSource := oc.Source{
