@@ -224,7 +224,9 @@ See also the next section.
 
 These suggestions apply to the development of any Concourse resource.
 
-After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image is to use the `fly check-resource-type` command. It is faster and less resource-hungry than using a short `check_interval` setting in the pipeline.
+After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image used to be the `fly check-resource-type` command. Unfortunately sometimes in the Concourse 7.6.x series this broke (details: [registry-image-resource #316](https://github.com/concourse/registry-image-resource/issues/316)).
+
+Luckily, since Concourse 7.8.0, the new fly command [`clear-versions`](https://github.com/concourse/concourse/pull/8196), can be used as a workaround.
 
 For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
 
@@ -244,15 +246,13 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
 
 ```
 $ task test:all docker:build docker:smoke docker:push &&
-  fly -t cogito check-resource-type -r cogito-test/cogito &&
+  fly -t cogito clear-versions --resource-type cogito-test/cogito &&
   fly -t cogito trigger-job -j cogito-test/autocat -w
 ```
 
-Command `check-resource-type` can sometimes not be enough (Details: [registry-image-resource 316](https://github.com/concourse/registry-image-resource/issues/316)). Concourse 7.8.0 will ship a new fly command, [`clear-versions`](https://github.com/concourse/concourse/pull/8196), that should be more reliable.
+If you are stuck on a Concourse release < 7.8.0, thus you are missing `clear-versions`, an effective workaround is to issue a new tag for the Docker image. Following the suggested workflow, this is achieved by renaming the branch, building a new Docker image and re-setting the pipeline.
 
-Waiting for this release, a workaround that often works is to issue a new tag for the Docker image. Following the suggested workflow, this is achieved by renaming the branch, building a new Docker image and re-setting the pipeline.
-
-On each `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
+On each `check`, `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
 
 ```text
 This is the Cogito GitHub status resource. Tag: latest, commit: 91f64c0, date: 2019-10-09
