@@ -18,10 +18,9 @@ import (
 //
 type CheckInput struct {
 	Source Source `json:"source"`
-	// Field Version will be omitted from the first request.
+	// Concourse will omit field Version from the first request.
 	Version Version `json:"version"`
-	// Currently no env variables for check; we keep it for uniformity and just in case.
-	Env Environment
+	Env     Environment
 }
 
 func NewCheckInput(in io.Reader) (CheckInput, error) {
@@ -36,6 +35,9 @@ func NewCheckInput(in io.Reader) (CheckInput, error) {
 	if err := ci.Source.Init(); err != nil {
 		return ci, err
 	}
+
+	// We don't validate the presence of field Version because, only for the check step,
+	// Concourse will omit it from the _first_ request.
 
 	ci.Env.Fill()
 
@@ -131,7 +133,9 @@ func (src *Source) Init() error {
 	return nil
 }
 
-// Version is a JSON object with string fields. Part of the Concourse resource protocol.
+// Version is a JSON object part of the Concourse resource protocol. The only requirement
+// is that the fields must be of type string, but the keys can be anything.
+// For Cogito, we have one key, "ref".
 type Version struct {
 	Ref string `json:"ref"`
 }

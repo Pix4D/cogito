@@ -9,6 +9,7 @@ import (
 )
 
 // Check implements the "check" step (the "check" executable).
+// For the Cogito resource, this is a no-op.
 //
 // From https://concourse-ci.org/implementing-resource-types.html#resource-check:
 //
@@ -30,7 +31,11 @@ func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	defer log.Debug("finished")
 
 	// Since there is no meaningful real version for this resource, we return always the
-	// same dummy version (we need to return a non-empty list to keep Concourse happy).
+	// same dummy version.
+	// NOTE I _think_ that when I initially wrote this, the JSON array of the versions
+	// could not be empty. Now (2022-07) it seems that it could indeed be empty.
+	// For the time being we keep it as-is because this maintains the previous behavior.
+	// This will be investigated by PCI-2617.
 	versions := []Version{{Ref: "dummy"}}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(versions); err != nil {

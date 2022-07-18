@@ -3,7 +3,6 @@ module github.com/Pix4D/cogito
 go 1.18
 
 require (
-	github.com/alecthomas/repr v0.1.0
 	github.com/alexflint/go-arg v1.3.0
 	github.com/cloudboss/ofcourse v0.2.2
 	github.com/gertd/wild v0.0.2-0.20200810044159-389fd0bed676
