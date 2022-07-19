@@ -30,7 +30,8 @@ func fromJSON(t *testing.T, data []byte, thing any) {
 // merged copy. If s has only one element, mergeStructs returns it unmodified.
 // Used to express succinctly the delta in the test cases.
 func mergeStructs[E any](t *testing.T, s []E) E {
-	assert.Assert(t, len(s) == 1 || len(s) == 2)
+	t.Helper()
+	assert.Assert(t, len(s) == 1 || len(s) == 2, len(s))
 	want := s[0]
 	if len(s) == 2 {
 		err := mergo.Merge(&want, s[1], mergo.WithOverride)
@@ -42,6 +43,6 @@ func mergeStructs[E any](t *testing.T, s []E) E {
 // failingWriter is an io.Writer that always returns an error.
 type failingWriter struct{}
 
-func (t *failingWriter) Write(p []byte) (n int, err error) {
-	return 0, errors.New("no bananas")
+func (t *failingWriter) Write([]byte) (n int, err error) {
+	return 0, errors.New("test write error")
 }

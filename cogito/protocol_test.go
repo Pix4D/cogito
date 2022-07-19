@@ -2,6 +2,7 @@ package cogito_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,7 +12,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestNewCheckInputSuccess(t *testing.T) {
+func TestSourceValidateLogSuccess(t *testing.T) {
 	type testCase struct {
 		name   string
 		source []cogito.Source // 1st element is the default; 2nd is the override
@@ -20,13 +21,12 @@ func TestNewCheckInputSuccess(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		source := mergeStructs(t, tc.source)
-		in := bytes.NewReader(toJSON(t, cogito.CheckInput{Source: source}))
+		want := mergeStructs(t, tc.want)
 
-		have, err := cogito.NewCheckInput(in)
+		err := source.ValidateLog()
 
 		assert.NilError(t, err)
-		want := mergeStructs(t, tc.want)
-		assert.DeepEqual(t, have.Source, want)
+		assert.DeepEqual(t, source, want)
 	}
 
 	baseSource := cogito.Source{
@@ -37,7 +37,7 @@ func TestNewCheckInputSuccess(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:   "only mandatory keys and defaults",
+			name:   "apply defaults",
 			source: []cogito.Source{baseSource},
 			want:   []cogito.Source{baseSource, {LogLevel: "info"}},
 		},
@@ -55,36 +55,33 @@ func TestNewCheckInputSuccess(t *testing.T) {
 	}
 }
 
-func TestNewCheckInputFailure(t *testing.T) {
+func TestSourceValidateLogFailure(t *testing.T) {
 	type testCase struct {
-		name   string
-		source cogito.Source
-		want   string
+		name    string
+		source  []cogito.Source // 1st element is the default; 2nd is the override
+		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(toJSON(t, cogito.CheckInput{Source: tc.source}))
+		assert.Assert(t, tc.wantErr != "")
+		source := mergeStructs(t, tc.source)
 
-		_, err := cogito.NewCheckInput(in)
+		err := source.ValidateLog()
 
-		assert.Error(t, err, tc.want)
+		assert.Error(t, err, tc.wantErr)
+	}
+
+	baseSource := cogito.Source{
+		Owner:       "the-owner",
+		Repo:        "the-repo",
+		AccessToken: "the-token",
 	}
 
 	testCases := []testCase{
 		{
-			name:   "missing mandatory source keys",
-			source: cogito.Source{},
-			want:   "source: missing keys: owner, repo, access_token",
-		},
-		{
-			name: "invalid log_level",
-			source: cogito.Source{
-				Owner:       "the-owner",
-				Repo:        "the-repo",
-				AccessToken: "the-token",
-				LogLevel:    "pippo",
-			},
-			want: "source: invalid log_level: pippo",
+			name:    "invalid log level",
+			source:  []cogito.Source{baseSource, {LogLevel: "pippo"}},
+			wantErr: "source: invalid log_level: pippo",
 		},
 	}
 
@@ -95,61 +92,129 @@ func TestNewCheckInputFailure(t *testing.T) {
 	}
 }
 
-// The majority of tests for failure are done in TestNewCheckInputFailure, which limits
-// the input since it uses a struct. Thus, we also test with some raw JSON input text.
-func TestNewCheckInputRawFailure(t *testing.T) {
-	testCases := []struct {
-		name    string
-		input   string
-		wantErr string
-	}{
+func TestSourceValidationSuccess(t *testing.T) {
+	type testCase struct {
+		name   string
+		source cogito.Source
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		err := tc.source.Validate()
+
+		assert.NilError(t, err)
+	}
+
+	baseSource := cogito.Source{
+		Owner:       "the-owner",
+		Repo:        "the-repo",
+		AccessToken: "the-token",
+	}
+
+	testCases := []testCase{
 		{
-			name:    "empty input",
-			input:   ``,
-			wantErr: `parsing JSON from stdin: EOF`,
-		},
-		{
-			name:    "malformed input",
-			input:   `pizza`,
-			wantErr: `parsing JSON from stdin: invalid character 'p' looking for beginning of value`,
-		},
-		{
-			name: "JSON types validation is automatic (since Go is statically typed)",
-			input: `
-{
-  "source": {
-    "owner": 123
-  }
-}`,
-			wantErr: `parsing JSON from stdin: json: cannot unmarshal number into Go struct field Source.source.owner of type string`,
-		},
-		{
-			name: "Unknown fields are caught automatically by the JSON decoder",
-			input: `
-{
-  "source": {
-    "owner": "the-owner",
-    "repo": "the-repo",
-    "access_token": "the-token",
-    "hello": "I am an unknown key"
-  }
-}`,
-			wantErr: `parsing JSON from stdin: json: unknown field "hello"`,
+			name:   "only mandatory keys",
+			source: baseSource,
 		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			in := strings.NewReader(tc.input)
-
-			_, err := cogito.NewCheckInput(in)
-
-			assert.Error(t, err, tc.wantErr)
+			test(t, tc)
 		})
 	}
 }
 
-func TestLogRedaction(t *testing.T) {
+func TestSourceValidationFailure(t *testing.T) {
+	type testCase struct {
+		name    string
+		source  cogito.Source
+		wantErr string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		assert.Assert(t, tc.wantErr != "")
+
+		err := tc.source.Validate()
+
+		assert.Error(t, err, tc.wantErr)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "missing mandatory source keys",
+			source:  cogito.Source{},
+			wantErr: "source: missing keys: owner, repo, access_token",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test(t, tc)
+		})
+	}
+}
+
+// The majority of tests for failure are done in TestSourceValidationFailure, which limits
+// the input since it uses a struct. Thus, we also test with some raw JSON input text.
+func TestSourceParseRawFailure(t *testing.T) {
+	type testCase struct {
+		name    string
+		input   string
+		wantErr string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		assert.Assert(t, tc.wantErr != "")
+		in := strings.NewReader(tc.input)
+		var source cogito.Source
+		dec := json.NewDecoder(in)
+		dec.DisallowUnknownFields()
+
+		err := dec.Decode(&source)
+
+		assert.Error(t, err, tc.wantErr)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "empty input",
+			input:   ``,
+			wantErr: `EOF`,
+		},
+		{
+			name:    "malformed input",
+			input:   `pizza`,
+			wantErr: `invalid character 'p' looking for beginning of value`,
+		},
+		{
+			name: "JSON types validation is automatic (since Go is statically typed)",
+			input: `
+{
+  "owner": 123
+}`,
+			wantErr: `json: cannot unmarshal number into Go struct field Source.owner of type string`,
+		},
+		{
+			name: "Unknown fields are caught automatically by the JSON decoder",
+			input: `
+{
+  "owner": "the-owner",
+  "repo": "the-repo",
+  "access_token": "the-token",
+  "hello": "I am an unknown key"
+}`,
+			wantErr: `json: unknown field "hello"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			test(t, tc)
+		})
+	}
+}
+
+func TestSourcePrintLogRedaction(t *testing.T) {
 	input := cogito.Source{
 		Owner:         "the-owner",
 		Repo:          "the-repo",
@@ -199,4 +264,22 @@ context_prefix: `
 		assert.Assert(t, strings.Contains(have, "| gchat_webhook:  ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
+}
+
+func TestVersion_String(t *testing.T) {
+	version := cogito.Version{Ref: "pizza"}
+
+	have := fmt.Sprint(version)
+
+	assert.Equal(t, have, "ref: pizza")
+}
+
+func TestEnvironment(t *testing.T) {
+	t.Setenv("BUILD_NAME", "banana-mango")
+	env := cogito.Environment{}
+
+	env.Fill()
+
+	have := fmt.Sprint(env)
+	assert.Assert(t, strings.Contains(have, "banana-mango"), "\n%s", have)
 }

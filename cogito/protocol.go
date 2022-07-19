@@ -4,9 +4,7 @@
 package cogito
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"os"
 	"strings"
 )
@@ -21,27 +19,6 @@ type CheckInput struct {
 	// Concourse will omit field Version from the first request.
 	Version Version `json:"version"`
 	Env     Environment
-}
-
-func NewCheckInput(in io.Reader) (CheckInput, error) {
-	var ci CheckInput
-
-	dec := json.NewDecoder(in)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&ci); err != nil {
-		return ci, fmt.Errorf("parsing JSON from stdin: %s", err)
-	}
-
-	if err := ci.Source.Init(); err != nil {
-		return ci, err
-	}
-
-	// We don't validate the presence of field Version because, only for the check step,
-	// Concourse will omit it from the _first_ request.
-
-	ci.Env.Fill()
-
-	return ci, nil
 }
 
 // Source is the "source:" block in a pipeline "resources:" block for the Cogito resource.
@@ -83,29 +60,14 @@ func redact(s string) string {
 	return s
 }
 
-// Init validates and applies defaults for Source.
-func (src *Source) Init() error {
-	//
-	// Validate mandatory fields.
-	//
-	var mandatory []string
-	if src.Owner == "" {
-		mandatory = append(mandatory, "owner")
-	}
-	if src.Repo == "" {
-		mandatory = append(mandatory, "repo")
-	}
-	if src.AccessToken == "" {
-		mandatory = append(mandatory, "access_token")
-	}
-	if len(mandatory) > 0 {
-		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
-	}
-
-	//
-	// Validate optional fields.
-	//
-
+// ValidateLog validates and applies defaults for the logging configuration of Source.
+//
+// This chicken-and-egg problem is due to the fact that logging configuration is passed
+// too late, at the same time as all the other resource Source configuration, so to give
+// as much debugging information as possible we need to get the log level as soon as
+// possible, also if the Source has other errors. This cannot be simplified, we are
+// working within the limits of the Concourse resource protocol.
+func (src *Source) ValidateLog() error {
 	// Normally we would leave this validation directly to the logging package, but since
 	// the log level names are part of the Cogito API and predate the removal of ofcourse,
 	// we need to handle the mapping and the error message, to avoid confusing the user.
@@ -124,11 +86,41 @@ func (src *Source) Init() error {
 	}
 
 	//
-	// Apply defaults.
+	// Apply defaults for logging.
 	//
 	if src.LogLevel == "" {
 		src.LogLevel = "info"
 	}
+
+	return nil
+}
+
+// Validate verifies the Source configuration and applies defaults.
+func (src *Source) Validate() error {
+	//
+	// Validate mandatory fields.
+	//
+	var mandatory []string
+	if src.Owner == "" {
+		mandatory = append(mandatory, "owner")
+	}
+	if src.Repo == "" {
+		mandatory = append(mandatory, "repo")
+	}
+	if src.AccessToken == "" {
+		mandatory = append(mandatory, "access_token")
+	}
+	if len(mandatory) > 0 {
+		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
+	}
+
+	//
+	// Validate optional fields. In this case, nothing to do.
+	//
+
+	//
+	// Apply defaults. In this case, nothing to do.
+	//
 
 	return nil
 }

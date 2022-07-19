@@ -19,16 +19,35 @@ import (
 // the requested version if it is still valid.
 //
 func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
-	ci, err := NewCheckInput(in)
-	if err != nil {
+	var ci CheckInput
+	dec := json.NewDecoder(in)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&ci); err != nil {
+		return fmt.Errorf("check: parsing JSON from stdin: %s", err)
+	}
+	ci.Env.Fill()
+
+	if err := ci.Source.ValidateLog(); err != nil {
+		return fmt.Errorf("check: %s", err)
+	}
+	log = log.Named("check")
+	log.SetLevel(hclog.LevelFromString(ci.Source.LogLevel))
+
+	log.Debug("started",
+		"source", ci.Source,
+		"version", ci.Version,
+		"environment", ci.Env,
+		"args", args)
+
+	if err := ci.Source.Validate(); err != nil {
 		return fmt.Errorf("check: %s", err)
 	}
 
-	log = log.Named("check")
-	log.SetLevel(hclog.LevelFromString(ci.Source.LogLevel))
-	log.Debug("started",
-		"source", ci.Source, "version", ci.Version, "environment", ci.Env, "args", args)
-	defer log.Debug("finished")
+	// We don't validate the presence of field ci.Version because Concourse will omit it
+	// from the _first_ request of the check step.
+
+	// Here a normal resource would fetch a list of the latest versions.
+	// In this resource, we do nothing.
 
 	// Since there is no meaningful real version for this resource, we return always the
 	// same dummy version.
@@ -39,7 +58,7 @@ func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	versions := []Version{{Ref: "dummy"}}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(versions); err != nil {
-		return err
+		return fmt.Errorf("check: %s", err)
 	}
 
 	log.Debug("success", "output", versions)

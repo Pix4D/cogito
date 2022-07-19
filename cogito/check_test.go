@@ -2,15 +2,16 @@ package cogito_test
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"testing"
+	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
 
-// Note that all input tests are performed by [TestNewCheckInputSuccess]
 func TestCheckSuccess(t *testing.T) {
 	type testCase struct {
 		name    string
@@ -65,39 +66,57 @@ func TestCheckSuccess(t *testing.T) {
 func TestCheckFailure(t *testing.T) {
 	type testCase struct {
 		name    string
-		in      cogito.CheckInput
+		source  []cogito.Source // will be embedded source cogito.CheckInput
+		reader  io.Reader       // if set, will override field `source`.
 		writer  io.Writer
 		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
-		in := bytes.NewReader(toJSON(t, tc.in))
+		source := mergeStructs(t, tc.source)
+		in := tc.reader
+		if in == nil {
+			in = bytes.NewReader(toJSON(t, cogito.CheckInput{Source: source}))
+		}
 		log := hclog.NewNullLogger()
 
 		err := cogito.Check(log, in, tc.writer, nil)
 
-		assert.ErrorContains(t, err, tc.wantErr)
+		assert.Error(t, err, tc.wantErr)
+	}
+
+	baseSource := cogito.Source{
+		Owner:       "the-owner",
+		Repo:        "the-repo",
+		AccessToken: "the-token",
 	}
 
 	testCases := []testCase{
 		{
-			name:    "missing keys",
-			in:      cogito.CheckInput{},
+			name:    "validation failure: missing keys",
+			source:  []cogito.Source{{}},
 			writer:  io.Discard,
-			wantErr: "missing keys",
+			wantErr: "check: source: missing keys: owner, repo, access_token",
 		},
 		{
-			name: "write error",
-			in: cogito.CheckInput{
-				Source: cogito.Source{
-					Owner:       "the-owner",
-					Repo:        "the-repo",
-					AccessToken: "the-token",
-				},
-			},
+			name:    "validation failure: log",
+			source:  []cogito.Source{baseSource, {LogLevel: "pippo"}},
+			writer:  io.Discard,
+			wantErr: "check: source: invalid log_level: pippo",
+		},
+		{
+			name:    "write error",
+			source:  []cogito.Source{baseSource},
 			writer:  &failingWriter{},
-			wantErr: "no bananas",
+			wantErr: "check: test write error",
+		},
+		{
+			name:    "read error",
+			source:  []cogito.Source{{}},
+			reader:  iotest.ErrReader(errors.New("test read error")),
+			writer:  io.Discard,
+			wantErr: "check: parsing JSON from stdin: test read error",
 		},
 	}
 

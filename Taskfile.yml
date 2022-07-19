@@ -62,6 +62,7 @@ tasks:
   test:unit:
     desc: Run the unit tests.
     cmds:
+      # One day I will understand how to use -coverpkg=./... :-(
       - go test -count=1 -short -coverprofile=coverage.out ./...
 
   test:all:
