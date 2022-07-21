@@ -89,10 +89,10 @@ tasks:
     dir: bin
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/cogito
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
       - ln -sf cogito check
       - ln -sf cogito in
+      - ln -sf cogito out
 
   build:copydir:
     desc: Build copydir (development helper, normally not needed).

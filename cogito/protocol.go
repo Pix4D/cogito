@@ -35,6 +35,17 @@ type GetInput struct {
 	Env Environment
 }
 
+// PutInput is the JSON object passed to the stdin of the "out" executable plus
+// build metadata (environment variables).
+//
+// See https://concourse-ci.org/implementing-resource-types.html#resource-out
+//
+type PutInput struct {
+	Source Source    `json:"source"`
+	Params PutParams `json:"params"`
+	Env    Environment
+}
+
 // Source is the "source:" block in a pipeline "resources:" block for the Cogito resource.
 type Source struct {
 	//
@@ -163,6 +174,18 @@ type Output struct {
 // message form the JSON parsing, instead of declaring it an empty struct, we do not
 // declare it at all.
 // type GetParams struct{}
+
+// PutParams is the "params:" block in a pipeline put step for the Cogito resource.
+type PutParams struct {
+	//
+	// Mandatory
+	//
+	State string `json:"state"`
+	//
+	// Optional
+	//
+	Context string `json:"context"`
+}
 
 // Environment represents the environment variables made available to the program.
 // Depending on the type of build and on the step, only some variables could be set.

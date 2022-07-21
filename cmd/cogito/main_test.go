@@ -52,6 +52,18 @@ func TestRunSmokeSuccess(t *testing.T) {
   "version": {"ref": "pizza"}
 }`,
 		},
+		{
+			name: "put",
+			args: []string{"out", "dummy-dir"},
+			in: `
+{
+  "source": {
+    "owner": "the-owner",
+    "repo": "the-repo",
+    "access_token": "the-secret"
+  }
+}`,
+		},
 	}
 
 	for _, tc := range testCases {

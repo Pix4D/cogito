@@ -38,6 +38,8 @@ func run(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
 		return cogito.Check(log, in, out, args[1:])
 	case "in":
 		return cogito.Get(log, in, out, args[1:])
+	case "out":
+		return cogito.Put(log, in, out, args[1:])
 	default:
 		return fmt.Errorf(
 			"cogito: unexpected invocation as '%s'; want: one of 'check', 'in', 'out'; (command-line: %s)",
