@@ -19,10 +19,11 @@ func TestRunSmokeSuccess(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		in := strings.NewReader(tc.in)
 		var out bytes.Buffer
+		var logOut bytes.Buffer
 
-		err := run(in, &out, io.Discard, tc.args)
+		err := run(in, &out, &logOut, tc.args)
 
-		assert.NilError(t, err)
+		assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 	}
 
 	testCases := []testCase{
@@ -36,6 +37,19 @@ func TestRunSmokeSuccess(t *testing.T) {
     "repo": "the-repo",
     "access_token": "the-secret"
   }
+}`,
+		},
+		{
+			name: "get",
+			args: []string{"in", "dummy-dir"},
+			in: `
+{
+  "source": {
+    "owner": "the-owner",
+    "repo": "the-repo",
+    "access_token": "the-secret"
+  },
+  "version": {"ref": "pizza"}
 }`,
 		},
 	}

@@ -23,7 +23,6 @@ RUN go test ./...  && \
     go install \
         -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" \
         ./cmd/cogito \
-        ./cmd/in \
         ./cmd/out
 
 #
@@ -38,4 +37,5 @@ RUN mkdir -p /opt/resource
 
 COPY --from=builder /root/go/bin/* /opt/resource/
 
-RUN ln -s /opt/resource/cogito /opt/resource/check
+RUN ln -s /opt/resource/cogito /opt/resource/check && \
+    ln -s /opt/resource/cogito /opt/resource/in
