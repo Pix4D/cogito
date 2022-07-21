@@ -11,10 +11,9 @@ import (
 
 func TestRunSmokeSuccess(t *testing.T) {
 	type testCase struct {
-		name    string
-		args    []string
-		in      string
-		wantOut string
+		name string
+		args []string
+		in   string
 	}
 
 	test := func(t *testing.T, tc testCase) {
@@ -24,8 +23,6 @@ func TestRunSmokeSuccess(t *testing.T) {
 		err := run(in, &out, io.Discard, tc.args)
 
 		assert.NilError(t, err)
-		have := out.String()
-		assert.Equal(t, have, tc.wantOut)
 	}
 
 	testCases := []testCase{
@@ -38,10 +35,8 @@ func TestRunSmokeSuccess(t *testing.T) {
     "owner": "the-owner",
     "repo": "the-repo",
     "access_token": "the-secret"
-  } 
+  }
 }`,
-			wantOut: `[{"ref":"dummy"}]
-`,
 		},
 	}
 
