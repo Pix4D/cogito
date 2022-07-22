@@ -58,7 +58,7 @@ func Get(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	// and put there the requested version of the resource.
 	// In this resource we do nothing, but we still check for protocol conformance.
 	if len(args) == 0 {
-		return fmt.Errorf("get: missing output directory from arguments")
+		return fmt.Errorf("get: arguments: missing output directory")
 	}
 	log.Debug("", "output-directory", args[0])
 

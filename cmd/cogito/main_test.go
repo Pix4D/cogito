@@ -9,68 +9,60 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestRunSmokeSuccess(t *testing.T) {
-	type testCase struct {
-		name string
-		args []string
-		in   string
-	}
-
-	test := func(t *testing.T, tc testCase) {
-		in := strings.NewReader(tc.in)
-		var out bytes.Buffer
-		var logOut bytes.Buffer
-
-		err := run(in, &out, &logOut, tc.args)
-
-		assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
-	}
-
-	testCases := []testCase{
-		{
-			name: "check",
-			args: []string{"check"},
-			in: `
+func TestRunCheckSmokeSuccess(t *testing.T) {
+	in := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
     "repo": "the-repo",
-    "access_token": "the-secret"
+    "access_token": "the-secret",
+    "log_level": "debug"
   }
-}`,
-		},
-		{
-			name: "get",
-			args: []string{"in", "dummy-dir"},
-			in: `
+}`)
+	var out bytes.Buffer
+	var logOut bytes.Buffer
+
+	err := run(in, &out, &logOut, []string{"check"})
+
+	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+}
+
+func TestRunGetSmokeSuccess(t *testing.T) {
+	in := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
     "repo": "the-repo",
-    "access_token": "the-secret"
+    "access_token": "the-secret",
+    "log_level": "debug"
   },
   "version": {"ref": "pizza"}
-}`,
-		},
-		{
-			name: "put",
-			args: []string{"out", "dummy-dir"},
-			in: `
+}`)
+	var out bytes.Buffer
+	var logOut bytes.Buffer
+
+	err := run(in, &out, &logOut, []string{"in", "dummy-dir"})
+
+	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+}
+
+func TestRunPutSmokeSuccess(t *testing.T) {
+	in := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
     "repo": "the-repo",
-    "access_token": "the-secret"
-  }
-}`,
-		},
-	}
+    "access_token": "the-secret",
+    "log_level": "debug"
+  },
+  "params": {"state": "pending"}
+}`)
+	var out bytes.Buffer
+	var logOut bytes.Buffer
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
-	}
+	err := run(in, &out, &logOut, []string{"out", "dummy-dir"})
+
+	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
 
 func TestRunSmokeFailure(t *testing.T) {

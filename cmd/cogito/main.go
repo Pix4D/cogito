@@ -18,7 +18,7 @@ func main() {
 	// - stderr for logging
 	// See: https://concourse-ci.org/implementing-resource-types.html
 	if err := run(os.Stdin, os.Stdout, os.Stderr, os.Args); err != nil {
-		fmt.Fprintln(os.Stderr, err)
+		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		os.Exit(1)
 	}
 }

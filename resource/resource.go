@@ -30,12 +30,6 @@ const (
 	ownerKey         = "owner"
 	repoKey          = "repo"
 	stateKey         = "state"
-
-	abortState   = "abort"
-	errorState   = "error"
-	failureState = "failure"
-	pendingState = "pending"
-	successState = "success"
 )
 
 var (

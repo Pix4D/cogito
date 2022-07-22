@@ -46,18 +46,24 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 		return fmt.Errorf("put: %s", err)
 	}
 
-	// args[0] contains the path to a Concourse volume containing all the resource
-	// "put inputs".
+	// args[0] contains the path to a directory containing all the "put inputs".
 	if len(args) == 0 {
-		return fmt.Errorf("put: missing input directory from arguments")
+		return fmt.Errorf("put: arguments: missing input directory")
 	}
 	inputDir := args[0]
 	log.Debug("", "input-directory", inputDir)
 
-	// Following the protocol for put, we return a dummy version and metadata.
+	buildState := pi.Params.State
+	if err := buildState.Validate(); err != nil {
+		return fmt.Errorf("put: params: %s", err)
+	}
+	log.Debug("", "state", buildState)
+
+	// Following the protocol for put, we return the version and metadata.
+	// For Cogito, the metadata contains the Concourse build state.
 	output := Output{
-		// TODO Version: constant dummy
-		// TODO Metadata
+		Version:  DummyVersion,
+		Metadata: []Metadata{{Name: KeyState, Value: string(buildState)}},
 	}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
