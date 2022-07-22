@@ -114,28 +114,6 @@ func NewWith(githubAPI string) *Resource {
 	}
 }
 
-// Check satisfies ofcourse.Resource.Check(), corresponding to the /opt/resource/check command.
-func (r *Resource) Check(
-	source oc.Source,
-	version oc.Version,
-	env oc.Environment,
-	log *oc.Logger,
-) ([]oc.Version, error) {
-	return nil, errors.New("old 'check', kept to satisfy the ofcourse.Resource interface")
-}
-
-// In satisfies ofcourse.Resource.In(), corresponding to the /opt/resource/in command.
-func (r *Resource) In(
-	outputDir string,
-	source oc.Source,
-	params oc.Params,
-	version oc.Version,
-	env oc.Environment,
-	log *oc.Logger,
-) (oc.Version, oc.Metadata, error) {
-	return nil, nil, errors.New("old 'get', kept to satisfy the ofcourse.Resource interface")
-}
-
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.
 func (r *Resource) Out(
 	inputDir string, // All the resource "put inputs" are below this directory.
