@@ -17,7 +17,7 @@ vars:
   DOCKER_BASE_NAME: "{{.DOCKER_ORG}}/{{.DOCKER_IMAGE}}"
   DOCKER_FULL_NAME: "{{.DOCKER_BASE_NAME}}:{{.DOCKER_TAG}}"
   BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
-  LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
+  LDFLAGS: -w -X '{{.REPO}}/cogito.buildinfo={{.BUILD_INFO}}'
   #
   SMOKE_INPUT: >
     {
@@ -76,10 +76,35 @@ tasks:
   test:smoke:
     desc: Simple smoke test of the local executables.
     cmds:
+      - task: test:buildinfo
       - echo '{{.SMOKE_INPUT}}' | ./bin/check
       - echo
       - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
       - echo
+      - echo '{{.PUT_INPUT}}' | ./bin/out dummy-dir
+      - echo
+    vars:
+      PUT_INPUT: >
+        {
+          "source": {"owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"},
+          "params": {"state": "success"}
+        }
+
+  test:buildinfo:
+    desc: Verify that the executable contains build information
+    # cogito: This is the Cogito GitHub status resource. unknown
+    # cogito: This is the Cogito GitHub status resource. Tag: buildinfo, commit: e9b36d0814, build date: 2022-07-26
+    cmds:
+      # "unknown" is the default value, printed when built without linker flags.
+      - 'echo {{.OUTPUT}} | grep -v unknown'
+      - 'echo {{.OUTPUT}} | grep Tag:'
+      - 'echo {{.OUTPUT}} | grep commit:'
+    vars:
+      INPUT: '{"source": {"owner": "foo", "repo": "bar", "access_token": "123"}}'
+      OUTPUT:
+        # We only want to capture stderr, because the Cogito resource protocol uses
+        # stderr for logging.
+        sh: echo '{{.INPUT}}' | ./bin/check 2>&1 1>/dev/null
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"

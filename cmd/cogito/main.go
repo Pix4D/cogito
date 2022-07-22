@@ -9,7 +9,6 @@ import (
 	"path"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/resource"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -30,7 +29,7 @@ func run(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
 		Output:      logOut,
 		DisableTime: true,
 	})
-	log.Info(resource.BuildInfo())
+	log.Info(cogito.BuildInfo())
 
 	command := path.Base(args[0])
 	switch command {
