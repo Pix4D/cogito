@@ -81,7 +81,7 @@ tasks:
       - echo
       - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
       - echo
-      - echo '{{.PUT_INPUT}}' | ./bin/out dummy-dir
+      - echo '{{.PUT_INPUT}}' | ./bin/out cogito/testdata/a-repo
       - echo
     vars:
       PUT_INPUT: >

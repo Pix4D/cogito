@@ -60,7 +60,7 @@ func TestRunPutSmokeSuccess(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 
-	err := run(in, &out, &logOut, []string{"out", "dummy-dir"})
+	err := run(in, &out, &logOut, []string{"out", "../../cogito/testdata/a-repo"})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }

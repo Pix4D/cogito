@@ -25,7 +25,7 @@ func TestPutSuccess(t *testing.T) {
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 
-		err := cogito.Put(log, in, &out, []string{"dummy-dir"})
+		err := cogito.Put(log, in, &out, []string{"testdata/a-repo"})
 
 		assert.NilError(t, err)
 		var have cogito.Output
@@ -146,6 +146,11 @@ func TestPutProtocolFailure(t *testing.T) {
 			args:    []string{},
 			wantErr: "put: arguments: missing input directory",
 		},
+		{
+			name:    "wrong input directory from arguments",
+			args:    []string{"non-existing"},
+			wantErr: "put: validating the input dir: collecting directories in non-existing: open non-existing: no such file or directory",
+		},
 	}
 
 	for _, tc := range testCases {
@@ -167,7 +172,7 @@ func TestPutSystemFailure(t *testing.T) {
 		assert.Assert(t, tc.wantErr != "")
 		log := hclog.NewNullLogger()
 
-		err := cogito.Put(log, tc.reader, tc.writer, []string{"dummy-dir"})
+		err := cogito.Put(log, tc.reader, tc.writer, []string{"testdata/a-repo"})
 
 		assert.Error(t, err, tc.wantErr)
 	}

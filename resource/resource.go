@@ -4,13 +4,10 @@
 package resource
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
@@ -25,51 +22,12 @@ const (
 
 	contextKey       = "context"
 	contextPrefixKey = "context_prefix"
-	logLevelKey      = "log_level"
-	logUrlKey        = "log_url"
 	ownerKey         = "owner"
 	repoKey          = "repo"
 	stateKey         = "state"
 )
 
 var (
-	dummyVersion = oc.Version{"ref": "dummy"}
-
-	outMandatoryParams = map[string]struct{}{
-		stateKey: {},
-	}
-
-	outOptionalParams = map[string]struct{}{
-		contextKey: {},
-	}
-
-	outValidStates = map[string]struct{}{
-		abortState:   {},
-		errorState:   {},
-		failureState: {},
-		pendingState: {},
-		successState: {},
-	}
-
-	mandatorySourceKeys = map[string]struct{}{
-		ownerKey:       {},
-		repoKey:        {},
-		accessTokenKey: {},
-	}
-
-	optionalSourceKeys = map[string]struct{}{
-		logLevelKey:      {},
-		logUrlKey:        {},
-		contextPrefixKey: {},
-		//
-		gchatWebhookKey: {},
-	}
-
-	secretKeys = map[string]struct{}{
-		accessTokenKey:  {},
-		gchatWebhookKey: {},
-	}
-
 	// States that will trigger a chat notification by default.
 	statesToNotifyChat = []string{abortState, errorState, failureState}
 )
@@ -106,35 +64,8 @@ func (r *Resource) Out(
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Debugf("out: started")
-	defer log.Debugf("out: finished")
 
-	log.Infof(BuildInfo())
-	log.Debugf("out: source:\n%s", stringify(redact(source, secretKeys)))
-	log.Debugf("out: params:\n%s", stringify(params))
-	log.Debugf("out: env:\n%s", stringify(env.GetAll()))
-
-	if err := validateSource(source); err != nil {
-		return nil, nil, err
-	}
-
-	if err := validateOutParams(params); err != nil {
-		return nil, nil, err
-	}
-
-	owner, _ := source[ownerKey].(string)
-	repo, _ := source[repoKey].(string)
-
-	inputDirs, err := collectInputDirs(inputDir)
-	if err != nil {
-		return nil, nil, err
-	}
-	if len(inputDirs) != 1 {
-		err := fmt.Errorf("found %d input dirs: %v. "+
-			"Want exactly 1, corresponding to the GitHub repo %s/%s",
-			len(inputDirs), inputDirs, owner, repo)
-		return nil, nil, err
-	}
+	// STUFF DELETED
 
 	repoDir := filepath.Join(inputDir, inputDirs[0])
 	if err := checkRepoDir(repoDir, owner, repo); err != nil {
@@ -178,82 +109,6 @@ func (r *Resource) Out(
 	metadata = append(metadata, oc.NameVal{Name: stateKey, Value: state})
 
 	return dummyVersion, metadata, nil
-}
-
-func validateSource(source oc.Source) error {
-	// Any missing source key?
-	missing := make([]string, 0, len(mandatorySourceKeys))
-	for key := range mandatorySourceKeys {
-		if _, ok := source[key].(string); !ok {
-			missing = append(missing, key)
-		}
-	}
-
-	// Any unknown source key?
-	unknown := make([]string, 0, len(source))
-	for key := range source {
-		_, ok1 := mandatorySourceKeys[key]
-		_, ok2 := optionalSourceKeys[key]
-		if !ok1 && !ok2 {
-			unknown = append(unknown, key)
-		}
-	}
-
-	errMsg := make([]string, 0, 2)
-	if len(missing) > 0 {
-		sort.Strings(missing)
-		errMsg = append(errMsg, fmt.Sprintf("missing source keys: %s", missing))
-	}
-	if len(unknown) > 0 {
-		sort.Strings(unknown)
-		errMsg = append(errMsg, fmt.Sprintf("unknown source keys: %s", unknown))
-	}
-	if len(errMsg) > 0 {
-		return errors.New(strings.Join(errMsg, "; "))
-	}
-
-	return nil
-}
-
-func validateOutParams(params oc.Params) error {
-	// Any missing parameter?
-	for wantParam := range outMandatoryParams {
-		if _, ok := params[wantParam].(string); !ok {
-			return fmt.Errorf("missing put parameter '%s'", wantParam)
-		}
-	}
-
-	// Any invalid parameter?
-	state, _ := params[stateKey].(string)
-	if _, ok := outValidStates[state]; !ok {
-		return fmt.Errorf("invalid put parameter 'state: %s'", state)
-	}
-
-	// Any unknown parameter?
-	for param := range params {
-		_, ok1 := outMandatoryParams[param]
-		_, ok2 := outOptionalParams[param]
-		if !ok1 && !ok2 {
-			return fmt.Errorf("unknown put parameter '%s'", param)
-		}
-	}
-
-	return nil
-}
-
-// Return a list of all directories below dir (non-recursive).
-func collectInputDirs(dir string) ([]string, error) {
-	entries, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, fmt.Errorf("collecting directories in %v: %w", dir, err)
-	}
-	dirs := []string{}
-	for _, e := range entries {
-		if e.IsDir() {
-			dirs = append(dirs, e.Name())
-		}
-	}
-	return dirs, nil
 }
 
 // checkRepoDir validates whether DIR, assumed to be received as input of a put step,

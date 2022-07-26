@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"os"
 
 	"github.com/hashicorp/go-hclog"
 )
@@ -59,6 +60,10 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	}
 	log.Debug("", "state", buildState)
 
+	if err := validateInputDir(inputDir, pi.Source.Owner, pi.Source.Repo); err != nil {
+		return fmt.Errorf("put: validating the input dir: %s", err)
+	}
+
 	// Following the protocol for put, we return the version and metadata.
 	// For Cogito, the metadata contains the Concourse build state.
 	output := Output{
@@ -72,4 +77,34 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 
 	log.Debug("success", "output", output)
 	return nil
+}
+
+// validateInputDir checks whether dir, the "put input", conforms to what we expect.
+func validateInputDir(dir string, owner string, repo string) error {
+	inputDirs, err := collectInputDirs(dir)
+	if err != nil {
+		return err
+	}
+	if len(inputDirs) != 1 {
+		return fmt.Errorf(
+			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
+			len(inputDirs), inputDirs, owner, repo)
+	}
+
+	return nil
+}
+
+// collectInputDirs returns a list of all directories below dir (non-recursive).
+func collectInputDirs(dir string) ([]string, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("collecting directories in %v: %w", dir, err)
+	}
+	var dirs []string
+	for _, e := range entries {
+		if e.IsDir() {
+			dirs = append(dirs, e.Name())
+		}
+	}
+	return dirs, nil
 }

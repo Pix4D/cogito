@@ -2,7 +2,6 @@ package resource
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -56,9 +55,6 @@ func TestOutMockSuccess(t *testing.T) {
 		wantMeta oc.Metadata
 		wantBody map[string]string
 	}{
-		{
-			name: "valid mandatory source and params",
-		},
 		{
 			name: "source: optional: context_prefix",
 			source: help.MergeMap(defSource, oc.Source{
@@ -149,88 +145,6 @@ func TestOutMockSuccess(t *testing.T) {
 
 			if diff := cmp.Diff(tc.wantMeta, metadata); diff != "" {
 				t.Errorf("metadata: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestOutMockFailure(t *testing.T) {
-	cfg := help.FakeTestCfg
-
-	defSource := oc.Source{
-		accessTokenKey: cfg.Token,
-		ownerKey:       cfg.Owner,
-		repoKey:        cfg.Repo,
-	}
-	defParams := oc.Params{
-		stateKey: errorState,
-	}
-
-	testDir := "a-repo"
-
-	testCases := []struct {
-		name    string
-		source  oc.Source
-		params  oc.Params
-		wantErr string
-	}{
-		{
-			name:    "missing mandatory source keys",
-			source:  oc.Source{},
-			params:  defParams,
-			wantErr: "missing source keys: [access_token owner repo]",
-		},
-		{
-			name:    "missing mandatory parameters",
-			source:  defSource,
-			params:  oc.Params{},
-			wantErr: "missing put parameter 'state'",
-		},
-		{
-			name:   "invalid state parameter",
-			source: defSource,
-			params: oc.Params{
-				stateKey: "hello",
-			},
-			wantErr: "invalid put parameter 'state: hello'",
-		},
-		{
-			name:   "unknown parameter",
-			source: defSource,
-			params: oc.Params{
-				stateKey: pendingState,
-				"pizza":  "margherita",
-			},
-			wantErr: "unknown put parameter 'pizza'",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			inDir := setup(t, testDir, sshRemote(cfg.Owner, cfg.Repo), cfg.SHA, cfg.SHA)
-
-			ts := httptest.NewServer(
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(http.StatusCreated)
-					fmt.Fprintln(w, "Anything goes...")
-				}),
-			)
-
-			defer func() {
-				ts.Close()
-			}()
-
-			res := NewWith(ts.URL)
-
-			_, _, err := res.Out(
-				inDir, tc.source, tc.params, defEnv, silentLog)
-
-			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErr)
-			}
-
-			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
-				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}
@@ -343,47 +257,6 @@ Cogito SOURCE configuration:
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestCollectInputDirs(t *testing.T) {
-	var testCases = []struct {
-		name    string
-		dir     string
-		wantErr error
-		wantN   int
-	}{
-		{
-			name:    "non existing base directory",
-			dir:     "non-existing",
-			wantErr: os.ErrNotExist,
-			wantN:   0,
-		},
-		{
-			name:    "empty directory",
-			dir:     "testdata/empty-dir",
-			wantErr: nil,
-			wantN:   0,
-		},
-		{
-			name:    "two directories and one file",
-			dir:     "testdata/two-dirs",
-			wantErr: nil,
-			wantN:   2,
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			dirs, err := collectInputDirs(tc.dir)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("sut(%v): error: have %v; want %v", tc.dir, err, tc.wantErr)
-			}
-			gotN := len(dirs)
-			if gotN != tc.wantN {
-				t.Errorf("sut(%v): len(dirs): have %v; want %v", tc.dir, gotN, tc.wantN)
 			}
 		})
 	}
