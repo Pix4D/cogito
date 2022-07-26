@@ -76,12 +76,20 @@ tasks:
   test:smoke:
     desc: Simple smoke test of the local executables.
     cmds:
+      - task: build
+      - task: build:copydir
       - task: test:buildinfo
       - echo '{{.SMOKE_INPUT}}' | ./bin/check
       - echo
       - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
       - echo
-      - echo '{{.PUT_INPUT}}' | ./bin/out cogito/testdata/a-repo
+      - rm -rf /tmp/cogito-test
+      - mkdir -p /tmp/cogito-test
+      - >
+        ./bin/copydir cogito/testdata/a-repo /tmp/cogito-test --dot 
+        --template repo_url=https://github.com/foo/bar head=dummyHead
+        branch_name=dummyBranch commit_sha=dummySha
+      - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test
       - echo
     vars:
       PUT_INPUT: >

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
 )
 
@@ -59,8 +60,10 @@ func TestRunPutSmokeSuccess(t *testing.T) {
 }`)
 	var out bytes.Buffer
 	var logOut bytes.Buffer
+	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/a-repo",
+		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
-	err := run(in, &out, &logOut, []string{"out", "../../cogito/testdata/a-repo"})
+	err := run(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }

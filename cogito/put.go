@@ -4,9 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net/url"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/hashicorp/go-hclog"
+	"github.com/sasbury/mini"
 )
 
 // Put implements the "put" step (the "out" executable).
@@ -79,9 +83,10 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	return nil
 }
 
-// validateInputDir checks whether dir, the "put input", conforms to what we expect.
-func validateInputDir(dir string, owner string, repo string) error {
-	inputDirs, err := collectInputDirs(dir)
+// validateInputDir checks whether dir, containing the "put inputs", conforms
+// to what we expect.
+func validateInputDir(inputDir string, owner string, repo string) error {
+	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
 		return err
 	}
@@ -89,6 +94,11 @@ func validateInputDir(dir string, owner string, repo string) error {
 		return fmt.Errorf(
 			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
 			len(inputDirs), inputDirs, owner, repo)
+	}
+
+	repoDir := filepath.Join(inputDir, inputDirs[0])
+	if err := checkGitRepoDir(repoDir, owner, repo); err != nil {
+		return err
 	}
 
 	return nil
@@ -107,4 +117,112 @@ func collectInputDirs(dir string) ([]string, error) {
 		}
 	}
 	return dirs, nil
+}
+
+// checkGitRepoDir validates whether DIR, assumed to be received as input of a put step,
+// contains a git repository usable with the Cogito source configuration:
+// - DIR is indeed a git repository.
+// - The repo configuration contains a "remote origin" section.
+// - The remote origin url can be parsed following the GitHub conventions.
+// - The result of the parse matches OWNER and REPO.
+func checkGitRepoDir(dir, owner, repo string) error {
+	cfg, err := mini.LoadConfiguration(filepath.Join(dir, ".git/config"))
+	if err != nil {
+		return fmt.Errorf("parsing .git/config: %w", err)
+	}
+
+	// .git/config contains a section like:
+	//
+	// [remote "origin"]
+	//     url = git@github.com:Pix4D/cogito.git
+	//     fetch = +refs/heads/*:refs/remotes/origin/*
+	//
+	const section = `remote "origin"`
+	const key = "url"
+	gitUrl := cfg.StringFromSection(section, key, "")
+	if gitUrl == "" {
+		return fmt.Errorf(".git/config: key [%s]/%s: not found", section, key)
+	}
+	gu, err := parseGitPseudoURL(gitUrl)
+	if err != nil {
+		return fmt.Errorf(".git/config: remote: %w", err)
+	}
+	left := []string{"github.com", owner, repo}
+	right := []string{gu.URL.Host, gu.Owner, gu.Repo}
+	for i, l := range left {
+		r := right[i]
+		if !strings.EqualFold(l, r) {
+			return fmt.Errorf(`the received git repository is incompatible with the Cogito configuration.
+
+Git repository configuration (received as 'inputs:' in this PUT step):
+      url: %s
+    owner: %s
+     repo: %s
+
+Cogito SOURCE configuration:
+    owner: %s
+     repo: %s`,
+				gitUrl, gu.Owner, gu.Repo,
+				owner, repo)
+		}
+	}
+	return nil
+}
+
+type gitURL struct {
+	URL   *url.URL
+	Owner string
+	Repo  string
+}
+
+// parseGitPseudoURL attempts to parse rawURL as a git remote URL compatible with the
+// Github naming conventions.
+//
+// It supports the following types of git pseudo URLs:
+// - ssh:   git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
+//          ssh://git@github.com/Pix4D/cogito.git
+// - https: https://github.com/Pix4D/cogito.git
+// - http:  http://github.com/Pix4D/cogito.git
+func parseGitPseudoURL(rawURL string) (gitURL, error) {
+	workURL := rawURL
+	// If ssh pseudo URL, we need to massage the rawURL ourselves :-(
+	if strings.HasPrefix(workURL, "git@") {
+		if strings.Count(workURL, ":") != 1 {
+			return gitURL{}, fmt.Errorf("invalid git SSH URL %s: want exactly one ':'", rawURL)
+		}
+		// Make the URL a real URL, ready to be parsed. For example:
+		// git@github.com:Pix4D/cogito.git -> ssh://git@github.com/Pix4D/cogito.git
+		workURL = "ssh://" + strings.Replace(workURL, ":", "/", 1)
+	}
+
+	anyUrl, err := url.Parse(workURL)
+	if err != nil {
+		return gitURL{}, err
+	}
+
+	scheme := anyUrl.Scheme
+	if scheme == "" {
+		return gitURL{}, fmt.Errorf("invalid git URL %s: missing scheme", rawURL)
+	}
+	if scheme != "ssh" && scheme != "http" && scheme != "https" {
+		return gitURL{}, fmt.Errorf("invalid git URL %s: invalid scheme: %s", rawURL, scheme)
+	}
+
+	// Further parse the path component of the URL to see if it complies with the GitHub
+	// naming conventions.
+	// Example of compliant path: github.com/Pix4D/cogito.git
+	tokens := strings.Split(anyUrl.Path, "/")
+	if have, want := len(tokens), 3; have != want {
+		return gitURL{},
+			fmt.Errorf("invalid git URL: path: want: %d components; have: %d %s",
+				want, have, tokens)
+	}
+
+	// All OK. Fill our gitURL struct
+	gu := gitURL{
+		URL:   anyUrl,
+		Owner: tokens[1],
+		Repo:  strings.TrimSuffix(tokens[2], ".git"),
+	}
+	return gu, nil
 }

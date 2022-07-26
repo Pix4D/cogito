@@ -9,6 +9,7 @@ import (
 	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
@@ -24,8 +25,10 @@ func TestPutSuccess(t *testing.T) {
 		in := bytes.NewReader(toJSON(t, tc.in))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
+		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/a-repo",
+			testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
-		err := cogito.Put(log, in, &out, []string{"testdata/a-repo"})
+		err := cogito.Put(log, in, &out, []string{inputDir})
 
 		assert.NilError(t, err)
 		var have cogito.Output
@@ -171,8 +174,10 @@ func TestPutSystemFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
 		log := hclog.NewNullLogger()
+		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/a-repo",
+			testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
-		err := cogito.Put(log, tc.reader, tc.writer, []string{"testdata/a-repo"})
+		err := cogito.Put(log, tc.reader, tc.writer, []string{inputDir})
 
 		assert.Error(t, err, tc.wantErr)
 	}
@@ -209,8 +214,6 @@ func TestPutSystemFailure(t *testing.T) {
 	}
 }
 
-// TODO: give a more helpful error message!
-//  The JSON parser does not mention the outer object ("params") :-(
 func TestPutInvalidParamsFailure(t *testing.T) {
 	in := strings.NewReader(`
 {
