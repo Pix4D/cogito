@@ -64,8 +64,8 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	}
 	log.Debug("", "state", buildState)
 
-	if err := validateInputDir(inputDir, pi.Source.Owner, pi.Source.Repo); err != nil {
-		return fmt.Errorf("put: validating the input dir: %s", err)
+	if err := processInputDir(inputDir, pi.Source.Owner, pi.Source.Repo); err != nil {
+		return fmt.Errorf("put: processing the input dir: %s", err)
 	}
 
 	// Following the protocol for put, we return the version and metadata.
@@ -83,9 +83,9 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	return nil
 }
 
-// validateInputDir checks whether dir, containing the "put inputs", conforms
+// processInputDir checks whether dir, containing the "put inputs", conforms
 // to what we expect.
-func validateInputDir(inputDir string, owner string, repo string) error {
+func processInputDir(inputDir string, owner string, repo string) error {
 	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
 		return err

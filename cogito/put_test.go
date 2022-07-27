@@ -152,7 +152,7 @@ func TestPutProtocolFailure(t *testing.T) {
 		{
 			name:    "wrong input directory from arguments",
 			args:    []string{"non-existing"},
-			wantErr: "put: validating the input dir: collecting directories in non-existing: open non-existing: no such file or directory",
+			wantErr: "put: processing the input dir: collecting directories in non-existing: open non-existing: no such file or directory",
 		},
 	}
 

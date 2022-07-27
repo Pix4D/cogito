@@ -13,7 +13,7 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestValidateInputDirFailure(t *testing.T) {
+func TestProcessInputDirFailure(t *testing.T) {
 	type testCase struct {
 		name     string
 		inputDir string
@@ -24,7 +24,7 @@ func TestValidateInputDirFailure(t *testing.T) {
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/foo", "dummySHA", "dummyHead")
 
-		err := validateInputDir(filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
+		err := processInputDir(filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
 			"dummy-owner", "dummy-repo")
 
 		assert.ErrorContains(t, err, tc.wantErr)
