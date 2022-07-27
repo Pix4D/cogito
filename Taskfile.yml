@@ -86,7 +86,7 @@ tasks:
       - rm -rf /tmp/cogito-test
       - mkdir -p /tmp/cogito-test
       - >
-        ./bin/copydir cogito/testdata/a-repo /tmp/cogito-test --dot 
+        ./bin/copydir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot 
         --template repo_url=https://github.com/foo/bar head=dummyHead
         branch_name=dummyBranch commit_sha=dummySha
       - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test

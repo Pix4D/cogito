@@ -64,9 +64,11 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	}
 	log.Debug("", "state", buildState)
 
-	if err := processInputDir(inputDir, pi.Source.Owner, pi.Source.Repo); err != nil {
+	gitHash, err := processInputDir(inputDir, pi.Source.Owner, pi.Source.Repo)
+	if err != nil {
 		return fmt.Errorf("put: processing the input dir: %s", err)
 	}
+	log.Debug("", "git-commit", gitHash)
 
 	// Following the protocol for put, we return the version and metadata.
 	// For Cogito, the metadata contains the Concourse build state.
@@ -83,25 +85,32 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	return nil
 }
 
-// processInputDir checks whether dir, containing the "put inputs", conforms
-// to what we expect.
-func processInputDir(inputDir string, owner string, repo string) error {
+// processInputDir checks whether inputDir, containing the "put inputs", conforms to
+// what we expect and returns the git commit hash of the repo passed as put input.
+func processInputDir(inputDir string, owner string, repo string) (string, error) {
 	inputDirs, err := collectInputDirs(inputDir)
 	if err != nil {
-		return err
+		return "", err
 	}
 	if len(inputDirs) != 1 {
-		return fmt.Errorf(
+		return "", fmt.Errorf(
 			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
 			len(inputDirs), inputDirs, owner, repo)
 	}
 
+	// Since we require inputDir to contain only one directory, we assume that this
+	// directory is the git repo.
 	repoDir := filepath.Join(inputDir, inputDirs[0])
 	if err := checkGitRepoDir(repoDir, owner, repo); err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	gitHash, err := getGitCommit(repoDir)
+	if err != nil {
+		return "", err
+	}
+
+	return gitHash, nil
 }
 
 // collectInputDirs returns a list of all directories below dir (non-recursive).
@@ -225,4 +234,44 @@ func parseGitPseudoURL(rawURL string) (gitURL, error) {
 		Repo:  strings.TrimSuffix(tokens[2], ".git"),
 	}
 	return gu, nil
+}
+
+// getGitCommit looks into a git repository and extracts the commit SHA of the HEAD.
+func getGitCommit(repoPath string) (string, error) {
+	dotGitPath := filepath.Join(repoPath, ".git")
+
+	headPath := filepath.Join(dotGitPath, "HEAD")
+	headBuf, err := os.ReadFile(headPath)
+	if err != nil {
+		return "", fmt.Errorf("git commit: read HEAD: %w", err)
+	}
+
+	// The HEAD file can have two completely different contents:
+	// 1. if a branch checkout: "ref: refs/heads/BRANCH_NAME"
+	// 2. if a detached head : the commit SHA
+	// A detached head with Concourse happens in two cases:
+	// 1. if the git resource has a `tag_filter:`
+	// 2. if the git resource has a `version:`
+
+	head := strings.TrimSuffix(string(headBuf), "\n")
+	tokens := strings.Fields(head)
+	var sha string
+	switch len(tokens) {
+	case 1:
+		// detached head
+		sha = head
+	case 2:
+		// branch checkout
+		shaRelPath := tokens[1]
+		shaPath := filepath.Join(dotGitPath, shaRelPath)
+		shaBuf, err := os.ReadFile(shaPath)
+		if err != nil {
+			return "", fmt.Errorf("git commit: branch checkout: read SHA file: %w", err)
+		}
+		sha = strings.TrimSuffix(string(shaBuf), "\n")
+	default:
+		return "", fmt.Errorf("git commit: invalid HEAD format: %q", head)
+	}
+
+	return sha, nil
 }

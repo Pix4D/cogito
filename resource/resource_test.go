@@ -6,13 +6,10 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/url"
 	"os"
-	"path/filepath"
 	"testing"
 
 	oc "github.com/cloudboss/ofcourse/ofcourse"
-	"github.com/gertd/wild"
 	"github.com/google/go-cmp/cmp"
 
 	"github.com/Pix4D/cogito/help"
@@ -257,91 +254,6 @@ Cogito SOURCE configuration:
 			}
 			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
 				t.Fatalf("error msg mismatch: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
-func TestGitGetCommitSuccess(t *testing.T) {
-	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
-	const defHead = "ref: refs/heads/a-branch-FIXME"
-
-	testCases := []struct {
-		name    string
-		dir     string
-		repoURL string
-		head    string
-	}{
-		{
-			name:    "happy path for branch checkout",
-			dir:     "a-repo",
-			repoURL: "dummy",
-			head:    defHead,
-		},
-		{
-			name:    "happy path for detached HEAD checkout",
-			dir:     "a-repo",
-			repoURL: "dummy",
-			head:    wantSHA,
-		},
-	}
-
-	for _, tc := range testCases {
-		dir := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
-
-		t.Run(tc.name, func(t *testing.T) {
-			sha, err := GitGetCommit(filepath.Join(dir, tc.dir))
-
-			if err != nil {
-				t.Fatalf("\nhave: %s\nwant: <no error>", err)
-			}
-			if sha != wantSHA {
-				t.Fatalf("ref: have: %s; want: %s", sha, wantSHA)
-			}
-		})
-	}
-}
-
-func TestGitGetCommitFailure(t *testing.T) {
-	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
-
-	testCases := []struct {
-		name        string
-		dir         string
-		repoURL     string
-		head        string
-		wantErrWild string // wildcard matching
-	}{
-		{
-			name:        "missing HEAD",
-			dir:         "not-a-repo",
-			repoURL:     "dummy",
-			head:        "dummy",
-			wantErrWild: `git commit: read HEAD: open */not-a-repo/.git/HEAD: no such file or directory`,
-		},
-		{
-			name:        "invalid format for HEAD",
-			dir:         "a-repo",
-			repoURL:     "dummyURL",
-			head:        "this is a bad head",
-			wantErrWild: `git commit: invalid HEAD format: "this is a bad head"`,
-		},
-	}
-
-	for _, tc := range testCases {
-		dir := setup(t, tc.dir, tc.repoURL, wantSHA, tc.head)
-
-		t.Run(tc.name, func(t *testing.T) {
-			_, err := GitGetCommit(filepath.Join(dir, tc.dir))
-
-			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrWild)
-			}
-
-			have := err.Error()
-			if !wild.Match(tc.wantErrWild, have, false) {
-				diff := cmp.Diff(tc.wantErrWild, have)
-				t.Fatalf("error msg wildcard mismatch: (-want +have):\n%s", diff)
 			}
 		})
 	}

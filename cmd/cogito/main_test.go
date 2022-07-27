@@ -60,7 +60,7 @@ func TestRunPutSmokeSuccess(t *testing.T) {
 }`)
 	var out bytes.Buffer
 	var logOut bytes.Buffer
-	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/a-repo",
+	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
 	err := run(in, &out, &logOut, []string{"out", inputDir})

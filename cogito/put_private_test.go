@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/Pix4D/cogito/testhelp"
-	"github.com/gertd/wild"
 	"github.com/google/go-cmp/cmp"
 	"gotest.tools/v3/assert"
 )
@@ -22,9 +21,9 @@ func TestProcessInputDirFailure(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
-			"https://github.com/foo", "dummySHA", "dummyHead")
+			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
 
-		err := processInputDir(filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
+		_, err := processInputDir(filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
 			"dummy-owner", "dummy-repo")
 
 		assert.ErrorContains(t, err, tc.wantErr)
@@ -41,23 +40,38 @@ func TestProcessInputDirFailure(t *testing.T) {
 			inputDir: "testdata/not-a-repo",
 			wantErr:  "parsing .git/config: open ",
 		},
+		{
+			name:     "git repo, but something wrong",
+			inputDir: "testdata/one-repo",
+			wantErr:  "git commit: branch checkout: read SHA file: open ",
+		},
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
-
 }
 
 func TestCollectInputDirs(t *testing.T) {
-	var testCases = []struct {
+	type testCase = struct {
 		name    string
 		dir     string
 		wantErr error
 		wantN   int
-	}{
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		dirs, err := collectInputDirs(tc.dir)
+		if !errors.Is(err, tc.wantErr) {
+			t.Errorf("sut(%v): error: have %v; want %v", tc.dir, err, tc.wantErr)
+		}
+		gotN := len(dirs)
+		if gotN != tc.wantN {
+			t.Errorf("sut(%v): len(dirs): have %v; want %v", tc.dir, gotN, tc.wantN)
+		}
+	}
+
+	var testCases = []testCase{
 		{
 			name:    "non existing base directory",
 			dir:     "non-existing",
@@ -79,87 +93,95 @@ func TestCollectInputDirs(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			dirs, err := collectInputDirs(tc.dir)
-			if !errors.Is(err, tc.wantErr) {
-				t.Errorf("sut(%v): error: have %v; want %v", tc.dir, err, tc.wantErr)
-			}
-			gotN := len(dirs)
-			if gotN != tc.wantN {
-				t.Errorf("sut(%v): len(dirs): have %v; want %v", tc.dir, gotN, tc.wantN)
-			}
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
 func TestCheckGitRepoDirSuccess(t *testing.T) {
-	const wantOwner = "smiling"
-	const wantRepo = "butterfly"
-
-	testCases := []struct {
+	type testCase struct {
 		name    string
 		dir     string // repoURL to put in file <dir>/.git/config
 		repoURL string
-	}{
+	}
+
+	const wantOwner = "smiling"
+	const wantRepo = "butterfly"
+
+	test := func(t *testing.T, tc testCase) {
+		inputDir := testhelp.MakeGitRepoFromTestdata(t, tc.dir, tc.repoURL,
+			"dummySHA", "dummyHead")
+
+		err := checkGitRepoDir(filepath.Join(inputDir, filepath.Base(tc.dir)),
+			wantOwner, wantRepo)
+
+		assert.NilError(t, err)
+	}
+
+	testCases := []testCase{
 		{
 			name:    "repo with good SSH remote",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: testhelp.SshRemote(wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTPS remote",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: testhelp.HttpsRemote(wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTP remote",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: testhelp.HttpRemote(wantOwner, wantRepo),
 		},
 		{
 			name:    "PR resource but with basic auth in URL (see PR #46)",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
 		},
 	}
 
 	for _, tc := range testCases {
-		inputDir := testhelp.MakeGitRepoFromTestdata(t, filepath.Join("testdata", tc.dir),
-			tc.repoURL, "dummySHA", "dummyHead")
-
-		t.Run(tc.name, func(t *testing.T) {
-			err := checkGitRepoDir(filepath.Join(inputDir, tc.dir), wantOwner, wantRepo)
-
-			assert.NilError(t, err)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
 func TestCheckGitRepoDirFailure(t *testing.T) {
-	const wantOwner = "smiling"
-	const wantRepo = "butterfly"
-
-	testCases := []struct {
+	type testCase struct {
 		name        string
 		dir         string
 		repoURL     string // repoURL to put in file <dir>/.git/config
 		wantErrWild string // wildcard matching
-	}{
+	}
+
+	const wantOwner = "smiling"
+	const wantRepo = "butterfly"
+
+	test := func(t *testing.T, tc testCase) {
+		inDir := testhelp.MakeGitRepoFromTestdata(t, tc.dir, tc.repoURL,
+			"dummySHA", "dummyHead")
+
+		err := checkGitRepoDir(filepath.Join(inDir, filepath.Base(tc.dir)),
+			wantOwner, wantRepo)
+
+		assert.ErrorContains(t, err, tc.wantErrWild)
+	}
+
+	testCases := []testCase{
 		{
 			name:        "dir is not a repo",
-			dir:         "not-a-repo",
+			dir:         "testdata/not-a-repo",
 			repoURL:     "dummyurl",
-			wantErrWild: `parsing .git/config: open */not-a-repo/.git/config: no such file or directory`,
+			wantErrWild: "parsing .git/config: open ",
 		},
 		{
 			name:        "bad file .git/config",
-			dir:         "repo-bad-git-config",
+			dir:         "testdata/repo-bad-git-config",
 			repoURL:     "dummyurl",
 			wantErrWild: `.git/config: key [remote "origin"]/url: not found`,
 		},
 		{
 			name:    "repo with unrelated HTTPS remote",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: testhelp.HttpsRemote("owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
@@ -174,7 +196,7 @@ Cogito SOURCE configuration:
 		},
 		{
 			name:    "repo with unrelated SSH remote or wrong source config",
-			dir:     "a-repo",
+			dir:     "testdata/one-repo/a-repo",
 			repoURL: testhelp.SshRemote("owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
@@ -189,29 +211,14 @@ Cogito SOURCE configuration:
 		},
 		{
 			name:        "invalid git pseudo URL in .git/config",
-			dir:         "a-repo",
+			dir:         "testdata/one-repo/a-repo",
 			repoURL:     "foo://bar",
 			wantErrWild: `.git/config: remote: invalid git URL foo://bar: invalid scheme: foo`,
 		},
 	}
 
 	for _, tc := range testCases {
-		inDir := testhelp.MakeGitRepoFromTestdata(t, filepath.Join("testdata", tc.dir),
-			tc.repoURL, "dummySHA", "dummyHead")
-
-		t.Run(tc.name, func(t *testing.T) {
-			err := checkGitRepoDir(filepath.Join(inDir, tc.dir), wantOwner, wantRepo)
-
-			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", tc.wantErrWild)
-			}
-
-			have := err.Error()
-			if !wild.Match(tc.wantErrWild, have, false) {
-				diff := cmp.Diff(tc.wantErrWild, have)
-				t.Fatalf("error msg wildcard mismatch: (-want +have):\n%s", diff)
-			}
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
@@ -324,5 +331,93 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 
 			assert.Error(t, err, tc.wantErr)
 		})
+	}
+}
+
+func TestGitGetCommitSuccess(t *testing.T) {
+	type testCase struct {
+		name    string
+		dir     string
+		repoURL string
+		head    string
+	}
+
+	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+	const defHead = "ref: refs/heads/a-branch-FIXME"
+
+	test := func(t *testing.T, tc testCase) {
+		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.dir, tc.repoURL, wantSHA, tc.head)
+
+		sha, err := getGitCommit(filepath.Join(tmpDir, filepath.Base(tc.dir)))
+
+		assert.NilError(t, err)
+		assert.Equal(t, sha, wantSHA)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "happy path for branch checkout",
+			dir:     "testdata/one-repo/a-repo",
+			repoURL: "dummy",
+			head:    defHead,
+		},
+		{
+			name:    "happy path for detached HEAD checkout",
+			dir:     "testdata/one-repo/a-repo",
+			repoURL: "dummy",
+			head:    wantSHA,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestGitGetCommitFailure(t *testing.T) {
+	type testCase struct {
+		name    string
+		dir     string
+		repoURL string
+		head    string
+		wantErr string
+	}
+
+	const wantSHA = "af6cd86e98eb1485f04d38b78d9532e916bbff02"
+
+	test := func(t *testing.T, tc testCase) {
+		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.dir, tc.repoURL, wantSHA, tc.head)
+
+		_, err := getGitCommit(filepath.Join(tmpDir, filepath.Base(tc.dir)))
+
+		assert.ErrorContains(t, err, tc.wantErr)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "missing HEAD",
+			dir:     "testdata/not-a-repo",
+			repoURL: "dummy",
+			head:    "dummy",
+			wantErr: "git commit: read HEAD: open ",
+		},
+		{
+			name:    "invalid format for HEAD",
+			dir:     "testdata/one-repo/a-repo",
+			repoURL: "dummyURL",
+			head:    "this is a bad head",
+			wantErr: `git commit: invalid HEAD format: "this is a bad head"`,
+		},
+		{
+			name:    "HEAD points to non-existent file",
+			dir:     "testdata/one-repo/a-repo",
+			repoURL: "dummyURL",
+			head:    "banana mango",
+			wantErr: "git commit: branch checkout: read SHA file: open ",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }

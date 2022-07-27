@@ -25,7 +25,7 @@ func TestPutSuccess(t *testing.T) {
 		in := bytes.NewReader(toJSON(t, tc.in))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
-		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/a-repo",
+		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/one-repo/a-repo",
 			testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
 		err := cogito.Put(log, in, &out, []string{inputDir})
@@ -59,9 +59,7 @@ func TestPutSuccess(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
@@ -113,9 +111,7 @@ func TestPutPipelineValidationFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 
 }
@@ -157,9 +153,7 @@ func TestPutProtocolFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
@@ -174,7 +168,7 @@ func TestPutSystemFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
 		log := hclog.NewNullLogger()
-		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/a-repo",
+		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/one-repo/a-repo",
 			testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
 
 		err := cogito.Put(log, tc.reader, tc.writer, []string{inputDir})
@@ -208,9 +202,7 @@ func TestPutSystemFailure(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
 
