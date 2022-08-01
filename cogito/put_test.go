@@ -22,7 +22,7 @@ func TestPutSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(toJSON(t, tc.in))
+		in := bytes.NewReader(testhelp.ToJSON(t, tc.in))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 		inputDir := testhelp.MakeGitRepoFromTestdata(t, "testdata/one-repo/a-repo",
@@ -32,7 +32,7 @@ func TestPutSuccess(t *testing.T) {
 
 		assert.NilError(t, err)
 		var have cogito.Output
-		fromJSON(t, out.Bytes(), &have)
+		testhelp.FromJSON(t, out.Bytes(), &have)
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
@@ -72,7 +72,7 @@ func TestPutPipelineValidationFailure(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		log := hclog.NewNullLogger()
-		in := bytes.NewReader(toJSON(t, tc.putInput))
+		in := bytes.NewReader(testhelp.ToJSON(t, tc.putInput))
 
 		err := cogito.Put(log, in, io.Discard, []string{"dummy-dir"})
 
@@ -96,7 +96,7 @@ func TestPutPipelineValidationFailure(t *testing.T) {
 		{
 			name: "invalid log_level",
 			putInput: cogito.PutInput{
-				Source: mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+				Source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			},
 			wantErr: "put: source: invalid log_level: pippo",
 		},
@@ -125,7 +125,7 @@ func TestPutProtocolFailure(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		log := hclog.NewNullLogger()
-		in := bytes.NewReader(toJSON(t, cogito.PutInput{
+		in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutInput{
 			Source: cogito.Source{
 				Owner:       "the-owner",
 				Repo:        "the-repo",
@@ -176,7 +176,7 @@ func TestPutSystemFailure(t *testing.T) {
 		assert.Error(t, err, tc.wantErr)
 	}
 
-	baseReader := bytes.NewReader(toJSON(t,
+	baseReader := bytes.NewReader(testhelp.ToJSON(t,
 		cogito.PutInput{
 			Source: cogito.Source{
 				Owner:       "the-owner",
@@ -196,7 +196,7 @@ func TestPutSystemFailure(t *testing.T) {
 		{
 			name:    "system write error",
 			reader:  baseReader,
-			writer:  &failingWriter{},
+			writer:  &testhelp.FailingWriter{},
 			wantErr: "put: test write error",
 		},
 	}

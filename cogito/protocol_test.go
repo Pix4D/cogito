@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
@@ -37,12 +38,12 @@ func TestSourceValidateLogSuccess(t *testing.T) {
 		{
 			name:   "apply defaults",
 			source: baseSource,
-			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
+			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
 		},
 		{
 			name:   "override defaults",
-			source: mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
-			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
+			source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
+			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
 		},
 	}
 
@@ -77,7 +78,7 @@ func TestSourceValidateLogFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:    "invalid log level",
-			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			wantErr: "source: invalid log_level: pippo",
 		},
 	}

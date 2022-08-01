@@ -8,6 +8,7 @@ import (
 	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
@@ -20,7 +21,7 @@ func TestCheckSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(toJSON(t, tc.in))
+		in := bytes.NewReader(testhelp.ToJSON(t, tc.in))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 
@@ -28,7 +29,7 @@ func TestCheckSuccess(t *testing.T) {
 
 		assert.NilError(t, err)
 		var have []cogito.Version
-		fromJSON(t, out.Bytes(), &have)
+		testhelp.FromJSON(t, out.Bytes(), &have)
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
@@ -76,7 +77,7 @@ func TestCheckFailure(t *testing.T) {
 		assert.Assert(t, tc.wantErr != "")
 		in := tc.reader
 		if in == nil {
-			in = bytes.NewReader(toJSON(t, cogito.CheckInput{Source: tc.source}))
+			in = bytes.NewReader(testhelp.ToJSON(t, cogito.CheckInput{Source: tc.source}))
 		}
 		log := hclog.NewNullLogger()
 
@@ -100,14 +101,14 @@ func TestCheckFailure(t *testing.T) {
 		},
 		{
 			name:    "validation failure: log",
-			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			writer:  io.Discard,
 			wantErr: "check: source: invalid log_level: pippo",
 		},
 		{
 			name:    "write error",
 			source:  baseSource,
-			writer:  &failingWriter{},
+			writer:  &testhelp.FailingWriter{},
 			wantErr: "check: test write error",
 		},
 		{
