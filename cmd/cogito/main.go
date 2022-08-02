@@ -9,6 +9,7 @@ import (
 	"path"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/github"
 	"github.com/hashicorp/go-hclog"
 )
 
@@ -38,7 +39,8 @@ func run(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
 	case "in":
 		return cogito.Get(log, in, out, args[1:])
 	case "out":
-		return cogito.Put(log, in, out, args[1:])
+		putter := cogito.NewPutter(github.API, log)
+		return cogito.Put(log, in, out, args[1:], putter)
 	default:
 		return fmt.Errorf(
 			"cogito: unexpected invocation as '%s'; want: one of 'check', 'in', 'out'; (command-line: %s)",
