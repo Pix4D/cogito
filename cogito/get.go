@@ -26,31 +26,31 @@ import (
 // This data is intended for public consumption and will be shown on the build page.
 //
 func Get(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
-	var gi GetInput
+	var request GetRequest
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&gi); err != nil {
+	if err := dec.Decode(&request); err != nil {
 		return fmt.Errorf("get: parsing JSON from stdin: %s", err)
 	}
-	gi.Env.Fill()
+	request.Env.Fill()
 
-	if err := gi.Source.ValidateLog(); err != nil {
+	if err := request.Source.ValidateLog(); err != nil {
 		return fmt.Errorf("get: %s", err)
 	}
 	log = log.Named("get")
-	log.SetLevel(hclog.LevelFromString(gi.Source.LogLevel))
+	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
 
 	log.Debug("started",
-		"source", gi.Source,
-		"version", gi.Version,
-		"environment", gi.Env,
+		"source", request.Source,
+		"version", request.Version,
+		"environment", request.Env,
 		"args", args)
 
-	if err := gi.Source.Validate(); err != nil {
+	if err := request.Source.Validate(); err != nil {
 		return fmt.Errorf("get: %s", err)
 	}
 
-	if gi.Version.Ref == "" {
+	if request.Version.Ref == "" {
 		return fmt.Errorf("get: empty 'version' field")
 	}
 
@@ -63,7 +63,7 @@ func Get(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	log.Debug("", "output-directory", args[0])
 
 	// Following the protocol for get, we return the same version as the requested one.
-	output := Output{Version: gi.Version}
+	output := Output{Version: request.Version}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
 		return fmt.Errorf("get: %s", err)

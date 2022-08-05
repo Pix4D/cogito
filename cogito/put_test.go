@@ -24,7 +24,7 @@ var (
 
 	baseParams = cogito.PutParams{State: cogito.StatePending}
 
-	basePutInput = cogito.PutInput{
+	basePutInput = cogito.PutRequest{
 		Source: baseSource,
 		Params: baseParams,
 	}
@@ -133,7 +133,7 @@ func TestPutterLoadConfigurationSuccess(t *testing.T) {
 func TestPutterLoadConfigurationFailure(t *testing.T) {
 	type testCase struct {
 		name     string
-		putInput cogito.PutInput
+		putInput cogito.PutRequest
 		args     []string
 		wantErr  string
 	}
@@ -150,19 +150,19 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "source: missing keys",
-			putInput: cogito.PutInput{Source: cogito.Source{}},
+			putInput: cogito.PutRequest{Source: cogito.Source{}},
 			wantErr:  "put: source: missing keys: owner, repo, access_token",
 		},
 		{
 			name: "source: invalid log_level",
-			putInput: cogito.PutInput{
+			putInput: cogito.PutRequest{
 				Source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			},
 			wantErr: "put: source: invalid log_level: pippo",
 		},
 		{
 			name: "params: invalid",
-			putInput: cogito.PutInput{
+			putInput: cogito.PutRequest{
 				Source: baseSource,
 				Params: cogito.PutParams{State: "burnt-pizza"},
 			},
@@ -171,7 +171,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 		},
 		{
 			name:     "arguments: missing input directory",
-			putInput: cogito.PutInput{Source: baseSource},
+			putInput: cogito.PutRequest{Source: baseSource},
 			args:     []string{},
 			wantErr:  "put: arguments: missing input directory",
 		},
@@ -210,7 +210,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 		"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 	putter.InputDir = filepath.Join(tmpDir, filepath.Base(inputDir))
-	putter.Pi = cogito.PutInput{
+	putter.Request = cogito.PutRequest{
 		Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
 	}
 
@@ -231,7 +231,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
 		putter := &cogito.ProdPutter{
 			InputDir: filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
-			Pi: cogito.PutInput{
+			Request: cogito.PutRequest{
 				Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
 			},
 		}
@@ -267,7 +267,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 func TestPutterProcessInputDirNonExisting(t *testing.T) {
 	putter := &cogito.ProdPutter{
 		InputDir: "non-existing",
-		Pi:       cogito.PutInput{Source: baseSource},
+		Request:  cogito.PutRequest{Source: baseSource},
 	}
 
 	err := putter.ProcessInputDir()
@@ -304,7 +304,7 @@ func TestPutterOutputFailure(t *testing.T) {
 
 func TestSinkGitHubCommitStatusSend(t *testing.T) {
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-	sink := cogito.GitHubCommitStatusSink{Pu: putter}
+	sink := cogito.GitHubCommitStatusSink{Putter: putter}
 
 	assert.NilError(t, sink.Send())
 }

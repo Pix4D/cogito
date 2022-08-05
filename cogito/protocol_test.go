@@ -213,7 +213,7 @@ func TestSourceParseRawFailure(t *testing.T) {
 }
 
 func TestSourcePrintLogRedaction(t *testing.T) {
-	input := cogito.Source{
+	source := cogito.Source{
 		Owner:         "the-owner",
 		Repo:          "the-repo",
 		AccessToken:   "sensitive-the-access-token",
@@ -230,7 +230,7 @@ gchat_webhook:  ***REDACTED***
 log_level:      debug
 context_prefix: the-prefix`
 
-		have := fmt.Sprint(input)
+		have := fmt.Sprint(source)
 
 		assert.Equal(t, have, want)
 	})
@@ -255,7 +255,7 @@ context_prefix: `
 		var logBuf bytes.Buffer
 		log := hclog.New(&hclog.LoggerOptions{Output: &logBuf})
 
-		log.Info("log test", "input", input)
+		log.Info("log test", "source", source)
 		have := logBuf.String()
 
 		assert.Assert(t, strings.Contains(have, "| access_token:   ***REDACTED***"))

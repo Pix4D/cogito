@@ -79,7 +79,7 @@ type ProdPutter struct {
 	log    hclog.Logger
 	gitRef string
 
-	Pi       PutInput
+	Request  PutRequest
 	InputDir string
 }
 
@@ -94,24 +94,24 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 func (pu *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&pu.Pi); err != nil {
+	if err := dec.Decode(&pu.Request); err != nil {
 		return fmt.Errorf("put: parsing JSON from stdin: %s", err)
 	}
-	pu.Pi.Env.Fill()
+	pu.Request.Env.Fill()
 
-	if err := pu.Pi.Source.ValidateLog(); err != nil {
+	if err := pu.Request.Source.ValidateLog(); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 	pu.log = pu.log.Named("put")
-	pu.log.SetLevel(hclog.LevelFromString(pu.Pi.Source.LogLevel))
+	pu.log.SetLevel(hclog.LevelFromString(pu.Request.Source.LogLevel))
 
 	pu.log.Debug("started",
-		"source", pu.Pi.Source,
-		"params", pu.Pi.Params,
-		"environment", pu.Pi.Env,
+		"source", pu.Request.Source,
+		"params", pu.Request.Params,
+		"environment", pu.Request.Env,
 		"args", args)
 
-	if err := pu.Pi.Source.Validate(); err != nil {
+	if err := pu.Request.Source.Validate(); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
@@ -122,7 +122,7 @@ func (pu *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	pu.InputDir = args[0]
 	pu.log.Debug("", "input-directory", pu.InputDir)
 
-	buildState := pu.Pi.Params.State
+	buildState := pu.Request.Params.State
 	if err := buildState.Validate(); err != nil {
 		return fmt.Errorf("put: params: %s", err)
 	}
@@ -139,13 +139,14 @@ func (pu *ProdPutter) ProcessInputDir() error {
 	if len(inputDirs) != 1 {
 		return fmt.Errorf(
 			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
-			len(inputDirs), inputDirs, pu.Pi.Source.Owner, pu.Pi.Source.Repo)
+			len(inputDirs), inputDirs, pu.Request.Source.Owner, pu.Request.Source.Repo)
 	}
 
 	// Since we require InputDir to contain only one directory, we assume that this
 	// directory is the git repo.
 	repoDir := filepath.Join(pu.InputDir, inputDirs[0])
-	if err := checkGitRepoDir(repoDir, pu.Pi.Source.Owner, pu.Pi.Source.Repo); err != nil {
+	if err := checkGitRepoDir(
+		repoDir, pu.Request.Source.Owner, pu.Request.Source.Repo); err != nil {
 		return err
 	}
 
@@ -161,7 +162,7 @@ func (pu *ProdPutter) ProcessInputDir() error {
 func (pu *ProdPutter) Sinks() []Sinker {
 	pu.log.Info("prodPutter: Sinks")
 	return []Sinker{
-		GitHubCommitStatusSink{Pu: pu},
+		GitHubCommitStatusSink{Putter: pu},
 	}
 }
 
@@ -170,7 +171,7 @@ func (pu *ProdPutter) Output(out io.Writer) error {
 	// For Cogito, the metadata contains the Concourse build state.
 	output := Output{
 		Version:  DummyVersion,
-		Metadata: []Metadata{{Name: KeyState, Value: string(pu.Pi.Params.State)}},
+		Metadata: []Metadata{{Name: KeyState, Value: string(pu.Request.Params.State)}},
 	}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
@@ -184,13 +185,13 @@ func (pu *ProdPutter) Output(out io.Writer) error {
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
 type GitHubCommitStatusSink struct {
-	Pu *ProdPutter
+	Putter *ProdPutter
 }
 
 func (cs GitHubCommitStatusSink) Send() error {
-	cs.Pu.log.Info("GitHubCommitStatusSink: Send")
+	cs.Putter.log.Info("GitHubCommitStatusSink: Send")
 
-	// return GhCommitStatusSink(cs.Pu.ghAPI, cs.Pu.log, cs.Pu.Pi, cs.Pu.gitRef)
+	// return GhCommitStatusSink(cs.Putter.ghAPI, cs.Putter.log, cs.Putter.Request, cs.Putter.gitRef)
 	return nil // FIXME implement me!
 }
 

@@ -16,12 +16,12 @@ import (
 func TestCheckSuccess(t *testing.T) {
 	type testCase struct {
 		name    string
-		in      cogito.CheckInput
+		request cogito.CheckRequest
 		wantOut []cogito.Version
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(testhelp.ToJSON(t, tc.in))
+		in := bytes.NewReader(testhelp.ToJSON(t, tc.request))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 
@@ -42,14 +42,14 @@ func TestCheckSuccess(t *testing.T) {
 	testCases := []testCase{
 		{
 			name: "first request (Concourse omits the version field)",
-			in: cogito.CheckInput{
+			request: cogito.CheckRequest{
 				Source: baseSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
 		{
 			name: "subsequent requests (Concourse adds the version field)",
-			in: cogito.CheckInput{
+			request: cogito.CheckRequest{
 				Source:  baseSource,
 				Version: cogito.Version{Ref: "dummy"},
 			},
@@ -67,7 +67,7 @@ func TestCheckSuccess(t *testing.T) {
 func TestCheckFailure(t *testing.T) {
 	type testCase struct {
 		name    string
-		source  cogito.Source // will be embedded in cogito.CheckInput
+		source  cogito.Source // will be embedded in cogito.CheckRequest
 		reader  io.Reader     // if set, will override field `source`.
 		writer  io.Writer
 		wantErr string
@@ -77,7 +77,7 @@ func TestCheckFailure(t *testing.T) {
 		assert.Assert(t, tc.wantErr != "")
 		in := tc.reader
 		if in == nil {
-			in = bytes.NewReader(testhelp.ToJSON(t, cogito.CheckInput{Source: tc.source}))
+			in = bytes.NewReader(testhelp.ToJSON(t, cogito.CheckRequest{Source: tc.source}))
 		}
 		log := hclog.NewNullLogger()
 

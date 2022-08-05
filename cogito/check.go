@@ -19,32 +19,32 @@ import (
 // the requested version if it is still valid.
 //
 func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
-	var ci CheckInput
+	var request CheckRequest
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&ci); err != nil {
+	if err := dec.Decode(&request); err != nil {
 		return fmt.Errorf("check: parsing JSON from stdin: %s", err)
 	}
-	ci.Env.Fill()
+	request.Env.Fill()
 
-	if err := ci.Source.ValidateLog(); err != nil {
+	if err := request.Source.ValidateLog(); err != nil {
 		return fmt.Errorf("check: %s", err)
 	}
 	log = log.Named("check")
-	log.SetLevel(hclog.LevelFromString(ci.Source.LogLevel))
+	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
 
 	log.Debug("started",
-		"source", ci.Source,
-		"version", ci.Version,
-		"environment", ci.Env,
+		"source", request.Source,
+		"version", request.Version,
+		"environment", request.Env,
 		"args", args)
 
-	if err := ci.Source.Validate(); err != nil {
+	if err := request.Source.Validate(); err != nil {
 		return fmt.Errorf("check: %s", err)
 	}
 
-	// We don't validate the presence of field ci.Version because Concourse will omit it
-	// from the _first_ request of the check step.
+	// We don't validate the presence of field request.Version because Concourse will
+	// omit it from the _first_ request of the check step.
 
 	// Here a normal resource would fetch a list of the latest versions.
 	// In this resource, we do nothing.
