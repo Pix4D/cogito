@@ -177,7 +177,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 			name: "non existing repo: Not Found",
 			repo: "non-existing-really",
 			wantErr: `Failed to add state "success" for commit 32e4b4f: 404 Not Found
-Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/reference/repos#create-a-commit-status"}
+Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: one of the following happened:
     1. The repo https://github.com/pix4d/non-existing-really doesn't exist
     2. The user who issued the token doesn't have write access to the repo
@@ -190,7 +190,7 @@ OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
 			name: "non existing SHA: Unprocessable Entity",
 			sha:  "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
 			wantErr: `Failed to add state "success" for commit e576e3a: 422 Unprocessable Entity
-Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/reference/repos#create-a-commit-status"}
+Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: none
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822
 OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
