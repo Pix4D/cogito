@@ -25,8 +25,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.46.0
-  GOLINES_VERSION: v0.9.0
+  GOLANGCI_VERSION: v1.48.0
+  TPARSE_VERSION: v0.11.1
 
 tasks:
 
@@ -34,17 +34,12 @@ tasks:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
+      - go install github.com/mfridman/tparse@{{.TPARSE_VERSION}}
 
   lint:
     desc: Lint the code.
     cmds:
       - golangci-lint run ./...
-
-  lint:linelength:
-    desc: Enforce max line length. Use the tool output only as a hint, sometimes it makes wrong decisions.
-    cmds:
-      - golines --max-len=99 --write-output .
 
   test:env:
     desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
@@ -63,12 +58,12 @@ tasks:
     desc: Run the unit tests.
     cmds:
       # One day I will understand how to use -coverpkg=./... :-(
-      - go test -count=1 -short -coverprofile=coverage.out ./...
+      - go test -count=1 -short -coverprofile=coverage.out -json ./... | tparse -skip
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      - go test -count=1 -coverprofile=coverage.out ./...
+      - go test -count=1 -coverprofile=coverage.out -json ./... | tparse -skip
     env: *test-env
 
   test:smoke:
