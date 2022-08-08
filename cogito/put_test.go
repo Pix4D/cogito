@@ -301,10 +301,3 @@ func TestPutterOutputFailure(t *testing.T) {
 
 	assert.Error(t, err, "put: test write error")
 }
-
-func TestSinkGitHubCommitStatusSend(t *testing.T) {
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-	sink := cogito.GitHubCommitStatusSink{Putter: putter}
-
-	assert.NilError(t, sink.Send())
-}

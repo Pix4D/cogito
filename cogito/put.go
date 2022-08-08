@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -75,10 +76,9 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Pu
 // ProdPutter is an implementation of a [Putter] for the Cogito resource.
 // Use [NewPutter] to create an instance.
 type ProdPutter struct {
-	ghAPI  string
-	log    hclog.Logger
-	gitRef string
-
+	ghAPI    string
+	log      hclog.Logger
+	gitRef   string
 	Request  PutRequest
 	InputDir string
 }
@@ -160,9 +160,13 @@ func (pu *ProdPutter) ProcessInputDir() error {
 }
 
 func (pu *ProdPutter) Sinks() []Sinker {
-	pu.log.Info("prodPutter: Sinks")
 	return []Sinker{
-		GitHubCommitStatusSink{Putter: pu},
+		GitHubCommitStatusSink{
+			Log:     pu.log,
+			GhAPI:   pu.ghAPI,
+			GitRef:  pu.gitRef,
+			Request: pu.Request,
+		},
 	}
 }
 
@@ -181,18 +185,6 @@ func (pu *ProdPutter) Output(out io.Writer) error {
 	pu.log.Debug("success", "output", output)
 
 	return nil
-}
-
-// GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
-type GitHubCommitStatusSink struct {
-	Putter *ProdPutter
-}
-
-func (cs GitHubCommitStatusSink) Send() error {
-	cs.Putter.log.Info("GitHubCommitStatusSink: Send")
-
-	// return GhCommitStatusSink(cs.Putter.ghAPI, cs.Putter.log, cs.Putter.Request, cs.Putter.gitRef)
-	return nil // FIXME implement me!
 }
 
 // multiErrString takes a slice of errors and returns a formatted string.
@@ -284,10 +276,10 @@ type gitURL struct {
 // Github naming conventions.
 //
 // It supports the following types of git pseudo URLs:
-// - ssh:   git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
-//          ssh://git@github.com/Pix4D/cogito.git
-// - https: https://github.com/Pix4D/cogito.git
-// - http:  http://github.com/Pix4D/cogito.git
+//   - ssh:   git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
+//     ssh://git@github.com/Pix4D/cogito.git
+//   - https: https://github.com/Pix4D/cogito.git
+//   - http:  http://github.com/Pix4D/cogito.git
 func parseGitPseudoURL(rawURL string) (gitURL, error) {
 	workURL := rawURL
 	// If ssh pseudo URL, we need to massage the rawURL ourselves :-(
@@ -370,4 +362,24 @@ func getGitCommit(repoPath string) (string, error) {
 	}
 
 	return sha, nil
+}
+
+// concourseBuildURL builds a URL pointing to a specific build of a job in a pipeline.
+func concourseBuildURL(env Environment) string {
+	// Example:
+	// https://ci.example.com/teams/main/pipelines/cogito/jobs/hello/builds/25
+	buildURL := env.AtcExternalUrl + path.Join(
+		"/teams", env.BuildTeamName,
+		"pipelines", env.BuildPipelineName,
+		"jobs", env.BuildJobName,
+		"builds", env.BuildName)
+
+	// Example:
+	// BUILD_PIPELINE_INSTANCE_VARS: {"branch":"stable"}
+	// https://ci.example.com/teams/main/pipelines/cogito/jobs/autocat/builds/3?vars=%7B%22branch%22%3A%22stable%22%7D
+	if env.BuildPipelineInstanceVars != "" {
+		buildURL += fmt.Sprintf("?vars=%s", url.QueryEscape(env.BuildPipelineInstanceVars))
+	}
+
+	return buildURL
 }

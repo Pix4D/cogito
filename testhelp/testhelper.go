@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -35,24 +34,26 @@ func IdentityRenamer(name string) string {
 // CopyDir recursively copies src directory below dst directory, with optional
 // transformations.
 // It performs the following transformations:
-// - Renames any directory with renamer.
-// - If templatedata is not empty, will consider each file ending with ".template" as a Go
-//   template.
-// - If a file name contains basic Go template formatting (eg: `foo-{{.bar}}.template`), the
-//   file will be renamed accordingly.
+//   - Renames any directory with renamer.
+//   - If templatedata is not empty, will consider each file ending with ".template" as a Go
+//     template.
+//   - If a file name contains basic Go template formatting (eg: `foo-{{.bar}}.template`), the
+//     file will be renamed accordingly.
 //
 // It will fail if the dst directory doesn't exist.
 //
 // For example, if src directory is `foo`:
 // foo
 // └── dot.git
-//     └── config
+//
+//	└── config
 //
 // and dst directory is `bar`, src will be copied as:
 // bar
 // └── foo
-//     └── .git        <= dot renamed
-//         └── config
+//
+//	└── .git        <= dot renamed
+//	    └── config
 func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateData) error {
 	for _, dir := range []string{dst, src} {
 		fi, err := os.Stat(dir)
@@ -70,7 +71,7 @@ func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateDa
 		return fmt.Errorf("making src dir: %w", err)
 	}
 
-	srcEntries, err := ioutil.ReadDir(src)
+	srcEntries, err := os.ReadDir(src)
 	if err != nil {
 		return err
 	}
@@ -126,7 +127,7 @@ func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 		_, err = io.Copy(dstFile, srcFile)
 		return err
 	}
-	buf, err := ioutil.ReadAll(srcFile)
+	buf, err := io.ReadAll(srcFile)
 	if err != nil {
 		return err
 	}

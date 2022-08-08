@@ -32,6 +32,13 @@ func run(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
 	})
 	log.Info(cogito.BuildInfo())
 
+	ghAPI := os.Getenv("COGITO_GITHUB_API")
+	if ghAPI != "" {
+		log.Info("endpoint override", "COGITO_GITHUB_API", ghAPI)
+	} else {
+		ghAPI = github.API
+	}
+
 	command := path.Base(args[0])
 	switch command {
 	case "check":
@@ -39,7 +46,7 @@ func run(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
 	case "in":
 		return cogito.Get(log, in, out, args[1:])
 	case "out":
-		putter := cogito.NewPutter(github.API, log)
+		putter := cogito.NewPutter(ghAPI, log)
 		return cogito.Put(log, in, out, args[1:], putter)
 	default:
 		return fmt.Errorf(

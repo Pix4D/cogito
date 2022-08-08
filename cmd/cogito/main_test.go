@@ -3,14 +3,18 @@ package main
 import (
 	"bytes"
 	"io"
+	"net/url"
+	"path"
 	"strings"
 	"testing"
 
+	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
 )
 
-func TestRunCheckSmokeSuccess(t *testing.T) {
+func TestRunCheckSuccess(t *testing.T) {
 	in := strings.NewReader(`
 {
   "source": {
@@ -28,7 +32,7 @@ func TestRunCheckSmokeSuccess(t *testing.T) {
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
 
-func TestRunGetSmokeSuccess(t *testing.T) {
+func TestRunGetSuccess(t *testing.T) {
 	in := strings.NewReader(`
 {
   "source": {
@@ -47,8 +51,12 @@ func TestRunGetSmokeSuccess(t *testing.T) {
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
 
-func TestRunPutSmokeIntegrationSuccess(t *testing.T) {
-	t.Skip("FIXME REQUIRES SECRETS") // FIXME
+func TestRunPutSuccess(t *testing.T) {
+	wantState := cogito.StatePending
+	wantGitRef := "dummyHead"
+	var ghReq github.AddRequest
+	var URL *url.URL
+	ts := testhelp.GhCommitStatusTestServer(&ghReq, &URL)
 	in := strings.NewReader(`
 {
   "source": {
@@ -62,14 +70,45 @@ func TestRunPutSmokeIntegrationSuccess(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", "dummyHead")
+		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", wantGitRef)
+	t.Setenv("COGITO_GITHUB_API", ts.URL)
+
+	err := run(in, &out, &logOut, []string{"out", inputDir})
+
+	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+	ts.Close() // Avoid races before following asserts.
+	assert.Equal(t, ghReq.State, string(wantState), "", ghReq.State, string(wantState))
+	assert.Equal(t, path.Base(URL.Path), wantGitRef)
+}
+
+func TestRunPutSuccessIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test")
+	}
+
+	cfg := testhelp.SkipTestIfNoEnvVars(t)
+	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
+		Source: cogito.Source{
+			Owner:       cfg.Owner,
+			Repo:        cfg.Repo,
+			AccessToken: cfg.Token,
+			LogLevel:    "debug",
+		},
+		Params: cogito.PutParams{State: cogito.StatePending},
+	}))
+	var out bytes.Buffer
+	var logOut bytes.Buffer
+	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
+		testhelp.HttpsRemote(cfg.Owner, cfg.Repo), cfg.SHA, "ref: refs/heads/a-branch-FIXME")
+	t.Setenv("BUILD_JOB_NAME", "TestRunPutSuccessIntegration")
+	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
 
 	err := run(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
 
-func TestRunSmokeFailure(t *testing.T) {
+func TestRunFailure(t *testing.T) {
 	type testCase struct {
 		name    string
 		args    []string
