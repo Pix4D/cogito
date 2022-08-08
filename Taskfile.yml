@@ -124,7 +124,6 @@ tasks:
     dir: bin
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/cogito
-      # FIXME - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
       - ln -sf cogito check
       - ln -sf cogito in
       - ln -sf cogito out
