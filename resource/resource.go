@@ -6,19 +6,19 @@ package resource
 import (
 	"fmt"
 
-	"github.com/Pix4D/cogito/github"
 	oc "github.com/cloudboss/ofcourse/ofcourse"
 )
 
 const (
-	accessTokenKey  = "access_token"
 	gchatWebhookKey = "gchat_webhook"
 
-	contextKey       = "context"
-	contextPrefixKey = "context_prefix"
-	ownerKey         = "owner"
-	repoKey          = "repo"
-	stateKey         = "state"
+	stateKey = "state"
+
+	abortState   = "abort"
+	errorState   = "error"
+	failureState = "failure"
+	pendingState = "pending"
+	successState = "success"
 )
 
 var (
@@ -28,26 +28,6 @@ var (
 
 // Resource satisfies the ofcourse.Resource interface.
 type Resource struct {
-	githubAPI string
-}
-
-// New returns a new Resource object using the default GitHub API endpoint.
-func New() *Resource {
-	return NewWith(github.API)
-}
-
-// NewWith returns a new Resource object with a custom Github API endpoint.
-//
-// Can be used by tests to "mock" with net/http/httptest:
-//   ts := httptest.NewServer(...)
-//   defer func() {
-// 	     ts.Close()
-//   }()
-//   res := resource.newWith(ts.URL)
-func NewWith(githubAPI string) *Resource {
-	return &Resource{
-		githubAPI: githubAPI,
-	}
 }
 
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.
@@ -67,16 +47,10 @@ func (r *Resource) Out(
 	var sinkErrors = map[string]error{}
 
 	//
-	// Post the status to GitHub Commit status sink.
-	//
-	err = gitHubCommitStatus(source, params, env, log, gitRef, r.githubAPI)
-	if err != nil {
-		sinkErrors["github commit status"] = err
-	}
-	//
 	// Post the status to chat sink.
 	//
-	err = sendToChat(source, params, env, log, gitRef)
+	gitRef := "dummy"
+	err := sendToChat(source, params, env, log, gitRef)
 	if err != nil {
 		sinkErrors["google chat"] = err
 	}
@@ -91,5 +65,5 @@ func (r *Resource) Out(
 	metadata := oc.Metadata{}
 	metadata = append(metadata, oc.NameVal{Name: stateKey, Value: state})
 
-	return dummyVersion, metadata, nil
+	return oc.Version{}, metadata, nil
 }

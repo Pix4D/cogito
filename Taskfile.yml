@@ -63,14 +63,12 @@ tasks:
     desc: Run the unit tests.
     cmds:
       # One day I will understand how to use -coverpkg=./... :-(
-      # FIXME - go test -count=1 -short -coverprofile=coverage.out ./...
-      - go test -count=1 -short -coverprofile=coverage.out ./cogito ./cmd/cogito
+      - go test -count=1 -short -coverprofile=coverage.out ./...
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      # FIXME - go test -count=1 -coverprofile=coverage.out ./...
-      - go test -count=1 -short -coverprofile=coverage.out ./cogito ./cmd/cogito
+      - go test -count=1 -coverprofile=coverage.out ./...
     env: *test-env
 
   test:smoke:

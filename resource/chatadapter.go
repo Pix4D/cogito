@@ -25,7 +25,8 @@ func sendToChat(
 	team := env.Get("BUILD_TEAM_NAME")
 	buildN := env.Get("BUILD_NAME")
 	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
+	// buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
+	buildURL := fmt.Sprintf("FIXME-%s-%s-%s-%s", atc, team, buildN, instanceVars)
 
 	webhook, ok := source[gchatWebhookKey].(string)
 	if !ok || webhook == "" {

@@ -19,7 +19,7 @@ RUN go mod download
 #
 COPY . .
 
-RUN go test ./cogito ./cmd/cogito
+RUN go test ./...
 RUN go install \
         -ldflags "-w -X 'github.com/Pix4D/cogito/cogito.buildinfo=$BUILD_INFO'" \
         ./cmd/cogito
