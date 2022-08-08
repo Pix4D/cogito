@@ -72,10 +72,20 @@ tasks:
       - task: build
       - task: build:copydir
       - task: test:buildinfo
+      - task: test:smoke:check
+      - task: test:smoke:get
+      #- task: test:smoke:put
+
+  test:smoke:check:
+    cmds:
       - echo '{{.SMOKE_INPUT}}' | ./bin/check
-      - echo
+
+  test:smoke:get:
+    cmds:
       - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
-      - echo
+
+  test:smoke:put:
+    cmds:
       - rm -rf /tmp/cogito-test
       - mkdir -p /tmp/cogito-test
       - >
@@ -83,7 +93,6 @@ tasks:
         --template repo_url=https://github.com/foo/bar head=dummyHead
         branch_name=dummyBranch commit_sha=dummySha
       - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test
-      - echo
     vars:
       PUT_INPUT: >
         {
