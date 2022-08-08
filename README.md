@@ -13,7 +13,6 @@ Written in Go, it has the following characteristics:
 - Supports Concourse 7.4 [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
 - Helpful error messages when something goes wrong with the GitHub API.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
-- Boilerplate code generated with [ofcourse](https://github.com/cloudboss/ofcourse).
 
 [Concourse resource]: https://concourse-ci.org/resources.html
 [René Descartes]: https://en.wikipedia.org/wiki/Ren%C3%A9_Descartes
