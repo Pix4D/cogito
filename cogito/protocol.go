@@ -17,7 +17,6 @@ var DummyVersion = Version{Ref: "dummy"}
 // (Source and Version) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-check
-//
 type CheckRequest struct {
 	Source Source `json:"source"`
 	// Concourse will omit field Version from the first request.
@@ -29,7 +28,6 @@ type CheckRequest struct {
 // (Source and Version) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-in
-//
 type GetRequest struct {
 	Source  Source  `json:"source"`
 	Version Version `json:"version"`
@@ -43,7 +41,6 @@ type GetRequest struct {
 // (Source and Params) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-out
-//
 type PutRequest struct {
 	Source Source    `json:"source"`
 	Params PutParams `json:"params"`
@@ -191,14 +188,13 @@ type Metadata struct {
 // BuildState is a pseudo-enum representing the valid values of PutParams.State
 type BuildState string
 
+// NOTE: this list must be kept in sync with method Validate().
 const (
-	// NOTE: this list must be kept in sync with method Validate().
-
 	StateAbort   BuildState = "abort"
-	StateError              = "error"
-	StateFailure            = "failure"
-	StatePending            = "pending"
-	StateSuccess            = "success"
+	StateError   BuildState = "error"
+	StateFailure BuildState = "failure"
+	StatePending BuildState = "pending"
+	StateSuccess BuildState = "success"
 )
 
 const KeyState = "state"
