@@ -58,7 +58,8 @@ func (r *Resource) Out(
 	// We treat all sinks as equal: it is enough for one to fail to cause the put
 	// operation to fail.
 	if len(sinkErrors) > 0 {
-		return nil, nil, fmt.Errorf("out: %s", stringify(sinkErrors))
+		// return nil, nil, fmt.Errorf("out: %s", stringify(sinkErrors))
+		return nil, nil, fmt.Errorf("FIXME out: %s", sinkErrors)
 	}
 
 	state, _ := params[stateKey].(string)
