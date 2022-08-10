@@ -167,6 +167,11 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
+		GoogleChatSink{
+			Log:     putter.log.Named("gChat"),
+			GitRef:  putter.gitRef,
+			Request: putter.Request,
+		},
 	}
 }
 

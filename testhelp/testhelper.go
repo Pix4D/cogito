@@ -173,6 +173,22 @@ func GitHubSecretsOrFail(t *testing.T) GhTestCfg {
 	}
 }
 
+// GChatTestCfg contains the secrets needed to run integration tests against the
+// Google Chat API.
+type GChatTestCfg struct {
+	Hook string
+}
+
+// GoogleChatSecretsOrFail returns the secrets needed to run integration tests against the
+// Google Chat API. If the secrets are missing, GoogleChatSecretsOrFail fails the test.
+func GoogleChatSecretsOrFail(t *testing.T) GChatTestCfg {
+	t.Helper()
+
+	return GChatTestCfg{
+		Hook: getEnvOrFail(t, "COGITO_TEST_GCHAT_HOOK"),
+	}
+}
+
 // getEnvOrFail returns the value of environment variable key. If key is missing,
 // getEnvOrFail fails the test.
 func getEnvOrFail(t *testing.T, key string) string {

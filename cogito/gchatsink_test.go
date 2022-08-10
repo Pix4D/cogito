@@ -1,65 +1,102 @@
-package cogito
+package cogito_test
 
 import (
-	"context"
-	"os"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"testing"
-	"time"
+
+	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/googlechat"
+	"github.com/Pix4D/cogito/testhelp"
+	"github.com/hashicorp/go-hclog"
+	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
-func TestChatAdapterMock(t *testing.T) {
+func TestSinkGoogleChatSendSuccess(t *testing.T) {
+	wantGitRef := "deadbeef"
+	wantState := cogito.StateError // We want a state that is sent by default
+	var message googlechat.BasicMessage
+	var URL *url.URL
+	ts := testhelp.SpyHttpServer(&message, &URL, http.StatusOK)
+	sink := cogito.GoogleChatSink{
+		Log:    hclog.NewNullLogger(),
+		GitRef: wantGitRef,
+		Request: cogito.PutRequest{
+			Source: cogito.Source{GChatWebHook: ts.URL},
+			Params: cogito.PutParams{State: wantState},
+			Env: cogito.Environment{
+				BuildPipelineName: "the-test-pipeline",
+				BuildJobName:      "the-test-job",
+			},
+		},
+	}
+
+	err := sink.Send()
+
+	assert.NilError(t, err)
+	ts.Close() // Avoid races before the following asserts.
+	assert.Assert(t, cmp.Contains(message.Text, "*state* 🟠 error"))
+	assert.Assert(t, cmp.Contains(message.Text, "*pipeline* the-test-pipeline"))
+	assert.Assert(t, cmp.Contains(message.Text, "*job* the-test-job"))
+	assert.Assert(t, cmp.Contains(URL.String(), "/?threadKey=the-test-pipeline+deadbeef"))
 }
 
-func TestChatAdapterIntegration(t *testing.T) {
-	gchatUrl := os.Getenv("COGITO_TEST_GCHAT_HOOK")
-	if len(gchatUrl) == 0 {
-		t.Skip("Skipping integration test. See CONTRIBUTING for how to enable.")
+func TestSinkGoogleChatDoesNotSendSuccess(t *testing.T) {
+	type testCase struct {
+		name    string
+		request cogito.PutRequest
 	}
-	gitRef := "32e4b4f91b"
-	job := "peel"
 
-	// We send multiple messages to better see the UI in GChat and run the subtests
-	// in parallel for speed.
-	testCases := []struct {
-		pipeline string
-		state    string
-	}{
+	test := func(t *testing.T, tc testCase) {
+		sink := cogito.GoogleChatSink{
+			Log:     hclog.NewNullLogger(),
+			Request: tc.request,
+		}
+
+		err := sink.Send()
+
+		assert.NilError(t, err)
+	}
+
+	testCases := []testCase{
 		{
-			pipeline: "coconut",
-			state:    abortState,
+			name: "feature not enabled",
+			request: cogito.PutRequest{
+				Source: cogito.Source{GChatWebHook: ""},            // empty
+				Params: cogito.PutParams{State: cogito.StateError}, // sent by default
+			},
 		},
 		{
-			pipeline: "coconut",
-			state:    errorState,
-		},
-		{
-			pipeline: "coconut",
-			state:    failureState,
-		},
-		{
-			pipeline: "coconut",
-			state:    pendingState,
-		},
-		{
-			pipeline: "coconut",
-			state:    successState,
+			name: "state not in enabled states",
+			request: cogito.PutRequest{
+				Source: cogito.Source{GChatWebHook: "https://cogito.invalid"},
+				Params: cogito.PutParams{State: cogito.StatePending}, // not sent by default
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		tc := tc // Capture range variable, needed for t.Parallel to work correctly.
-		t.Run(tc.pipeline, func(t *testing.T) {
-			t.Parallel()
-			buildURL := "https://cogito.invalid/teams/TEAM/pipelines/PIPELINE/jobs/JOB/builds/42"
-			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-			defer cancel()
-
-			err := gChatMessage(ctx, gchatUrl, gitRef, tc.pipeline, job, tc.state,
-				buildURL)
-
-			if err != nil {
-				t.Fatalf("have: %s; want: <no error>", err)
-			}
-		})
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
+}
+
+func TestSinkGoogleChatSendFailure(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.WriteHeader(http.StatusTeapot)
+		}))
+	sink := cogito.GoogleChatSink{
+		Log: hclog.NewNullLogger(),
+		Request: cogito.PutRequest{
+			Source: cogito.Source{GChatWebHook: ts.URL},
+			Params: cogito.PutParams{State: cogito.StateError}, // sent by default
+		},
+	}
+
+	err := sink.Send()
+
+	assert.ErrorContains(t, err, "GoogleChatSink: TextMessage: status: 418 I'm a teapot")
+	ts.Close()
 }

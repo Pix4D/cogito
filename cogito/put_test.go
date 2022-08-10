@@ -281,9 +281,11 @@ func TestPutterSinks(t *testing.T) {
 
 	sinks := putter.Sinks()
 
-	assert.Assert(t, len(sinks) == 1)
-	_, ok := sinks[0].(cogito.GitHubCommitStatusSink)
-	assert.Assert(t, ok)
+	assert.Assert(t, len(sinks) == 2)
+	_, ok1 := sinks[0].(cogito.GitHubCommitStatusSink)
+	assert.Assert(t, ok1)
+	_, ok2 := sinks[1].(cogito.GoogleChatSink)
+	assert.Assert(t, ok2)
 }
 
 func TestPutterOutputSuccess(t *testing.T) {

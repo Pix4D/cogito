@@ -6,53 +6,62 @@ import (
 	"time"
 
 	"github.com/Pix4D/cogito/googlechat"
-	oc "github.com/cloudboss/ofcourse/ofcourse"
+	"github.com/hashicorp/go-hclog"
 )
 
-// sendToChat sends a message to the chat sink if the chat feature is enabled and the
-// state is configured to do so.
-func sendToChat(
-	source oc.Source,
-	params oc.Params,
-	env oc.Environment,
-	log *oc.Logger,
-	gitRef string,
-) error {
-	state, _ := params[stateKey].(string)
-	pipeline := env.Get("BUILD_PIPELINE_NAME")
-	job := env.Get("BUILD_JOB_NAME")
-	atc := env.Get("ATC_EXTERNAL_URL")
-	team := env.Get("BUILD_TEAM_NAME")
-	buildN := env.Get("BUILD_NAME")
-	instanceVars := env.Get("BUILD_PIPELINE_INSTANCE_VARS")
-	// buildURL := concourseBuildURL(atc, team, pipeline, job, buildN, instanceVars)
-	buildURL := fmt.Sprintf("FIXME-%s-%s-%s-%s", atc, team, buildN, instanceVars)
+// TODO FIND A BETTER PLACE?
+var (
+	// States that will trigger a chat notification by default.
+	statesToNotifyChat = []BuildState{StateAbort, StateError, StateFailure}
+)
 
-	webhook, ok := source[gchatWebhookKey].(string)
-	if !ok || webhook == "" {
-		log.Debugf("not sending to chat; reason: feature not enabled")
+// GoogleChatSink is an implementation of [Sinker] for the Cogito resource.
+type GoogleChatSink struct {
+	Log     hclog.Logger
+	GitRef  string
+	Request PutRequest
+}
+
+// Send sends a message to Google Chat if the configuration matches.
+func (sink GoogleChatSink) Send() error {
+	sink.Log.Debug("send: started")
+	defer sink.Log.Debug("send: finished")
+
+	if sink.Request.Source.GChatWebHook == "" {
+		sink.Log.Debug("not sending to chat",
+			"reason", "feature not enabled")
 		return nil
 	}
 
+	state := sink.Request.Params.State
 	if !shouldSendToChat(state) {
-		log.Debugf("not sending to chat; reason: state %s not in enabled states", state)
+		sink.Log.Debug("not sending to chat",
+			"reason", "state not in enabled states", "state", state)
 		return nil
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := gChatMessage(ctx, webhook, gitRef, pipeline, job, state, buildURL)
-	if err != nil {
-		return err
-	}
-	log.Infof("Chat state %s for %s/%s posted successfully", state, pipeline, job)
+	pipeline := sink.Request.Env.BuildPipelineName
+	job := sink.Request.Env.BuildJobName
+	buildURL := concourseBuildURL(sink.Request.Env)
 
+	threadKey := fmt.Sprintf("%s %s", pipeline, sink.GitRef)
+	text := gChatFormatText(sink.GitRef, pipeline, job, state, buildURL)
+
+	if err := googlechat.TextMessage(ctx, sink.Request.Source.GChatWebHook, threadKey,
+		text); err != nil {
+		return fmt.Errorf("GoogleChatSink: %s", err)
+	}
+
+	sink.Log.Info("state posted successfully to chat",
+		"state", state, "pipeline", pipeline, "job", job, "buildURL", buildURL)
 	return nil
 }
 
 // shouldSendToChat returns true if the state is configured to do so.
-func shouldSendToChat(state string) bool {
+func shouldSendToChat(state BuildState) bool {
 	for _, x := range statesToNotifyChat {
 		if state == x {
 			return true
@@ -61,46 +70,32 @@ func shouldSendToChat(state string) bool {
 	return false
 }
 
-// GChatMessage sends a one-off text message to webhook hookURL, containing information
-// about a Concourse job build status. The thread Key is pipeline + git commit hash.
-// Note that the Google Chat API encodes the secret in the webhook itself.
-// Parameter pipeline will be used as thread key.
-func gChatMessage(
-	ctx context.Context,
-	hookURL string,
-	gitRef string,
-	pipeline string,
-	job string,
-	state string,
+// gChatFormatText returns a plain text message to be sent to Google Chat.
+func gChatFormatText(gitRef string, pipeline string, job string, state BuildState,
 	buildURL string,
-) error {
+) string {
 	ts := time.Now().Format("2006-01-02 15:04:05 MST")
+	gitRef = fmt.Sprintf("%.10s", gitRef)
 
 	var icon string
 	switch state {
-	case abortState:
+	case StateAbort:
 		icon = "🟤"
-	case errorState:
+	case StateError:
 		icon = "🟠"
-	case failureState:
+	case StateFailure:
 		icon = "🔴"
-	case pendingState:
+	case StatePending:
 		icon = "🟡"
-	case successState:
+	case StateSuccess:
 		icon = "🟢"
 	default:
 		icon = "❓"
 	}
 
-	threadKey := fmt.Sprintf("%s %s", pipeline, gitRef)
-
-	if len(gitRef) > 10 {
-		gitRef = gitRef[0:10]
-	}
-
 	// Unfortunately the font is proportional and doesn't support tabs,
 	// so we cannot align in columns.
-	text := fmt.Sprintf(`%s
+	return fmt.Sprintf(`%s
 *pipeline* %s
 *job* %s
 *commit* %s
@@ -112,6 +107,4 @@ func gChatMessage(
 		gitRef,
 		icon, state,
 		buildURL)
-
-	return googlechat.TextMessage(ctx, hookURL, threadKey, text)
 }
