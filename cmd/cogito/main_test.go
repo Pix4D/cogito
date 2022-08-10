@@ -13,6 +13,7 @@ import (
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
 func TestRunCheckSuccess(t *testing.T) {
@@ -84,15 +85,15 @@ func TestRunPutSuccess(t *testing.T) {
 
 func TestRunPutSuccessIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test")
+		t.Skip("Skipping integration test (reason: -short)")
 	}
 
-	cfg := testhelp.SkipTestIfNoEnvVars(t)
+	gitHubCfg := testhelp.GitHubSecretsOrFail(t)
 	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
-			Owner:       cfg.Owner,
-			Repo:        cfg.Repo,
-			AccessToken: cfg.Token,
+			Owner:       gitHubCfg.Owner,
+			Repo:        gitHubCfg.Repo,
+			AccessToken: gitHubCfg.Token,
 			LogLevel:    "debug",
 		},
 		Params: cogito.PutParams{State: cogito.StatePending},
@@ -100,13 +101,16 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote(cfg.Owner, cfg.Repo), cfg.SHA, "ref: refs/heads/a-branch-FIXME")
+		testhelp.HttpsRemote(gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
+		"ref: refs/heads/a-branch-FIXME")
 	t.Setenv("BUILD_JOB_NAME", "TestRunPutSuccessIntegration")
 	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
 
 	err := run(in, &out, &logOut, []string{"out", inputDir})
 
-	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+	assert.NilError(t, err, "\nout:\n%s\nlogOut:\n%s", out.String(), logOut.String())
+	assert.Assert(t, cmp.Contains(logOut.String(),
+		"cogito.put.ghCommitStatus: commit status posted successfully"))
 }
 
 func TestRunFailure(t *testing.T) {

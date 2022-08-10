@@ -142,8 +142,9 @@ func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 	return nil
 }
 
-// TestCfg is a test configuration.
-type TestCfg struct {
+// GhTestCfg contains the secrets needed to run integration tests against the
+// GitHub Commit Status API.
+type GhTestCfg struct {
 	Token string
 	Owner string
 	Repo  string
@@ -152,47 +153,36 @@ type TestCfg struct {
 
 // FakeTestCfg is a fake test configuration that can be used in some tests that need
 // configuration but don't really use any external service.
-var FakeTestCfg = TestCfg{
+var FakeTestCfg = GhTestCfg{
 	Token: "fakeToken",
 	Owner: "fakeOwner",
 	Repo:  "fakeRepo",
 	SHA:   "0123456789012345678901234567890123456789",
 }
 
-// SkipTestIfNoEnvVars is used to decide whether to run an end-to-end test or not.
-// The decision is based on the presence or absence of environment variables detailed
-// in the CONTRIBUTING file.
-func SkipTestIfNoEnvVars(t *testing.T) TestCfg {
+// GitHubSecretsOrFail returns the secrets needed to run integration tests against the
+// GitHub Commit Status API. If the secrets are missing, GitHubSecretsOrFail fails the test.
+func GitHubSecretsOrFail(t *testing.T) GhTestCfg {
 	t.Helper()
 
-	token := os.Getenv("COGITO_TEST_OAUTH_TOKEN")
-	owner := os.Getenv("COGITO_TEST_REPO_OWNER")
-	repo := os.Getenv("COGITO_TEST_REPO_NAME")
-	SHA := os.Getenv("COGITO_TEST_COMMIT_SHA")
-
-	// If none of the environment variables are set, we skip the test.
-	if len(token) == 0 && len(owner) == 0 && len(repo) == 0 && len(SHA) == 0 {
-		t.Skip("Skipping integration test. See CONTRIBUTING for how to enable.")
+	return GhTestCfg{
+		Token: getEnvOrFail(t, "COGITO_TEST_OAUTH_TOKEN"),
+		Owner: getEnvOrFail(t, "COGITO_TEST_REPO_OWNER"),
+		Repo:  getEnvOrFail(t, "COGITO_TEST_REPO_NAME"),
+		SHA:   getEnvOrFail(t, "COGITO_TEST_COMMIT_SHA"),
 	}
-	// If some of the environment variables are set and some not, we fail the test.
-	if len(token) == 0 || len(owner) == 0 || len(repo) == 0 || len(SHA) == 0 {
-		t.Fatal("Some integration env vars are set and some not. See CONTRIBUTING for how to fix.")
-	}
-
-	return TestCfg{token, owner, repo, SHA}
 }
 
-// MergeMap returns a new map, the merge of b over a, meaning that duplicated keys in
-// a will be overwritten by the corresponding keys in b.
-func MergeMap(a, b map[string]any) map[string]any {
-	c := make(map[string]any, len(a)+len(b))
-	for k, v := range a {
-		c[k] = v
+// getEnvOrFail returns the value of environment variable key. If key is missing,
+// getEnvOrFail fails the test.
+func getEnvOrFail(t *testing.T, key string) string {
+	t.Helper()
+
+	value := os.Getenv(key)
+	if len(value) == 0 {
+		t.Fatalf("Missing environment variable (see CONTRIBUTING): %s", key)
 	}
-	for k, v := range b {
-		c[k] = v
-	}
-	return c
+	return value
 }
 
 // MakeGitRepoFromTestdata creates a temporary directory by rendering the templated

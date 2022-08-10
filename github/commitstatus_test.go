@@ -131,9 +131,10 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 
 func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test")
+		t.Skip("Skipping integration test (reason: -short)")
 	}
-	cfg := testhelp.SkipTestIfNoEnvVars(t)
+
+	cfg := testhelp.GitHubSecretsOrFail(t)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
@@ -149,9 +150,10 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 
 func TestGitHubStatusFailureIntegration(t *testing.T) {
 	if testing.Short() {
-		t.Skip("skipping integration test")
+		t.Skip("Skipping integration test (reason: -short)")
 	}
-	cfg := testhelp.SkipTestIfNoEnvVars(t)
+
+	cfg := testhelp.GitHubSecretsOrFail(t)
 	state := "success"
 
 	testCases := []struct {
