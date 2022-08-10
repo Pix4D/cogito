@@ -59,5 +59,5 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 	err := sink.Send()
 
 	assert.ErrorContains(t, err,
-		`Failed to add state "pending" for commit deadbee: 418 I'm a teapot`)
+		`failed to add state "pending" for commit deadbee: 418 I'm a teapot`)
 }

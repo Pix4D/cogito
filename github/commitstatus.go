@@ -149,14 +149,18 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		hint = "none"
 	}
 	return &StatusError{
-		What: fmt.Sprintf("Failed to add state %q for commit %s: %d %s",
+		What: fmt.Sprintf("failed to add state %q for commit %s: %d %s",
 			state, sha[0:min(len(sha), 7)], resp.StatusCode, http.StatusText(resp.StatusCode)),
 		StatusCode: resp.StatusCode,
 		Details: fmt.Sprintf(`Body: %s
 Hint: %s
 Action: %s %s
 OAuth: %s`,
-			strings.TrimSpace(string(respBody)), hint, req.Method, url, OAuthInfo),
+			strings.TrimSpace(string(respBody)),
+			hint,
+			req.Method,
+			url,
+			OAuthInfo),
 	}
 }
 

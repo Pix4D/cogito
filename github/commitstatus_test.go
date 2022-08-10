@@ -66,7 +66,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		{
 			name: "404 Not Found (multiple causes)",
 			body: "fake body",
-			wantErr: `Failed to add state "success" for commit 0123456: 404 Not Found
+			wantErr: `failed to add state "success" for commit 0123456: 404 Not Found
 Body: fake body
 Hint: one of the following happened:
     1. The repo https://github.com/fakeOwner/fakeRepo doesn't exist
@@ -79,7 +79,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 		{
 			name: "500 Internal Server Error",
 			body: "fake body",
-			wantErr: `Failed to add state "success" for commit 0123456: 500 Internal Server Error
+			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
 Body: fake body
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
@@ -89,7 +89,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 		{
 			name: "Any other error",
 			body: "fake body",
-			wantErr: `Failed to add state "success" for commit 0123456: 418 I'm a teapot
+			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
 Body: fake body
 Hint: none
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
@@ -166,7 +166,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		{
 			name:  "bad token: Unauthorized",
 			token: "bad-token",
-			wantErr: `Failed to add state "success" for commit 32e4b4f: 401 Unauthorized
+			wantErr: `failed to add state "success" for commit 32e4b4f: 401 Unauthorized
 Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
 Hint: Either wrong credentials or PAT expired (check your email for expiration notice)
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
@@ -176,7 +176,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 		{
 			name: "non existing repo: Not Found",
 			repo: "non-existing-really",
-			wantErr: `Failed to add state "success" for commit 32e4b4f: 404 Not Found
+			wantErr: `failed to add state "success" for commit 32e4b4f: 404 Not Found
 Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: one of the following happened:
     1. The repo https://github.com/pix4d/non-existing-really doesn't exist
@@ -189,7 +189,7 @@ OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
 		{
 			name: "non existing SHA: Unprocessable Entity",
 			sha:  "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
-			wantErr: `Failed to add state "success" for commit e576e3a: 422 Unprocessable Entity
+			wantErr: `failed to add state "success" for commit e576e3a: 422 Unprocessable Entity
 Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: none
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822
