@@ -168,7 +168,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			token: "bad-token",
 			wantErr: `Failed to add state "success" for commit 32e4b4f: 401 Unauthorized
 Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
-Hint: none
+Hint: Either wrong credentials or PAT expired (check your email for expiration notice)
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
 OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 			wantStatus: http.StatusUnauthorized,

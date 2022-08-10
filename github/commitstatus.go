@@ -142,6 +142,8 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 			path.Join(s.owner, s.repo))
 	case http.StatusInternalServerError:
 		hint = "Github API is down"
+	case http.StatusUnauthorized:
+		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	default:
 		// Any other error
 		hint = "none"
