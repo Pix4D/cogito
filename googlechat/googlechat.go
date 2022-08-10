@@ -25,13 +25,6 @@ import (
 // payload: https://developers.google.com/chat/api/guides/message-formats/basic
 // threadKey: https://developers.google.com/chat/reference/rest/v1/spaces.messages/create
 func TextMessage(ctx context.Context, theURL string, threadKey string, text string) error {
-	// threadKey is encoded as a URL parameter.
-	if threadKey != "" {
-		params := url.Values{}
-		params.Add("threadKey", threadKey)
-		theURL = fmt.Sprintf("%s&%s", theURL, params.Encode())
-	}
-
 	// Payload is just a JSON object with one key.
 	payload := fmt.Sprintf(`{"text": %q}`, text)
 
@@ -41,6 +34,13 @@ func TextMessage(ctx context.Context, theURL string, threadKey string, text stri
 		return fmt.Errorf("TextMessage: new request: %w", RedactErrorURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+
+	// Encode the thread Key a URL parameter.
+	if threadKey != "" {
+		values := req.URL.Query()
+		values.Set("threadKey", threadKey)
+		req.URL.RawQuery = values.Encode()
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
