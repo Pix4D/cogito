@@ -43,17 +43,17 @@ func IdentityRenamer(name string) string {
 // It will fail if the dst directory doesn't exist.
 //
 // For example, if src directory is `foo`:
-// foo
-// └── dot.git
 //
-//	└── config
+//	foo
+//	└── dot.git
+//	   └── config
 //
 // and dst directory is `bar`, src will be copied as:
-// bar
-// └── foo
 //
-//	└── .git        <= dot renamed
-//	    └── config
+//	bar
+//	└── foo
+//	   └── .git        <= dot renamed
+//	     └── config
 func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateData) error {
 	for _, dir := range []string{dst, src} {
 		fi, err := os.Stat(dir)
