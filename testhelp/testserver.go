@@ -8,18 +8,18 @@ import (
 	"net/url"
 )
 
-// GhCommitStatusTestServer returns a very basic HTTP test server (mock) that speaks
-// enough GitHub Commit Status API to reply successfully to a request.
-// The handler will JSON decode the request body to payload and will set URL to the
-// request URL.
+// SpyHttpServer returns a very basic HTTP test server (spy).
+// The handler will JSON decode the request body to payload and will set theUrl to the
+// request URL. On JSON decode success, the handler will return the HTTP status code
+// successCode. On JSON decode failure, the handler will return 418 I am a teapot.
 // To avoid races, call ts.Close() before reading any parameters.
 //
 // Example:
 //
 //	var ghReq github.AddRequest
 //	var URL *url.URL
-//	ts := GhCommitStatusTestServer(&ghReq, &URL)
-func GhCommitStatusTestServer(payload any, theUrl **url.URL) *httptest.Server {
+//	ts := SpyHttpServer(&ghReq, &URL, http.StatusCreated)
+func SpyHttpServer(payload any, theUrl **url.URL, successCode int) *httptest.Server {
 	// In the server we cannot use t *testing.T: it runs on a different goroutine;
 	// instead, we return the assert error via the HTTP protocol itself.
 	return httptest.NewServer(
@@ -33,6 +33,6 @@ func GhCommitStatusTestServer(payload any, theUrl **url.URL) *httptest.Server {
 
 			*theUrl = req.URL
 
-			w.WriteHeader(http.StatusCreated)
+			w.WriteHeader(successCode)
 		}))
 }

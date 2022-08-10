@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"io"
+	"net/http"
 	"net/url"
 	"path"
 	"strings"
@@ -56,7 +57,7 @@ func TestRunPutSuccess(t *testing.T) {
 	wantGitRef := "dummyHead"
 	var ghReq github.AddRequest
 	var URL *url.URL
-	ts := testhelp.GhCommitStatusTestServer(&ghReq, &URL)
+	ts := testhelp.SpyHttpServer(&ghReq, &URL, http.StatusCreated)
 	in := strings.NewReader(`
 {
   "source": {
@@ -76,7 +77,7 @@ func TestRunPutSuccess(t *testing.T) {
 	err := run(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
-	ts.Close() // Avoid races before following asserts.
+	ts.Close() // Avoid races before the following asserts.
 	assert.Equal(t, ghReq.State, string(wantState), "", ghReq.State, string(wantState))
 	assert.Equal(t, path.Base(URL.Path), wantGitRef)
 }
