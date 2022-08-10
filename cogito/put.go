@@ -162,7 +162,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 func (putter *ProdPutter) Sinks() []Sinker {
 	return []Sinker{
 		GitHubCommitStatusSink{
-			Log:     putter.log,
+			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
