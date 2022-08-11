@@ -181,7 +181,7 @@ type Metadata struct {
 
 // GetParams is the "params:" block in a pipeline get step for the Cogito resource.
 // Cogito doesn't accept any get step parameters, so to give a slightly better error
-// message form the JSON parsing, instead of declaring it an empty struct, we do not
+// message from the JSON parsing, instead of declaring it an empty struct, we do not
 // declare it at all.
 // type GetParams struct{}
 

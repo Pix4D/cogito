@@ -15,7 +15,8 @@ type GitHubCommitStatusSink struct {
 
 // Send sets the build status via the GitHub Commit status API endpoint.
 func (sink GitHubCommitStatusSink) Send() error {
-	sink.Log.Debug("GitHubCommitStatusSink: Send")
+	sink.Log.Debug("send: started")
+	defer sink.Log.Debug("send: finished")
 
 	ghState := ghAdaptState(sink.Request.Params.State)
 	buildURL := concourseBuildURL(sink.Request.Env)
@@ -32,7 +33,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	if err := commitStatus.Add(sink.GitRef, ghState, buildURL, description); err != nil {
 		return err
 	}
-	sink.Log.Info("GitHub commit status posted successfully",
+	sink.Log.Info("commit status posted successfully",
 		"state", ghState, "git-ref", sink.GitRef[0:9])
 
 	return nil

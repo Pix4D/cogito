@@ -21,7 +21,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	wantContext := jobName
 	var ghReq github.AddRequest
 	var URL *url.URL
-	ts := testhelp.GhCommitStatusTestServer(&ghReq, &URL)
+	ts := testhelp.SpyHttpServer(&ghReq, &URL, http.StatusCreated)
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
 		GhAPI:  ts.URL,
@@ -35,7 +35,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	err := sink.Send()
 
 	assert.NilError(t, err)
-	ts.Close() // Avoid races before following asserts.
+	ts.Close() // Avoid races before the following asserts.
 	assert.Equal(t, path.Base(URL.Path), wantGitRef)
 	assert.Equal(t, ghReq.State, string(wantState))
 	assert.Equal(t, ghReq.Context, wantContext)
@@ -59,5 +59,5 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 	err := sink.Send()
 
 	assert.ErrorContains(t, err,
-		`Failed to add state "pending" for commit deadbee: 418 I'm a teapot`)
+		`failed to add state "pending" for commit deadbee: 418 I'm a teapot`)
 }

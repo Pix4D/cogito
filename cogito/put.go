@@ -38,7 +38,7 @@ type Sinker interface {
 // From https://concourse-ci.org/implementing-resource-types.html#resource-out:
 //
 // The out script is passed a path to the directory containing the build's full set of
-// sources as command line argument $1, and is given on stdin the configured params and
+// inputs as command line argument $1, and is given on stdin the configured params and
 // the resource's source configuration.
 //
 // The script must emit the resulting version of the resource.
@@ -91,27 +91,27 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 	}
 }
 
-func (pu *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
+func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
-	if err := dec.Decode(&pu.Request); err != nil {
+	if err := dec.Decode(&putter.Request); err != nil {
 		return fmt.Errorf("put: parsing JSON from stdin: %s", err)
 	}
-	pu.Request.Env.Fill()
+	putter.Request.Env.Fill()
 
-	if err := pu.Request.Source.ValidateLog(); err != nil {
+	if err := putter.Request.Source.ValidateLog(); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
-	pu.log = pu.log.Named("put")
-	pu.log.SetLevel(hclog.LevelFromString(pu.Request.Source.LogLevel))
+	putter.log = putter.log.Named("put")
+	putter.log.SetLevel(hclog.LevelFromString(putter.Request.Source.LogLevel))
 
-	pu.log.Debug("started",
-		"source", pu.Request.Source,
-		"params", pu.Request.Params,
-		"environment", pu.Request.Env,
+	putter.log.Debug("started",
+		"source", putter.Request.Source,
+		"params", putter.Request.Params,
+		"environment", putter.Request.Env,
 		"args", args)
 
-	if err := pu.Request.Source.Validate(); err != nil {
+	if err := putter.Request.Source.Validate(); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
@@ -119,70 +119,75 @@ func (pu *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("put: arguments: missing input directory")
 	}
-	pu.InputDir = args[0]
-	pu.log.Debug("", "input-directory", pu.InputDir)
+	putter.InputDir = args[0]
+	putter.log.Debug("", "input-directory", putter.InputDir)
 
-	buildState := pu.Request.Params.State
+	buildState := putter.Request.Params.State
 	if err := buildState.Validate(); err != nil {
 		return fmt.Errorf("put: params: %s", err)
 	}
-	pu.log.Debug("", "state", buildState)
+	putter.log.Debug("", "state", buildState)
 
 	return nil
 }
 
-func (pu *ProdPutter) ProcessInputDir() error {
-	inputDirs, err := collectInputDirs(pu.InputDir)
+func (putter *ProdPutter) ProcessInputDir() error {
+	inputDirs, err := collectInputDirs(putter.InputDir)
 	if err != nil {
 		return err
 	}
 	if len(inputDirs) != 1 {
 		return fmt.Errorf(
 			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
-			len(inputDirs), inputDirs, pu.Request.Source.Owner, pu.Request.Source.Repo)
+			len(inputDirs), inputDirs, putter.Request.Source.Owner, putter.Request.Source.Repo)
 	}
 
 	// Since we require InputDir to contain only one directory, we assume that this
 	// directory is the git repo.
-	repoDir := filepath.Join(pu.InputDir, inputDirs[0])
+	repoDir := filepath.Join(putter.InputDir, inputDirs[0])
 	if err := checkGitRepoDir(
-		repoDir, pu.Request.Source.Owner, pu.Request.Source.Repo); err != nil {
+		repoDir, putter.Request.Source.Owner, putter.Request.Source.Repo); err != nil {
 		return err
 	}
 
-	pu.gitRef, err = getGitCommit(repoDir)
+	putter.gitRef, err = getGitCommit(repoDir)
 	if err != nil {
 		return err
 	}
-	pu.log.Debug("", "git-ref", pu.gitRef)
+	putter.log.Debug("", "git-ref", putter.gitRef)
 
 	return nil
 }
 
-func (pu *ProdPutter) Sinks() []Sinker {
+func (putter *ProdPutter) Sinks() []Sinker {
 	return []Sinker{
 		GitHubCommitStatusSink{
-			Log:     pu.log,
-			GhAPI:   pu.ghAPI,
-			GitRef:  pu.gitRef,
-			Request: pu.Request,
+			Log:     putter.log.Named("ghCommitStatus"),
+			GhAPI:   putter.ghAPI,
+			GitRef:  putter.gitRef,
+			Request: putter.Request,
+		},
+		GoogleChatSink{
+			Log:     putter.log.Named("gChat"),
+			GitRef:  putter.gitRef,
+			Request: putter.Request,
 		},
 	}
 }
 
-func (pu *ProdPutter) Output(out io.Writer) error {
+func (putter *ProdPutter) Output(out io.Writer) error {
 	// Following the protocol for put, we return the version and metadata.
 	// For Cogito, the metadata contains the Concourse build state.
 	output := Output{
 		Version:  DummyVersion,
-		Metadata: []Metadata{{Name: KeyState, Value: string(pu.Request.Params.State)}},
+		Metadata: []Metadata{{Name: KeyState, Value: string(putter.Request.Params.State)}},
 	}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
-	pu.log.Debug("success", "output", output)
+	putter.log.Debug("success", "output", output)
 
 	return nil
 }
