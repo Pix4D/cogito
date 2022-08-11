@@ -25,8 +25,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.46.0
-  GOLINES_VERSION: v0.9.0
+  GOLANGCI_VERSION: v1.48.0
+  TPARSE_VERSION: v0.11.1
 
 tasks:
 
@@ -34,17 +34,12 @@ tasks:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
+      - go install github.com/mfridman/tparse@{{.TPARSE_VERSION}}
 
   lint:
     desc: Lint the code.
     cmds:
       - golangci-lint run ./...
-
-  lint:linelength:
-    desc: Enforce max line length. Use the tool output only as a hint, sometimes it makes wrong decisions.
-    cmds:
-      - golines --max-len=99 --write-output .
 
   test:env:
     desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
@@ -63,14 +58,12 @@ tasks:
     desc: Run the unit tests.
     cmds:
       # One day I will understand how to use -coverpkg=./... :-(
-      # FIXME - go test -count=1 -short -coverprofile=coverage.out ./...
-      - go test -count=1 -short -coverprofile=coverage.out ./cogito ./cmd/cogito
+      - go test -count=1 -short -coverprofile=coverage.out -json ./... | tparse -skip
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      # FIXME - go test -count=1 -coverprofile=coverage.out ./...
-      - go test -count=1 -short -coverprofile=coverage.out ./cogito ./cmd/cogito
+      - go test -count=1 -coverprofile=coverage.out -json ./... | tparse -skip
     env: *test-env
 
   test:smoke:
@@ -79,10 +72,20 @@ tasks:
       - task: build
       - task: build:copydir
       - task: test:buildinfo
+      - task: test:smoke:check
+      - task: test:smoke:get
+      #- task: test:smoke:put
+
+  test:smoke:check:
+    cmds:
       - echo '{{.SMOKE_INPUT}}' | ./bin/check
-      - echo
+
+  test:smoke:get:
+    cmds:
       - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
-      - echo
+
+  test:smoke:put:
+    cmds:
       - rm -rf /tmp/cogito-test
       - mkdir -p /tmp/cogito-test
       - >
@@ -90,7 +93,6 @@ tasks:
         --template repo_url=https://github.com/foo/bar head=dummyHead
         branch_name=dummyBranch commit_sha=dummySha
       - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test
-      - echo
     vars:
       PUT_INPUT: >
         {
@@ -124,7 +126,6 @@ tasks:
     dir: bin
     cmds:
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/cogito
-      # FIXME - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
       - ln -sf cogito check
       - ln -sf cogito in
       - ln -sf cogito out

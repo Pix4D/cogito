@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"path"
 	"strings"
@@ -50,6 +50,14 @@ func NewCommitStatus(server, token, owner, repo, context string) CommitStatus {
 	return CommitStatus{server, token, owner, repo, context}
 }
 
+// AddRequest is the JSON object sent to the API.
+type AddRequest struct {
+	State       string `json:"state"`
+	TargetURL   string `json:"target_url"`
+	Description string `json:"description"`
+	Context     string `json:"context"`
+}
+
 // Add adds a commit state to the given sha, decorating it with targetURL and optional description.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
@@ -63,15 +71,12 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
 	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
 
-	// Field names must be uppercase (that is, exported) for the JSON encoder to consider
-	// them, but the GitHub API wants lowercase names, so we use the optional `json:...`
-	// tag to override the case.
-	reqBody := struct {
-		State       string `json:"state"`
-		TargetURL   string `json:"target_url"`
-		Description string `json:"description"`
-		Context     string `json:"context"`
-	}{state, targetURL, description, s.context}
+	reqBody := AddRequest{
+		State:       state,
+		TargetURL:   targetURL,
+		Description: description,
+		Context:     s.context,
+	}
 
 	reqBodyJSON, err := json.Marshal(reqBody)
 	if err != nil {
@@ -86,7 +91,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	// By default there is no timeout, so the call could hang forever.
+	// By default, there is no timeout, so the call could hang forever.
 	client := &http.Client{Timeout: time.Second * 30}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -122,7 +127,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		XAcceptedOauthScope, XOauthScopes)
 
-	respBody, _ := ioutil.ReadAll(resp.Body)
+	respBody, _ := io.ReadAll(resp.Body)
 	var hint string
 
 	switch resp.StatusCode {

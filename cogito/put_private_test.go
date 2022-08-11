@@ -412,3 +412,58 @@ func TestMultiErrString(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
+
+func TestConcourseBuildURL(t *testing.T) {
+	type testCase struct {
+		name string
+		env  Environment
+		want string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		if tc.want == "" {
+			t.Fatal("tc.want: empty")
+		}
+
+		have := concourseBuildURL(tc.env)
+
+		if have != tc.want {
+			t.Fatalf("\nhave: %s\nwant: %s", have, tc.want)
+		}
+	}
+
+	baseEnv := Environment{
+		BuildId:                   "",
+		BuildName:                 "42",
+		BuildJobName:              "paint",
+		BuildPipelineName:         "magritte",
+		BuildPipelineInstanceVars: "",
+		BuildTeamName:             "devs",
+		BuildCreatedBy:            "",
+		AtcExternalUrl:            "https://ci.example.com",
+	}
+
+	testCases := []testCase{
+		{
+			name: "all defaults",
+			env:  baseEnv,
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42",
+		},
+		{
+			name: "instanced vars 1",
+			env: testhelp.MergeStructs(baseEnv,
+				Environment{BuildPipelineInstanceVars: `{"branch":"stable"}`}),
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
+		},
+		{
+			name: "instanced vars 2",
+			env: testhelp.MergeStructs(baseEnv,
+				Environment{BuildPipelineInstanceVars: `{"branch":"stable","foo":"bar"}`}),
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
