@@ -7,6 +7,29 @@ import (
 	"gotest.tools/v3/assert/cmp"
 )
 
+func TestShouldSendToChatDefaultConfig(t *testing.T) {
+	type testCase struct {
+		state BuildState
+		want  bool
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		assert.Equal(t, shouldSendToChat(tc.state), tc.want)
+	}
+
+	testCases := []testCase{
+		{state: StateAbort, want: true},
+		{state: StateError, want: true},
+		{state: StateFailure, want: true},
+		{state: StatePending, want: false},
+		{state: StateSuccess, want: false},
+	}
+
+	for _, tc := range testCases {
+		t.Run(string(tc.state), func(t *testing.T) { test(t, tc) })
+	}
+}
+
 func TestGChatFormatText(t *testing.T) {
 	type testCase struct {
 		state BuildState
