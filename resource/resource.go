@@ -121,22 +121,7 @@ func (r *Resource) Check(
 	env oc.Environment,
 	log *oc.Logger,
 ) ([]oc.Version, error) {
-	log.Debugf("check: started")
-	defer log.Debugf("check: finished")
-
-	log.Infof(BuildInfo())
-	log.Debugf("check: source:\n%s", stringify(redact(source, secretKeys)))
-	log.Debugf("check: env:\n%s", stringify(env.GetAll()))
-
-	if err := validateSource(source); err != nil {
-		return nil, err
-	}
-
-	// To make Concourse happy it is enough to return always the same version (but not an
-	// empty version!) Since it is not clear if it makes sense to return a "real" version for
-	// this resource, we keep it simple.
-	versions := []oc.Version{dummyVersion}
-	return versions, nil
+	return nil, errors.New("old 'check', kept to satisfy the ofcourse.Resource interface")
 }
 
 // In satisfies ofcourse.Resource.In(), corresponding to the /opt/resource/in command.

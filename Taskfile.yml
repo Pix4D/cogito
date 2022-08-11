@@ -73,11 +73,11 @@ tasks:
     desc: Build on the local machine.
     dir: bin
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/check
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/cogito
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/in
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
       - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
+      - ln -sf cogito check
 
   build:copydir:
     desc: Build copydir (development helper, normally not needed).
@@ -114,7 +114,7 @@ tasks:
       - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy
       - echo
     vars:
-      INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
+      INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"} }'
 
   docker:push:
     desc: Push the Docker image.
