@@ -1,4 +1,4 @@
-// Useful when developing help.CopyDir.
+// Useful when developing testhelp.CopyDir.
 package main
 
 import (
@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	arg "github.com/alexflint/go-arg"
+	"github.com/alexflint/go-arg"
 
-	"github.com/Pix4D/cogito/help"
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 func main() {
@@ -24,26 +24,23 @@ func main() {
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}
-	src := os.Args[1]
-	dst := os.Args[2]
-	fmt.Println("src:", src, "dst:", dst)
 
-	var renamer help.Renamer
+	var renamer testhelp.Renamer
 	if args.Dot {
-		renamer = help.DotRenamer
+		renamer = testhelp.DotRenamer
 	} else {
-		renamer = help.IdentityRenamer
+		renamer = testhelp.IdentityRenamer
 	}
 
-	if err := help.CopyDir(dst, src, renamer, templateData); err != nil {
+	if err := testhelp.CopyDir(args.Dst, args.Src, renamer, templateData); err != nil {
 		fmt.Println("error:", err)
 		os.Exit(1)
 	}
 }
 
 // Take a list of strings of the form "key=value" and convert them to map entries.
-func makeTemplateData(keyvals []string) (help.TemplateData, error) {
-	data := help.TemplateData{}
+func makeTemplateData(keyvals []string) (testhelp.TemplateData, error) {
+	data := testhelp.TemplateData{}
 	for _, keyval := range keyvals {
 		pos := strings.Index(keyval, "=")
 		if pos == -1 {

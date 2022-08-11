@@ -55,7 +55,7 @@ func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	// could not be empty. Now (2022-07) it seems that it could indeed be empty.
 	// For the time being we keep it as-is because this maintains the previous behavior.
 	// This will be investigated by PCI-2617.
-	versions := []Version{{Ref: "dummy"}}
+	versions := []Version{DummyVersion}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(versions); err != nil {
 		return fmt.Errorf("check: %s", err)

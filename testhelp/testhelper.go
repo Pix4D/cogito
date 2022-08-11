@@ -1,4 +1,4 @@
-package help
+package testhelp
 
 import (
 	"bytes"
@@ -27,7 +27,8 @@ func IdentityRenamer(name string) string {
 	return name
 }
 
-// Recursive copy src directory below dst directory, with optional transformations.
+// CopyDir recursively copies src directory below dst directory, with optional
+// transformations.
 // It performs the following transformations:
 // - Renames any directory with renamer.
 // - If templatedata is not empty, will consider each file ending with ".template" as a Go
@@ -186,4 +187,64 @@ func MergeMap(a, b map[string]any) map[string]any {
 		c[k] = v
 	}
 	return c
+}
+
+// MakeGitRepoFromTestdata creates a temporary directory by rendering the templated
+// contents of testdataDir with values from (repoURL, commitSHA, head) and returns the
+// path to the directory.
+//
+// MakeGitRepoFromTestdata also renames directories of the form 'dot.git' to '.git',
+// thus making said directory a git repository. This allows to supply the 'dot.git'
+// directory as test input, avoiding the problem of having this testdata .git directory
+// a nested repository in the project repository.
+//
+// The temporary directory is registered for removal via t.Cleanup.
+// If any operation fails, makeGitRepoFromTestdata terminates the test by calling t.Fatal.
+func MakeGitRepoFromTestdata(
+	t *testing.T,
+	testdataDir string,
+	repoURL string,
+	commitSHA string,
+	head string,
+) string {
+	t.Helper()
+	dstDir, err := os.MkdirTemp("", "cogito-test-")
+	if err != nil {
+		t.Fatal("makeGitRepoFromTestdata: MkdirTemp", err)
+	}
+
+	t.Cleanup(func() {
+		if err := os.RemoveAll(dstDir); err != nil {
+			t.Fatal("makeGitRepoFromTestdata: cleanup: RemoveAll:", err)
+		}
+	})
+
+	// Prepare the template data.
+	tdata := make(TemplateData)
+	tdata["repo_url"] = repoURL
+	tdata["commit_sha"] = commitSHA
+	tdata["head"] = head
+	tdata["branch_name"] = "a-branch-FIXME"
+
+	err = CopyDir(dstDir, testdataDir, DotRenamer, tdata)
+	if err != nil {
+		t.Fatal("CopyDir:", err)
+	}
+
+	return dstDir
+}
+
+// SshRemote returns a GitHub SSH URL
+func SshRemote(owner, repo string) string {
+	return fmt.Sprintf("git@github.com:%s/%s.git", owner, repo)
+}
+
+// HttpsRemote returns a GitHub HTTPS URL
+func HttpsRemote(owner, repo string) string {
+	return fmt.Sprintf("https://github.com/%s/%s.git", owner, repo)
+}
+
+// HttpRemote returns a GitHub HTTP URL
+func HttpRemote(owner, repo string) string {
+	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
 }

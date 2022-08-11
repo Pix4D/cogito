@@ -9,12 +9,12 @@ import (
 	"time"
 
 	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/help"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/google/go-cmp/cmp"
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
-	cfg := help.FakeTestCfg
+	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
@@ -51,7 +51,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 }
 
 func TestGitHubStatusFailureMockAPI(t *testing.T) {
-	cfg := help.FakeTestCfg
+	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
@@ -133,7 +133,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
-	cfg := help.SkipTestIfNoEnvVars(t)
+	cfg := testhelp.SkipTestIfNoEnvVars(t)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
@@ -151,7 +151,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test")
 	}
-	cfg := help.SkipTestIfNoEnvVars(t)
+	cfg := testhelp.SkipTestIfNoEnvVars(t)
 	state := "success"
 
 	testCases := []struct {

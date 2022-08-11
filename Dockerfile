@@ -19,11 +19,10 @@ RUN go mod download
 #
 COPY . .
 
-RUN go test ./...  && \
-    go install \
-        -ldflags "-w -X 'github.com/Pix4D/cogito/resource.buildinfo=$BUILD_INFO'" \
-        ./cmd/cogito \
-        ./cmd/out
+RUN go test ./cogito ./cmd/cogito
+RUN go install \
+        -ldflags "-w -X 'github.com/Pix4D/cogito/cogito.buildinfo=$BUILD_INFO'" \
+        ./cmd/cogito
 
 #
 # The final image
@@ -38,4 +37,5 @@ RUN mkdir -p /opt/resource
 COPY --from=builder /root/go/bin/* /opt/resource/
 
 RUN ln -s /opt/resource/cogito /opt/resource/check && \
-    ln -s /opt/resource/cogito /opt/resource/in
+    ln -s /opt/resource/cogito /opt/resource/in && \
+    ln -s /opt/resource/cogito /opt/resource/out

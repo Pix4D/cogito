@@ -9,6 +9,10 @@ import (
 	"strings"
 )
 
+// DummyVersion is the version always returned by the Cogito resource.
+// DO NOT REASSIGN!
+var DummyVersion = Version{Ref: "dummy"}
+
 // CheckInput is the JSON object passed to the stdin of the "check" executable plus
 // build metadata (environment variables).
 //
@@ -33,6 +37,17 @@ type GetInput struct {
 	// following line uncommented:
 	// Params  GetParams `json:"params"`
 	Env Environment
+}
+
+// PutInput is the JSON object passed to the stdin of the "out" executable plus
+// build metadata (environment variables).
+//
+// See https://concourse-ci.org/implementing-resource-types.html#resource-out
+//
+type PutInput struct {
+	Source Source    `json:"source"`
+	Params PutParams `json:"params"`
+	Env    Environment
 }
 
 // Source is the "source:" block in a pipeline "resources:" block for the Cogito resource.
@@ -153,9 +168,18 @@ func (ver Version) String() string {
 
 // Output is the JSON object emitted by the get and put step.
 type Output struct {
-	Version Version `json:"version"`
-	// the Cogito resource doesn't use the optional "metadata" field.
-	// Metadata Metadata `json:"metadata"`
+	Version  Version    `json:"version"`
+	Metadata []Metadata `json:"metadata"`
+}
+
+// Metadata is an element of a list of indirect k/v pairs, part of the Concourse protocol.
+//
+// Note that Concourse confusingly uses the term "metadata" for two completely different
+// concepts: (1) the environment variables made available from Concourse to the check, get
+// and put steps and (2) the metadata k/v map outputted by the get and put steps.
+type Metadata struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
 }
 
 // GetParams is the "params:" block in a pipeline get step for the Cogito resource.
@@ -163,6 +187,42 @@ type Output struct {
 // message form the JSON parsing, instead of declaring it an empty struct, we do not
 // declare it at all.
 // type GetParams struct{}
+
+// BuildState is a pseudo-enum representing the valid values of PutParams.State
+type BuildState string
+
+const (
+	// NOTE: this list must be kept in sync with method Validate().
+
+	StateAbort   BuildState = "abort"
+	StateError              = "error"
+	StateFailure            = "failure"
+	StatePending            = "pending"
+	StateSuccess            = "success"
+)
+
+const KeyState = "state"
+
+// Validate checks whether the build state, parsed from JSON, is valid.
+func (bs BuildState) Validate() error {
+	switch bs {
+	case StateAbort, StateError, StateFailure, StatePending, StateSuccess:
+		return nil
+	}
+	return fmt.Errorf("invalid build state: %s", bs)
+}
+
+// PutParams is the "params:" block in a pipeline put step for the Cogito resource.
+type PutParams struct {
+	//
+	// Mandatory
+	//
+	State BuildState `json:"state"`
+	//
+	// Optional
+	//
+	Context string `json:"context"`
+}
 
 // Environment represents the environment variables made available to the program.
 // Depending on the type of build and on the step, only some variables could be set.

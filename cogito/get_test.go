@@ -115,7 +115,7 @@ func TestGetFailure(t *testing.T) {
 			source:  baseSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  io.Discard,
-			wantErr: "get: missing output directory from arguments",
+			wantErr: "get: arguments: missing output directory",
 		},
 		{
 			name:    "system write error",
@@ -127,7 +127,6 @@ func TestGetFailure(t *testing.T) {
 		},
 		{
 			name:    "system read error",
-			source:  cogito.Source{},
 			reader:  iotest.ErrReader(errors.New("test read error")),
 			writer:  io.Discard,
 			wantErr: "get: parsing JSON from stdin: test read error",
