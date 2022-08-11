@@ -5,7 +5,6 @@ go 1.18
 require (
 	github.com/alexflint/go-arg v1.4.3
 	github.com/cloudboss/ofcourse v0.2.2
-	github.com/gertd/wild v0.0.2-0.20200810044159-389fd0bed676
 	github.com/google/go-cmp v0.5.8
 	github.com/hashicorp/go-hclog v1.2.2
 	github.com/imdario/mergo v0.3.13

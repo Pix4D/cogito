@@ -12,46 +12,6 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestProcessInputDirFailure(t *testing.T) {
-	type testCase struct {
-		name     string
-		inputDir string
-		wantErr  string
-	}
-
-	test := func(t *testing.T, tc testCase) {
-		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
-			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
-
-		_, err := processInputDir(filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
-			"dummy-owner", "dummy-repo")
-
-		assert.ErrorContains(t, err, tc.wantErr)
-	}
-
-	testCases := []testCase{
-		{
-			name:     "two input dirs",
-			inputDir: "testdata/two-dirs",
-			wantErr:  "found 2 input dirs: [dir-1 dir-2]. Want exactly 1, corresponding to the GitHub repo dummy-owner/dummy-repo",
-		},
-		{
-			name:     "one input dir but not a repo",
-			inputDir: "testdata/not-a-repo",
-			wantErr:  "parsing .git/config: open ",
-		},
-		{
-			name:     "git repo, but something wrong",
-			inputDir: "testdata/one-repo",
-			wantErr:  "git commit: branch checkout: read SHA file: open ",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
-	}
-}
-
 func TestCollectInputDirs(t *testing.T) {
 	type testCase = struct {
 		name    string
@@ -414,6 +374,37 @@ func TestGitGetCommitFailure(t *testing.T) {
 			repoURL: "dummyURL",
 			head:    "banana mango",
 			wantErr: "git commit: branch checkout: read SHA file: open ",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestMultiErrString(t *testing.T) {
+	type testCase struct {
+		name    string
+		errs    []error
+		wantErr string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		assert.Equal(t, multiErrString(tc.errs), tc.wantErr)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "one error",
+			errs:    []error{errors.New("error 1")},
+			wantErr: "error 1",
+		},
+		{
+			name: "multiple errors",
+			errs: []error{errors.New("error 1"), errors.New("error 2")},
+			wantErr: `multiple errors:
+	error 1
+	error 2`,
 		},
 	}
 

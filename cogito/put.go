@@ -13,6 +13,25 @@ import (
 	"github.com/sasbury/mini"
 )
 
+// Putter represents the put step of a Concourse resource.
+// Note: The methods will be called in the same order as they are listed here.
+type Putter interface {
+	// LoadConfiguration parses the resource source configuration and put params.
+	LoadConfiguration(in io.Reader, args []string) error
+	// ProcessInputDir validates and extract the needed information from the "put input".
+	ProcessInputDir() error
+	// Sinks return the list of configured sinks.
+	Sinks() []Sinker
+	// Output emits the version and metadata required by the Concourse protocol.
+	Output(out io.Writer) error
+}
+
+// Sinker represents a sink: an endpoint to send a message.
+type Sinker interface {
+	// Send posts the information extracted by the Putter to a specific sink.
+	Send() error
+}
+
 // Put implements the "put" step (the "out" executable).
 //
 // From https://concourse-ci.org/implementing-resource-types.html#resource-out:
@@ -26,28 +45,73 @@ import (
 // Additionally, the script may emit metadata as a list of key-value pairs. This data is
 // intended for public consumption and will make it upstream, intended to be shown on the
 // build's page.
-func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
-	var pi PutInput
-	dec := json.NewDecoder(in)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&pi); err != nil {
-		return fmt.Errorf("put: parsing JSON from stdin: %s", err)
-	}
-	pi.Env.Fill()
-
-	if err := pi.Source.ValidateLog(); err != nil {
+func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Putter) error {
+	if err := putter.LoadConfiguration(in, args); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
-	log = log.Named("put")
-	log.SetLevel(hclog.LevelFromString(pi.Source.LogLevel))
 
-	log.Debug("started",
-		"source", pi.Source,
-		"params", pi.Params,
-		"environment", pi.Env,
+	if err := putter.ProcessInputDir(); err != nil {
+		return fmt.Errorf("put: %s", err)
+	}
+
+	// We invoke all the sinks and keep going also if some of them return an error.
+	var sinkErrors []error
+	for _, sink := range putter.Sinks() {
+		if err := sink.Send(); err != nil {
+			sinkErrors = append(sinkErrors, err)
+		}
+	}
+	if len(sinkErrors) > 0 {
+		return fmt.Errorf("put: %s", multiErrString(sinkErrors))
+	}
+
+	if err := putter.Output(out); err != nil {
+		return fmt.Errorf("put: %s", err)
+	}
+
+	return nil
+}
+
+// ProdPutter is an implementation of a [Putter] for the Cogito resource.
+// Use [NewPutter] to create an instance.
+type ProdPutter struct {
+	ghAPI  string
+	log    hclog.Logger
+	gitRef string
+
+	Request  PutRequest
+	InputDir string
+}
+
+// NewPutter returns a Cogito ProdPutter.
+func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
+	return &ProdPutter{
+		ghAPI: ghAPI,
+		log:   log,
+	}
+}
+
+func (pu *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
+	dec := json.NewDecoder(in)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&pu.Request); err != nil {
+		return fmt.Errorf("put: parsing JSON from stdin: %s", err)
+	}
+	pu.Request.Env.Fill()
+
+	if err := pu.Request.Source.ValidateLog(); err != nil {
+		return fmt.Errorf("put: %s", err)
+	}
+	pu.log = pu.log.Named("put")
+	pu.log.SetLevel(hclog.LevelFromString(pu.Request.Source.LogLevel))
+
+	pu.log.Debug("started",
+		"source", pu.Request.Source,
+		"params", pu.Request.Params,
+		"environment", pu.Request.Env,
 		"args", args)
 
-	if err := pi.Source.Validate(); err != nil {
+	if err := pu.Request.Source.Validate(); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
@@ -55,62 +119,94 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("put: arguments: missing input directory")
 	}
-	inputDir := args[0]
-	log.Debug("", "input-directory", inputDir)
+	pu.InputDir = args[0]
+	pu.log.Debug("", "input-directory", pu.InputDir)
 
-	buildState := pi.Params.State
+	buildState := pu.Request.Params.State
 	if err := buildState.Validate(); err != nil {
 		return fmt.Errorf("put: params: %s", err)
 	}
-	log.Debug("", "state", buildState)
+	pu.log.Debug("", "state", buildState)
 
-	gitHash, err := processInputDir(inputDir, pi.Source.Owner, pi.Source.Repo)
+	return nil
+}
+
+func (pu *ProdPutter) ProcessInputDir() error {
+	inputDirs, err := collectInputDirs(pu.InputDir)
 	if err != nil {
-		return fmt.Errorf("put: processing the input dir: %s", err)
+		return err
 	}
-	log.Debug("", "git-commit", gitHash)
+	if len(inputDirs) != 1 {
+		return fmt.Errorf(
+			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
+			len(inputDirs), inputDirs, pu.Request.Source.Owner, pu.Request.Source.Repo)
+	}
 
+	// Since we require InputDir to contain only one directory, we assume that this
+	// directory is the git repo.
+	repoDir := filepath.Join(pu.InputDir, inputDirs[0])
+	if err := checkGitRepoDir(
+		repoDir, pu.Request.Source.Owner, pu.Request.Source.Repo); err != nil {
+		return err
+	}
+
+	pu.gitRef, err = getGitCommit(repoDir)
+	if err != nil {
+		return err
+	}
+	pu.log.Debug("", "git-ref", pu.gitRef)
+
+	return nil
+}
+
+func (pu *ProdPutter) Sinks() []Sinker {
+	pu.log.Info("prodPutter: Sinks")
+	return []Sinker{
+		GitHubCommitStatusSink{Putter: pu},
+	}
+}
+
+func (pu *ProdPutter) Output(out io.Writer) error {
 	// Following the protocol for put, we return the version and metadata.
 	// For Cogito, the metadata contains the Concourse build state.
 	output := Output{
 		Version:  DummyVersion,
-		Metadata: []Metadata{{Name: KeyState, Value: string(buildState)}},
+		Metadata: []Metadata{{Name: KeyState, Value: string(pu.Request.Params.State)}},
 	}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
-	log.Debug("success", "output", output)
+	pu.log.Debug("success", "output", output)
+
 	return nil
 }
 
-// processInputDir checks whether inputDir, containing the "put inputs", conforms to
-// what we expect and returns the git commit hash of the repo passed as put input.
-func processInputDir(inputDir string, owner string, repo string) (string, error) {
-	inputDirs, err := collectInputDirs(inputDir)
-	if err != nil {
-		return "", err
-	}
-	if len(inputDirs) != 1 {
-		return "", fmt.Errorf(
-			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
-			len(inputDirs), inputDirs, owner, repo)
-	}
+// GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
+type GitHubCommitStatusSink struct {
+	Putter *ProdPutter
+}
 
-	// Since we require inputDir to contain only one directory, we assume that this
-	// directory is the git repo.
-	repoDir := filepath.Join(inputDir, inputDirs[0])
-	if err := checkGitRepoDir(repoDir, owner, repo); err != nil {
-		return "", err
-	}
+func (cs GitHubCommitStatusSink) Send() error {
+	cs.Putter.log.Info("GitHubCommitStatusSink: Send")
 
-	gitHash, err := getGitCommit(repoDir)
-	if err != nil {
-		return "", err
-	}
+	// return GhCommitStatusSink(cs.Putter.ghAPI, cs.Putter.log, cs.Putter.Request, cs.Putter.gitRef)
+	return nil // FIXME implement me!
+}
 
-	return gitHash, nil
+// multiErrString takes a slice of errors and returns a formatted string.
+func multiErrString(errs []error) string {
+	if len(errs) == 1 {
+		return errs[0].Error()
+	}
+	bld := new(strings.Builder)
+	bld.WriteString("multiple errors:")
+	for _, err := range errs {
+		bld.WriteString("\n\t")
+		bld.WriteString(err.Error())
+	}
+	return bld.String()
 }
 
 // collectInputDirs returns a list of all directories below dir (non-recursive).

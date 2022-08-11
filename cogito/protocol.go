@@ -13,24 +13,24 @@ import (
 // DO NOT REASSIGN!
 var DummyVersion = Version{Ref: "dummy"}
 
-// CheckInput is the JSON object passed to the stdin of the "check" executable plus
-// build metadata (environment variables).
+// CheckRequest contains the JSON object passed on the stdin of the "check" executable
+// (Source and Version) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-check
 //
-type CheckInput struct {
+type CheckRequest struct {
 	Source Source `json:"source"`
 	// Concourse will omit field Version from the first request.
 	Version Version `json:"version"`
 	Env     Environment
 }
 
-// GetInput is the JSON object passed to the stdin of the "in" executable plus
-// build metadata (environment variables).
+// GetRequest contains the JSON object passed on the stdin of the "request" executable
+// (Source and Version) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-in
 //
-type GetInput struct {
+type GetRequest struct {
 	Source  Source  `json:"source"`
 	Version Version `json:"version"`
 	// Cogito does not support get params; a resource supporting them would have the
@@ -39,12 +39,12 @@ type GetInput struct {
 	Env Environment
 }
 
-// PutInput is the JSON object passed to the stdin of the "out" executable plus
-// build metadata (environment variables).
+// PutRequest contains the JSON object passed to the stdin of the "out" executable
+// (Source and Params) and the build metadata (Env, environment variables).
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-out
 //
-type PutInput struct {
+type PutRequest struct {
 	Source Source    `json:"source"`
 	Params PutParams `json:"params"`
 	Env    Environment

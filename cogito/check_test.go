@@ -8,6 +8,7 @@ import (
 	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
@@ -15,12 +16,12 @@ import (
 func TestCheckSuccess(t *testing.T) {
 	type testCase struct {
 		name    string
-		in      cogito.CheckInput
+		request cogito.CheckRequest
 		wantOut []cogito.Version
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(toJSON(t, tc.in))
+		in := bytes.NewReader(testhelp.ToJSON(t, tc.request))
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 
@@ -28,7 +29,7 @@ func TestCheckSuccess(t *testing.T) {
 
 		assert.NilError(t, err)
 		var have []cogito.Version
-		fromJSON(t, out.Bytes(), &have)
+		testhelp.FromJSON(t, out.Bytes(), &have)
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
@@ -41,14 +42,14 @@ func TestCheckSuccess(t *testing.T) {
 	testCases := []testCase{
 		{
 			name: "first request (Concourse omits the version field)",
-			in: cogito.CheckInput{
+			request: cogito.CheckRequest{
 				Source: baseSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
 		{
 			name: "subsequent requests (Concourse adds the version field)",
-			in: cogito.CheckInput{
+			request: cogito.CheckRequest{
 				Source:  baseSource,
 				Version: cogito.Version{Ref: "dummy"},
 			},
@@ -66,7 +67,7 @@ func TestCheckSuccess(t *testing.T) {
 func TestCheckFailure(t *testing.T) {
 	type testCase struct {
 		name    string
-		source  cogito.Source // will be embedded in cogito.CheckInput
+		source  cogito.Source // will be embedded in cogito.CheckRequest
 		reader  io.Reader     // if set, will override field `source`.
 		writer  io.Writer
 		wantErr string
@@ -76,7 +77,7 @@ func TestCheckFailure(t *testing.T) {
 		assert.Assert(t, tc.wantErr != "")
 		in := tc.reader
 		if in == nil {
-			in = bytes.NewReader(toJSON(t, cogito.CheckInput{Source: tc.source}))
+			in = bytes.NewReader(testhelp.ToJSON(t, cogito.CheckRequest{Source: tc.source}))
 		}
 		log := hclog.NewNullLogger()
 
@@ -100,14 +101,14 @@ func TestCheckFailure(t *testing.T) {
 		},
 		{
 			name:    "validation failure: log",
-			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			writer:  io.Discard,
 			wantErr: "check: source: invalid log_level: pippo",
 		},
 		{
 			name:    "write error",
 			source:  baseSource,
-			writer:  &failingWriter{},
+			writer:  &testhelp.FailingWriter{},
 			wantErr: "check: test write error",
 		},
 		{

@@ -2,6 +2,8 @@ package testhelp
 
 import (
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,6 +13,9 @@ import (
 	"strings"
 	"testing"
 	"text/template"
+
+	"github.com/imdario/mergo"
+	"gotest.tools/v3/assert"
 )
 
 // Passed to template.Execute()
@@ -247,4 +252,37 @@ func HttpsRemote(owner, repo string) string {
 // HttpRemote returns a GitHub HTTP URL
 func HttpRemote(owner, repo string) string {
 	return fmt.Sprintf("http://github.com/%s/%s.git", owner, repo)
+}
+
+// ToJSON returns the JSON encoding of thing.
+func ToJSON(t *testing.T, thing any) []byte {
+	t.Helper()
+	buf, err := json.Marshal(thing)
+	assert.NilError(t, err)
+	return buf
+}
+
+// FromJSON unmarshals the JSON-encoded data into thing.
+func FromJSON(t *testing.T, data []byte, thing any) {
+	t.Helper()
+	err := json.Unmarshal(data, thing)
+	assert.NilError(t, err)
+}
+
+// MergeStructs merges b into a and returns the merged copy.
+// Said in another way, a is the default and b is the override.
+// Used to express succinctly the delta in the test cases.
+// Since it is a test helper, it will panic in case of error.
+func MergeStructs[T any](a, b T) T {
+	if err := mergo.Merge(&a, b, mergo.WithOverride); err != nil {
+		panic(err)
+	}
+	return a
+}
+
+// FailingWriter is an io.Writer that always returns an error.
+type FailingWriter struct{}
+
+func (t *FailingWriter) Write([]byte) (n int, err error) {
+	return 0, errors.New("test write error")
 }

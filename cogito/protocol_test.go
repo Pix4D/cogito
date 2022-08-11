@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 )
@@ -37,12 +38,12 @@ func TestSourceValidateLogSuccess(t *testing.T) {
 		{
 			name:   "apply defaults",
 			source: baseSource,
-			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
+			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
 		},
 		{
 			name:   "override defaults",
-			source: mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
-			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
+			source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
+			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
 		},
 	}
 
@@ -77,7 +78,7 @@ func TestSourceValidateLogFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:    "invalid log level",
-			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			wantErr: "source: invalid log_level: pippo",
 		},
 	}
@@ -212,7 +213,7 @@ func TestSourceParseRawFailure(t *testing.T) {
 }
 
 func TestSourcePrintLogRedaction(t *testing.T) {
-	input := cogito.Source{
+	source := cogito.Source{
 		Owner:         "the-owner",
 		Repo:          "the-repo",
 		AccessToken:   "sensitive-the-access-token",
@@ -229,7 +230,7 @@ gchat_webhook:  ***REDACTED***
 log_level:      debug
 context_prefix: the-prefix`
 
-		have := fmt.Sprint(input)
+		have := fmt.Sprint(source)
 
 		assert.Equal(t, have, want)
 	})
@@ -254,7 +255,7 @@ context_prefix: `
 		var logBuf bytes.Buffer
 		log := hclog.New(&hclog.LoggerOptions{Output: &logBuf})
 
-		log.Info("log test", "input", input)
+		log.Info("log test", "source", source)
 		have := logBuf.String()
 
 		assert.Assert(t, strings.Contains(have, "| access_token:   ***REDACTED***"))

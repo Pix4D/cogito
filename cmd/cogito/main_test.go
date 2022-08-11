@@ -47,7 +47,8 @@ func TestRunGetSmokeSuccess(t *testing.T) {
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
 
-func TestRunPutSmokeSuccess(t *testing.T) {
+func TestRunPutSmokeIntegrationSuccess(t *testing.T) {
+	t.Skip("FIXME REQUIRES SECRETS") // FIXME
 	in := strings.NewReader(`
 {
   "source": {
