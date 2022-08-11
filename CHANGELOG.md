@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.0] - 2022-08-11
+
+### Changed
+
+- Redesign of the whole cogito code, based on the removal of the ofcourse package. This simplifies the code and allows to use more of the Go type system (JSON is parsed into typed Go structs, instead of string maps): many validations are done directly by the JSON parser.
+  - The behaviour should be unchanged.
+  - Some error messages when parsing the pipeline configuration (source and params) are slightly different, but should cover the same area.
+- Increase test coverage, simplify tests.
+- Replace logging library. Log amount and content should be the same; some formatting differences.
+- OCI image size (compressed, reported by DockerHub) is 30% smaller, from 7.5 MB to 5.09 MB.
+
 ## [v0.7.1] - 2022-07-04
 
 ### Added
@@ -178,3 +189,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 [v0.6.2]: https://github.com/Pix4D/cogito/releases/tag/v0.6.2
 [v0.7.0]: https://github.com/Pix4D/cogito/releases/tag/v0.7.0
 [v0.7.1]: https://github.com/Pix4D/cogito/releases/tag/v0.7.1
+[v0.8.0]: https://github.com/Pix4D/cogito/releases/tag/v0.8.0

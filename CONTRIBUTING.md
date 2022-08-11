@@ -328,7 +328,7 @@ Update the expired secrets as follows.
 
 Trigger a manual run of the CI to verify that everything works fine.
 
-## Making a release
+# Making a release
 
 A release is performed by the GitHub Action CI, triggered by a git tag of the form `v1.2.3`.
 
