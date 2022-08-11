@@ -125,7 +125,6 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 		"cogito.put.ghCommitStatus: commit status posted successfully"))
 	assert.Assert(t, cmp.Contains(logOut.String(),
 		"cogito.put.gChat: state posted successfully to chat"))
-	// t.Logf("\nlogOut:\n%s", logOut.String())
 }
 
 func TestRunFailure(t *testing.T) {

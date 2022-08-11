@@ -70,7 +70,8 @@ tasks:
     desc: Simple smoke test of the local executables.
     cmds:
       - task: build
-      - task: build:copydir
+      - task: build:templatedir
+      - task: test:buildinfo
       - task: test:buildinfo
       - task: test:smoke:check
       - task: test:smoke:get
@@ -89,7 +90,7 @@ tasks:
       - rm -rf /tmp/cogito-test
       - mkdir -p /tmp/cogito-test
       - >
-        ./bin/copydir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot 
+        ./bin/templatedir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot 
         --template repo_url=https://github.com/foo/bar head=dummyHead
         branch_name=dummyBranch commit_sha=dummySha
       - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test
@@ -130,16 +131,17 @@ tasks:
       - ln -sf cogito in
       - ln -sf cogito out
 
-  build:copydir:
-    desc: Build copydir (development helper, normally not needed).
+  build:templatedir:
+    desc: Build templatedir (development helper, normally not needed).
     dir: bin
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/templatedir
 
   clean:
     desc: Delete build artifacts
     cmds:
       - rm -f coverage.out
+      - rm -r -f bin
 
   docker:login:
     cmds:

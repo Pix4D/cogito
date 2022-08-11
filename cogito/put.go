@@ -38,7 +38,7 @@ type Sinker interface {
 // From https://concourse-ci.org/implementing-resource-types.html#resource-out:
 //
 // The out script is passed a path to the directory containing the build's full set of
-// sources as command line argument $1, and is given on stdin the configured params and
+// inputs as command line argument $1, and is given on stdin the configured params and
 // the resource's source configuration.
 //
 // The script must emit the resulting version of the resource.

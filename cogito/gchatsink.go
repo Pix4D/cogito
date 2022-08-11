@@ -9,12 +9,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
-// TODO FIND A BETTER PLACE?
-var (
-	// States that will trigger a chat notification by default.
-	statesToNotifyChat = []BuildState{StateAbort, StateError, StateFailure}
-)
-
 // GoogleChatSink is an implementation of [Sinker] for the Cogito resource.
 type GoogleChatSink struct {
 	Log     hclog.Logger
@@ -62,6 +56,9 @@ func (sink GoogleChatSink) Send() error {
 
 // shouldSendToChat returns true if the state is configured to do so.
 func shouldSendToChat(state BuildState) bool {
+	// States that will trigger a chat notification by default.
+	statesToNotifyChat := []BuildState{StateAbort, StateError, StateFailure}
+
 	for _, x := range statesToNotifyChat {
 		if state == x {
 			return true
