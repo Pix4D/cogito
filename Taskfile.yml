@@ -19,6 +19,12 @@ vars:
   BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
   LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
   #
+  SMOKE_INPUT: >
+    {
+      "source": {"owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"},
+      "version": {"ref": "pizza"}
+    }
+  #
   GOLANGCI_VERSION: v1.46.0
   GOLINES_VERSION: v0.9.0
 
@@ -56,6 +62,7 @@ tasks:
   test:unit:
     desc: Run the unit tests.
     cmds:
+      # One day I will understand how to use -coverpkg=./... :-(
       - go test -count=1 -short -coverprofile=coverage.out ./...
 
   test:all:
@@ -63,6 +70,14 @@ tasks:
     cmds:
       - go test -count=1 -coverprofile=coverage.out ./...
     env: *test-env
+
+  test:smoke:
+    desc: Simple smoke test of the local executables.
+    cmds:
+      - echo '{{.SMOKE_INPUT}}' | ./bin/check
+      - echo
+      - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
+      - echo
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
@@ -109,12 +124,10 @@ tasks:
   docker:smoke:
     desc: Simple smoke test of the Docker image.
     cmds:
-      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/check
+      - echo '{{.SMOKE_INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/check
       - echo
-      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy
+      - echo '{{.SMOKE_INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy-dir
       - echo
-    vars:
-      INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"} }'
 
   docker:push:
     desc: Push the Docker image.
