@@ -17,10 +17,16 @@ vars:
   DOCKER_BASE_NAME: "{{.DOCKER_ORG}}/{{.DOCKER_IMAGE}}"
   DOCKER_FULL_NAME: "{{.DOCKER_BASE_NAME}}:{{.DOCKER_TAG}}"
   BUILD_INFO: "Tag: {{.DOCKER_TAG}}, commit: {{.COMMIT}}, build date: {{.DATE}}"
-  LDFLAGS: -w -X '{{.REPO}}/resource.buildinfo={{.BUILD_INFO}}'
+  LDFLAGS: -w -X '{{.REPO}}/cogito.buildinfo={{.BUILD_INFO}}'
   #
-  GOLANGCI_VERSION: v1.46.0
-  GOLINES_VERSION: v0.9.0
+  SMOKE_INPUT: >
+    {
+      "source": {"owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"},
+      "version": {"ref": "pizza"}
+    }
+  #
+  GOLANGCI_VERSION: v1.48.0
+  TPARSE_VERSION: v0.11.1
 
 tasks:
 
@@ -28,17 +34,12 @@ tasks:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - go install github.com/segmentio/golines@{{.GOLINES_VERSION}}
+      - go install github.com/mfridman/tparse@{{.TPARSE_VERSION}}
 
   lint:
     desc: Lint the code.
     cmds:
       - golangci-lint run ./...
-
-  lint:linelength:
-    desc: Enforce max line length. Use the tool output only as a hint, sometimes it makes wrong decisions.
-    cmds:
-      - golines --max-len=99 --write-output .
 
   test:env:
     desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
@@ -56,13 +57,65 @@ tasks:
   test:unit:
     desc: Run the unit tests.
     cmds:
-      - go test -count=1 -short -coverprofile=coverage.out ./...
+      # One day I will understand how to use -coverpkg=./... :-(
+      - go test -count=1 -short -coverprofile=coverage.out -json ./... | tparse -skip
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      - go test -count=1 -coverprofile=coverage.out ./...
+      - go test -count=1 -coverprofile=coverage.out -json ./... | tparse -skip
     env: *test-env
+
+  test:smoke:
+    desc: Simple smoke test of the local executables.
+    cmds:
+      - task: build
+      - task: build:templatedir
+      - task: test:buildinfo
+      - task: test:buildinfo
+      - task: test:smoke:check
+      - task: test:smoke:get
+      #- task: test:smoke:put
+
+  test:smoke:check:
+    cmds:
+      - echo '{{.SMOKE_INPUT}}' | ./bin/check
+
+  test:smoke:get:
+    cmds:
+      - echo '{{.SMOKE_INPUT}}' | ./bin/in dummy-dir
+
+  test:smoke:put:
+    cmds:
+      - rm -rf /tmp/cogito-test
+      - mkdir -p /tmp/cogito-test
+      - >
+        ./bin/templatedir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot 
+        --template repo_url=https://github.com/foo/bar head=dummyHead
+        branch_name=dummyBranch commit_sha=dummySha
+      - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test
+    vars:
+      PUT_INPUT: >
+        {
+          "source": {"owner": "foo", "repo": "bar", "access_token": "123", "log_level": "debug"},
+          "params": {"state": "success"}
+        }
+
+  test:buildinfo:
+    desc: Verify that the executable contains build information
+    # cogito: This is the Cogito GitHub status resource. unknown
+    # cogito: This is the Cogito GitHub status resource. Tag: buildinfo, commit: e9b36d0814, build date: 2022-07-26
+    cmds:
+      # "unknown" is the default value, printed when built without linker flags.
+      - 'echo {{.OUTPUT}} | grep -v unknown'
+      - 'echo {{.OUTPUT}} | grep Tag:'
+      - 'echo {{.OUTPUT}} | grep commit:'
+    vars:
+      INPUT: '{"source": {"owner": "foo", "repo": "bar", "access_token": "123"}}'
+      OUTPUT:
+        # We only want to capture stderr, because the Cogito resource protocol uses
+        # stderr for logging.
+        sh: echo '{{.INPUT}}' | ./bin/check 2>&1 1>/dev/null
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
@@ -73,21 +126,22 @@ tasks:
     desc: Build on the local machine.
     dir: bin
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/check
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/in
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/out
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/hello
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/cogito
+      - ln -sf cogito check
+      - ln -sf cogito in
+      - ln -sf cogito out
 
-  build:copydir:
-    desc: Build copydir (development helper, normally not needed).
+  build:templatedir:
+    desc: Build templatedir (development helper, normally not needed).
     dir: bin
     cmds:
-      - go build -ldflags "{{.LDFLAGS}}" ../cmd/copydir
+      - go build -ldflags "{{.LDFLAGS}}" ../cmd/templatedir
 
   clean:
     desc: Delete build artifacts
     cmds:
       - rm -f coverage.out
+      - rm -r -f bin
 
   docker:login:
     cmds:
@@ -108,12 +162,10 @@ tasks:
   docker:smoke:
     desc: Simple smoke test of the Docker image.
     cmds:
-      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/check
+      - echo '{{.SMOKE_INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/check
       - echo
-      - echo '{{.INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy
+      - echo '{{.SMOKE_INPUT}}' | docker run --rm --interactive {{.DOCKER_FULL_NAME}} /opt/resource/in dummy-dir
       - echo
-    vars:
-      INPUT: '{ "source": { "owner": "foo", "repo": "bar", "access_token": "123"} }'
 
   docker:push:
     desc: Push the Docker image.

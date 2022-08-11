@@ -5,7 +5,9 @@
 package googlechat
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -13,6 +15,11 @@ import (
 	"net/url"
 	"strings"
 )
+
+// BasicMessage represents the JSON payload of a Google Chat basic message.
+type BasicMessage struct {
+	Text string `json:"text"`
+}
 
 // TextMessage sends a one-off text message with threadKey to webhook theURL.
 // Note that the Google Chat API encodes the secret in the webhook itself.
@@ -25,22 +32,24 @@ import (
 // payload: https://developers.google.com/chat/api/guides/message-formats/basic
 // threadKey: https://developers.google.com/chat/reference/rest/v1/spaces.messages/create
 func TextMessage(ctx context.Context, theURL string, threadKey string, text string) error {
-	// threadKey is encoded as a URL parameter.
-	if threadKey != "" {
-		params := url.Values{}
-		params.Add("threadKey", threadKey)
-		theURL = fmt.Sprintf("%s&%s", theURL, params.Encode())
+	body, err := json.Marshal(BasicMessage{Text: text})
+	if err != nil {
+		return fmt.Errorf("TextMessage: %s", err)
 	}
 
-	// Payload is just a JSON object with one key.
-	payload := fmt.Sprintf(`{"text": %q}`, text)
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, theURL,
-		strings.NewReader(payload))
+		bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("TextMessage: new request: %w", RedactErrorURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
+
+	// Encode the thread Key a URL parameter.
+	if threadKey != "" {
+		values := req.URL.Query()
+		values.Set("threadKey", threadKey)
+		req.URL.RawQuery = values.Encode()
+	}
 
 	client := &http.Client{}
 	resp, err := client.Do(req)
