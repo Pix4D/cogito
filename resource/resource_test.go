@@ -29,48 +29,6 @@ var (
 			"BUILD_JOB_NAME":   "a-job"})
 )
 
-func TestIn(t *testing.T) {
-	defSource := oc.Source{
-		accessTokenKey: "dummy",
-		ownerKey:       "dummy",
-		repoKey:        "dummy",
-	}
-
-	var testCases = []struct {
-		name      string
-		inVersion oc.Version
-	}{
-		{
-			name:      "happy path",
-			inVersion: defVersion,
-		},
-		{
-			name:      "do not return a nil version the first time it runs (see Concourse PR #4442)",
-			inVersion: oc.Version{},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			r := New()
-
-			version, metadata, err := r.In(
-				"/tmp", defSource, oc.Params{}, tc.inVersion, defEnv, silentLog,
-			)
-
-			if err != nil {
-				t.Fatalf("err: have %v; want %v", err, nil)
-			}
-			if diff := cmp.Diff(defVersion, version); diff != "" {
-				t.Errorf("version: (-want +have):\n%s", diff)
-			}
-			if diff := cmp.Diff(oc.Metadata{}, metadata); diff != "" {
-				t.Errorf("metadata: (-want +have):\n%s", diff)
-			}
-		})
-	}
-}
-
 func TestOutMockSuccess(t *testing.T) {
 	cfg := help.FakeTestCfg
 

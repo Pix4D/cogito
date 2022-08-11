@@ -133,25 +133,7 @@ func (r *Resource) In(
 	env oc.Environment,
 	log *oc.Logger,
 ) (oc.Version, oc.Metadata, error) {
-	log.Debugf("in: started")
-	defer log.Debugf("in: finished")
-
-	log.Infof(BuildInfo())
-	log.Debugf("in: source:\n%s", stringify(redact(source, secretKeys)))
-	log.Debugf("in: params:\n%s", stringify(params))
-	log.Debugf("in: env:\n%s", stringify(env.GetAll()))
-
-	if err := validateSource(source); err != nil {
-		return nil, nil, err
-	}
-
-	// Since it is not clear if it makes sense to return a "real" version for this
-	// resource, we keep it simple and return the same version we have been called with, ensuring
-	// we never return a nul version.
-	if len(version) == 0 {
-		version = dummyVersion
-	}
-	return version, oc.Metadata{}, nil
+	return nil, nil, errors.New("old 'get', kept to satisfy the ofcourse.Resource interface")
 }
 
 // Out satisfies ofcourse.Resource.Out(), corresponding to the /opt/resource/out command.

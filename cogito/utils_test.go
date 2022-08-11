@@ -26,18 +26,14 @@ func fromJSON(t *testing.T, data []byte, thing any) {
 	assert.NilError(t, err)
 }
 
-// mergeStructs merges the second element of s into the first one and returns the
-// merged copy. If s has only one element, mergeStructs returns it unmodified.
+// mergeStructs merges b into a and returns the merged copy.
 // Used to express succinctly the delta in the test cases.
-func mergeStructs[E any](t *testing.T, s []E) E {
-	t.Helper()
-	assert.Assert(t, len(s) == 1 || len(s) == 2, len(s))
-	want := s[0]
-	if len(s) == 2 {
-		err := mergo.Merge(&want, s[1], mergo.WithOverride)
-		assert.NilError(t, err)
+// Since it is a test helper, it will panic in case of error.
+func mergeStructs[T any](a, b T) T {
+	if err := mergo.Merge(&a, b, mergo.WithOverride); err != nil {
+		panic(err)
 	}
-	return want
+	return a
 }
 
 // failingWriter is an io.Writer that always returns an error.

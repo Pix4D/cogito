@@ -15,18 +15,16 @@ import (
 func TestSourceValidateLogSuccess(t *testing.T) {
 	type testCase struct {
 		name   string
-		source []cogito.Source // 1st element is the default; 2nd is the override
-		want   []cogito.Source // 1st element is the default; 2nd is the override
+		source cogito.Source
+		want   cogito.Source
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		source := mergeStructs(t, tc.source)
-		want := mergeStructs(t, tc.want)
 
-		err := source.ValidateLog()
+		err := tc.source.ValidateLog()
 
 		assert.NilError(t, err)
-		assert.DeepEqual(t, source, want)
+		assert.DeepEqual(t, tc.source, tc.want)
 	}
 
 	baseSource := cogito.Source{
@@ -38,13 +36,13 @@ func TestSourceValidateLogSuccess(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:   "apply defaults",
-			source: []cogito.Source{baseSource},
-			want:   []cogito.Source{baseSource, {LogLevel: "info"}},
+			source: baseSource,
+			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
 		},
 		{
 			name:   "override defaults",
-			source: []cogito.Source{baseSource, {LogLevel: "debug"}},
-			want:   []cogito.Source{baseSource, {LogLevel: "debug"}},
+			source: mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
+			want:   mergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
 		},
 	}
 
@@ -58,15 +56,14 @@ func TestSourceValidateLogSuccess(t *testing.T) {
 func TestSourceValidateLogFailure(t *testing.T) {
 	type testCase struct {
 		name    string
-		source  []cogito.Source // 1st element is the default; 2nd is the override
+		source  cogito.Source
 		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
-		source := mergeStructs(t, tc.source)
 
-		err := source.ValidateLog()
+		err := tc.source.ValidateLog()
 
 		assert.Error(t, err, tc.wantErr)
 	}
@@ -80,7 +77,7 @@ func TestSourceValidateLogFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:    "invalid log level",
-			source:  []cogito.Source{baseSource, {LogLevel: "pippo"}},
+			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			wantErr: "source: invalid log_level: pippo",
 		},
 	}

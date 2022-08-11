@@ -11,21 +11,19 @@ import (
 
 func TestRunSmokeSuccess(t *testing.T) {
 	type testCase struct {
-		name    string
-		args    []string
-		in      string
-		wantOut string
+		name string
+		args []string
+		in   string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		in := strings.NewReader(tc.in)
 		var out bytes.Buffer
+		var logOut bytes.Buffer
 
-		err := run(in, &out, io.Discard, tc.args)
+		err := run(in, &out, &logOut, tc.args)
 
-		assert.NilError(t, err)
-		have := out.String()
-		assert.Equal(t, have, tc.wantOut)
+		assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 	}
 
 	testCases := []testCase{
@@ -38,10 +36,21 @@ func TestRunSmokeSuccess(t *testing.T) {
     "owner": "the-owner",
     "repo": "the-repo",
     "access_token": "the-secret"
-  } 
+  }
 }`,
-			wantOut: `[{"ref":"dummy"}]
-`,
+		},
+		{
+			name: "get",
+			args: []string{"in", "dummy-dir"},
+			in: `
+{
+  "source": {
+    "owner": "the-owner",
+    "repo": "the-repo",
+    "access_token": "the-secret"
+  },
+  "version": {"ref": "pizza"}
+}`,
 		},
 	}
 

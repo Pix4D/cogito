@@ -66,18 +66,17 @@ func TestCheckSuccess(t *testing.T) {
 func TestCheckFailure(t *testing.T) {
 	type testCase struct {
 		name    string
-		source  []cogito.Source // will be embedded source cogito.CheckInput
-		reader  io.Reader       // if set, will override field `source`.
+		source  cogito.Source // will be embedded in cogito.CheckInput
+		reader  io.Reader     // if set, will override field `source`.
 		writer  io.Writer
 		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
-		source := mergeStructs(t, tc.source)
 		in := tc.reader
 		if in == nil {
-			in = bytes.NewReader(toJSON(t, cogito.CheckInput{Source: source}))
+			in = bytes.NewReader(toJSON(t, cogito.CheckInput{Source: tc.source}))
 		}
 		log := hclog.NewNullLogger()
 
@@ -95,25 +94,25 @@ func TestCheckFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:    "validation failure: missing keys",
-			source:  []cogito.Source{{}},
+			source:  cogito.Source{},
 			writer:  io.Discard,
 			wantErr: "check: source: missing keys: owner, repo, access_token",
 		},
 		{
 			name:    "validation failure: log",
-			source:  []cogito.Source{baseSource, {LogLevel: "pippo"}},
+			source:  mergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
 			writer:  io.Discard,
 			wantErr: "check: source: invalid log_level: pippo",
 		},
 		{
 			name:    "write error",
-			source:  []cogito.Source{baseSource},
+			source:  baseSource,
 			writer:  &failingWriter{},
 			wantErr: "check: test write error",
 		},
 		{
 			name:    "read error",
-			source:  []cogito.Source{{}},
+			source:  cogito.Source{},
 			reader:  iotest.ErrReader(errors.New("test read error")),
 			writer:  io.Discard,
 			wantErr: "check: parsing JSON from stdin: test read error",

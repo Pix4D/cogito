@@ -21,6 +21,20 @@ type CheckInput struct {
 	Env     Environment
 }
 
+// GetInput is the JSON object passed to the stdin of the "in" executable plus
+// build metadata (environment variables).
+//
+// See https://concourse-ci.org/implementing-resource-types.html#resource-in
+//
+type GetInput struct {
+	Source  Source  `json:"source"`
+	Version Version `json:"version"`
+	// Cogito does not support get params; a resource supporting them would have the
+	// following line uncommented:
+	// Params  GetParams `json:"params"`
+	Env Environment
+}
+
 // Source is the "source:" block in a pipeline "resources:" block for the Cogito resource.
 type Source struct {
 	//
@@ -136,6 +150,19 @@ type Version struct {
 func (ver Version) String() string {
 	return fmt.Sprint("ref: ", ver.Ref)
 }
+
+// Output is the JSON object emitted by the get and put step.
+type Output struct {
+	Version Version `json:"version"`
+	// the Cogito resource doesn't use the optional "metadata" field.
+	// Metadata Metadata `json:"metadata"`
+}
+
+// GetParams is the "params:" block in a pipeline get step for the Cogito resource.
+// Cogito doesn't accept any get step parameters, so to give a slightly better error
+// message form the JSON parsing, instead of declaring it an empty struct, we do not
+// declare it at all.
+// type GetParams struct{}
 
 // Environment represents the environment variables made available to the program.
 // Depending on the type of build and on the step, only some variables could be set.
