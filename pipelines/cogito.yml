@@ -1,20 +1,44 @@
+# Names are an homage to https://hanna-barbera.fandom.com/wiki/Cattanooga_Cats
+
+# NOTICE
+# In this pipeline we have two cogito resources ONLY BECAUSE this is a test pipeline!
+# In a real pipeline, one cogito resource is always enough. If not, please open an
+#  issue to discuss your use case.
 meta:
 
-  gh-status_handlers: &gh-status-handlers
+  gh-status-1-handlers: &gh-status-1-handlers
     on_success:
-      put: gh-status
+      put: gh-status-1
       inputs: [repo.git]
       params: {state: success}
     on_failure:
-      put: gh-status
+      put: gh-status-1
       inputs: [repo.git]
       params: {state: failure}
     on_error:
-      put: gh-status
+      put: gh-status-1
       inputs: [repo.git]
       params: {state: error}
     on_abort:
-      put: gh-status
+      put: gh-status-1
+      inputs: [repo.git]
+      params: {state: abort}
+
+  gh-status-2-handlers: &gh-status-2-handlers
+    on_success:
+      put: gh-status-2
+      inputs: [repo.git]
+      params: {state: success}
+    on_failure:
+      put: gh-status-2
+      inputs: [repo.git]
+      params: {state: failure}
+    on_error:
+      put: gh-status-2
+      inputs: [repo.git]
+      params: {state: error}
+    on_abort:
+      put: gh-status-2
       inputs: [repo.git]
       params: {state: abort}
 
@@ -32,7 +56,7 @@ resource_types:
 
 resources:
 
-- name: gh-status
+- name: gh-status-1
   type: cogito
   # Since check is a no-op, we do not check, to reduce load on the system.
   check_every: never
@@ -43,6 +67,21 @@ resources:
     repo: ((repo-name))
     access_token: ((oauth-personal-access-token))
     gchat_webhook: ((gchat_webhook))
+
+  # See the NOTICE at the top of this file to understand why we have two cogito resources.
+- name: gh-status-2
+  type: cogito
+  # Since check is a no-op, we do not check, to reduce load on the system.
+  check_every: never
+  source:
+    # Optional, for debugging only.
+    log_level: debug
+    owner: ((github-owner))
+    repo: ((repo-name))
+    access_token: ((oauth-personal-access-token))
+    gchat_webhook: ((gchat_webhook))
+    # These two states make sense only for testing the resource itself...
+    notify_on_states: [pending, success]
 
 - name: repo.git
   type: git
@@ -57,11 +96,11 @@ resources:
 jobs:
 
   - name: autocat
-    <<: *gh-status-handlers
+    <<: *gh-status-1-handlers
     plan:
       - get: repo.git
         trigger: true
-      - put: gh-status
+      - put: gh-status-1
         inputs: [repo.git]
         params: {state: pending}
       - task: will-fail
@@ -80,11 +119,11 @@ jobs:
                 exit 1
 
   - name: motormouse
-    <<: *gh-status-handlers
+    <<: *gh-status-1-handlers
     plan:
       - get: repo.git
         trigger: true
-      - put: gh-status
+      - put: gh-status-1
         inputs: [repo.git]
         params: {state: pending}
       - task: will-succeed
@@ -100,4 +139,27 @@ jobs:
               - |
                 set -o errexit
                 echo Hello from motormouse
+                exit 0
+
+  - name: kitty-jo
+    <<: *gh-status-2-handlers
+    plan:
+      - get: repo.git
+        trigger: true
+      - put: gh-status-2
+        inputs: [repo.git]
+        params: {state: pending}
+      - task: meoooow
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: { repository: alpine }
+          run:
+            path: /bin/sh
+            args:
+              - -c
+              - |
+                set -o errexit
+                echo Hello from Kitty Jo
                 exit 0

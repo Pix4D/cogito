@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.1] - UNRELEASED
+
+### Added
+
+- Google Chat: allow selecting which states trigger a notification to the chat, via configuration `source.notify_on_states`. Default (as before this tunable): [`abort`, `error`, `failure`].
+
 ## [v0.8.0] - 2022-08-11
 
 ### Changed
@@ -27,7 +33,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Integration with Google Chat (optional). This allows to reduce the verbosity of a Concourse pipeline and especially to reduce the number of resource containers in a Concourse deployment, thus reducing load.
+- Integration with Google Chat (optional). This allows to reduce the verbosity of a Concourse pipeline and especially to reduce the number of resource containers in a Concourse deployment, thus reducing load. Notification is sent only on states `abort`, `error` and `failure`.
 
 ### Somehow breaking
 

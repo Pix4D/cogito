@@ -28,7 +28,7 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	state := sink.Request.Params.State
-	if !shouldSendToChat(state) {
+	if !shouldSendToChat(state, sink.Request.Source.NotifyOnStates) {
 		sink.Log.Debug("not sending to chat",
 			"reason", "state not in enabled states", "state", state)
 		return nil
@@ -55,11 +55,8 @@ func (sink GoogleChatSink) Send() error {
 }
 
 // shouldSendToChat returns true if the state is configured to do so.
-func shouldSendToChat(state BuildState) bool {
-	// States that will trigger a chat notification by default.
-	statesToNotifyChat := []BuildState{StateAbort, StateError, StateFailure}
-
-	for _, x := range statesToNotifyChat {
+func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
+	for _, x := range notifyOnStates {
 		if state == x {
 			return true
 		}

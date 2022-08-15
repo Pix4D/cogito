@@ -116,6 +116,12 @@ func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 		return fmt.Errorf("put: %s", err)
 	}
 
+	putter.log.Debug("after validation and defaults",
+		"source", putter.Request.Source,
+		"params", putter.Request.Params,
+		"environment", putter.Request.Env,
+		"args", args)
+
 	// args[0] contains the path to a directory containing all the "put inputs".
 	if len(args) == 0 {
 		return fmt.Errorf("put: arguments: missing input directory")

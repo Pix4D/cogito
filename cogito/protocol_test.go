@@ -11,6 +11,7 @@ import (
 	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
 func TestSourceValidateLogSuccess(t *testing.T) {
@@ -214,21 +215,23 @@ func TestSourceParseRawFailure(t *testing.T) {
 
 func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
-		Owner:         "the-owner",
-		Repo:          "the-repo",
-		AccessToken:   "sensitive-the-access-token",
-		GChatWebHook:  "sensitive-gchat-webhook",
-		LogLevel:      "debug",
-		ContextPrefix: "the-prefix",
+		Owner:          "the-owner",
+		Repo:           "the-repo",
+		AccessToken:    "sensitive-the-access-token",
+		GChatWebHook:   "sensitive-gchat-webhook",
+		LogLevel:       "debug",
+		ContextPrefix:  "the-prefix",
+		NotifyOnStates: []cogito.BuildState{cogito.StateSuccess, cogito.StateFailure},
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
-		want := `owner:          the-owner
-repo:           the-repo
-access_token:   ***REDACTED***
-gchat_webhook:  ***REDACTED***
-log_level:      debug
-context_prefix: the-prefix`
+		want := `owner:            the-owner
+repo:             the-repo
+access_token:     ***REDACTED***
+gchat_webhook:    ***REDACTED***
+log_level:        debug
+context_prefix:   the-prefix
+notify_on_states: [success failure]`
 
 		have := fmt.Sprint(source)
 
@@ -239,12 +242,13 @@ context_prefix: the-prefix`
 		input := cogito.Source{
 			Owner: "the-owner",
 		}
-		want := `owner:          the-owner
-repo:           
-access_token:   
-gchat_webhook:  
-log_level:      
-context_prefix: `
+		want := `owner:            the-owner
+repo:             
+access_token:     
+gchat_webhook:    
+log_level:        
+context_prefix:   
+notify_on_states: []`
 
 		have := fmt.Sprint(input)
 
@@ -258,8 +262,8 @@ context_prefix: `
 		log.Info("log test", "source", source)
 		have := logBuf.String()
 
-		assert.Assert(t, strings.Contains(have, "| access_token:   ***REDACTED***"))
-		assert.Assert(t, strings.Contains(have, "| gchat_webhook:  ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| access_token:     ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:    ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }
