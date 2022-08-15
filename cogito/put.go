@@ -123,9 +123,6 @@ func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	putter.log.Debug("", "input-directory", putter.InputDir)
 
 	buildState := putter.Request.Params.State
-	if err := buildState.Validate(); err != nil {
-		return fmt.Errorf("put: params: %s", err)
-	}
 	putter.log.Debug("", "state", buildState)
 
 	return nil

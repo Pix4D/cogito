@@ -4,6 +4,7 @@
 package cogito
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -188,7 +189,7 @@ type Metadata struct {
 // BuildState is a pseudo-enum representing the valid values of PutParams.State
 type BuildState string
 
-// NOTE: this list must be kept in sync with method Validate().
+// NOTE: this list must be kept in sync with the custom JSON methods of [BuildState].
 const (
 	StateAbort   BuildState = "abort"
 	StateError   BuildState = "error"
@@ -199,13 +200,24 @@ const (
 
 const KeyState = "state"
 
-// Validate checks whether the build state, parsed from JSON, is valid.
-func (bs BuildState) Validate() error {
-	switch bs {
+func (bs *BuildState) UnmarshalJSON(data []byte) error {
+	var str string
+	if err := json.Unmarshal(data, &str); err != nil {
+		return err
+	}
+
+	*bs = BuildState(str)
+
+	switch *bs {
 	case StateAbort, StateError, StateFailure, StatePending, StateSuccess:
 		return nil
+	default:
+		return fmt.Errorf("invalid build state: %s", str)
 	}
-	return fmt.Errorf("invalid build state: %s", bs)
+}
+
+func (bs BuildState) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(bs))
 }
 
 // PutParams is the "params:" block in a pipeline put step for the Cogito resource.

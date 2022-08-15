@@ -150,13 +150,14 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "source: missing keys",
-			putInput: cogito.PutRequest{Source: cogito.Source{}},
+			putInput: cogito.PutRequest{Source: cogito.Source{}, Params: baseParams},
 			wantErr:  "put: source: missing keys: owner, repo, access_token",
 		},
 		{
 			name: "source: invalid log_level",
 			putInput: cogito.PutRequest{
 				Source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
+				Params: baseParams,
 			},
 			wantErr: "put: source: invalid log_level: pippo",
 		},
@@ -166,12 +167,11 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 				Source: baseSource,
 				Params: cogito.PutParams{State: "burnt-pizza"},
 			},
-			args:    []string{"dummy-dir"},
-			wantErr: "put: params: invalid build state: burnt-pizza",
+			wantErr: "put: parsing request: invalid build state: burnt-pizza",
 		},
 		{
 			name:     "arguments: missing input directory",
-			putInput: cogito.PutRequest{Source: baseSource},
+			putInput: basePutInput,
 			args:     []string{},
 			wantErr:  "put: arguments: missing input directory",
 		},
