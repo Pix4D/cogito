@@ -116,7 +116,7 @@ func TestCheckFailure(t *testing.T) {
 			source:  cogito.Source{},
 			reader:  iotest.ErrReader(errors.New("test read error")),
 			writer:  io.Discard,
-			wantErr: "check: parsing JSON from stdin: test read error",
+			wantErr: "check: parsing request: test read error",
 		},
 	}
 

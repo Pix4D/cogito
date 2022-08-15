@@ -187,7 +187,7 @@ func TestPutterLoadConfigurationSystemFailure(t *testing.T) {
 
 	err := putter.LoadConfiguration(iotest.ErrReader(errors.New("test read error")), nil)
 
-	assert.Error(t, err, "put: parsing JSON from stdin: test read error")
+	assert.Error(t, err, "put: parsing request: test read error")
 }
 
 func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
@@ -196,7 +196,7 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
   "source": {},
   "params": {"pizza": "margherita"}
 }`)
-	wantErr := `put: parsing JSON from stdin: json: unknown field "pizza"`
+	wantErr := `put: parsing request: json: unknown field "pizza"`
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)

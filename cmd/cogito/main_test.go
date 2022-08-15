@@ -156,7 +156,7 @@ func TestRunFailure(t *testing.T) {
 {
   "fruit": "banana" 
 }`,
-			wantErr: `check: parsing JSON from stdin: json: unknown field "fruit"`,
+			wantErr: `check: parsing request: json: unknown field "fruit"`,
 		},
 	}
 

@@ -130,7 +130,7 @@ func TestGetFailure(t *testing.T) {
 			name:    "system read error",
 			reader:  iotest.ErrReader(errors.New("test read error")),
 			writer:  io.Discard,
-			wantErr: "get: parsing JSON from stdin: test read error",
+			wantErr: "get: parsing request: test read error",
 		},
 	}
 
@@ -147,7 +147,7 @@ func TestGetNonEmptyParamsFailure(t *testing.T) {
   "source": {},
   "params": {"pizza": "margherita"}
 }`)
-	wantErr := `get: parsing JSON from stdin: json: unknown field "params"`
+	wantErr := `get: parsing request: json: unknown field "params"`
 
 	err := cogito.Get(hclog.NewNullLogger(), in, io.Discard, []string{})
 
