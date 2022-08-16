@@ -282,7 +282,8 @@ type gitURL struct {
 func safeUrlParse(rawURL string) (*url.URL, error) {
 	parsedUrl, err := url.Parse(rawURL)
 	if err != nil {
-		if uerr := new(url.Error); errors.As(err, &uerr) {
+		var uerr *url.Error
+		if errors.As(err, &uerr) {
 			// url.Parse returns a wrapped error that contains also the URL. Instead, we return only the error.
 			return nil, uerr.Err
 		}
