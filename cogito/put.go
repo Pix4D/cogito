@@ -2,6 +2,7 @@ package cogito
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -274,14 +275,32 @@ type gitURL struct {
 	Repo  string
 }
 
+// safeParseUrl parse the given URL and return an error if the URL is not well formated.
+// this avoid to eventually leak passwords in case of error
+//
+// From https://github.com/golang/go/issues/53993
+func safeParse(rawURL string) (*url.URL, error) {
+	parsedUrl, err := url.Parse(rawURL)
+	if err != nil {
+		// check if the returned error is actually of type url.Error
+		if uerr := new(url.Error); errors.As(err, &uerr) {
+			// return only the Err and not the URL to not leak potential passwords
+			return nil, uerr.Err
+		}
+		// default error
+		return nil, errors.New("invalid URL")
+	}
+	return parsedUrl, nil
+}
+
 // parseGitPseudoURL attempts to parse rawURL as a git remote URL compatible with the
 // Github naming conventions.
 //
 // It supports the following types of git pseudo URLs:
 //   - ssh:   git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
 //     ssh://git@github.com/Pix4D/cogito.git
-//   - https: https://github.com/Pix4D/cogito.git
-//   - http:  http://github.com/Pix4D/cogito.git
+//   - https: https://github.com/Pix4D/cogito.git or https://username:password@github.com/Pix4D/cogito.git
+//   - http: http://github.com/Pix4D/cogito.git or http://username:password@github.com/Pix4D/cogito.git
 func parseGitPseudoURL(rawURL string) (gitURL, error) {
 	workURL := rawURL
 	// If ssh pseudo URL, we need to massage the rawURL ourselves :-(
@@ -294,7 +313,7 @@ func parseGitPseudoURL(rawURL string) (gitURL, error) {
 		workURL = "ssh://" + strings.Replace(workURL, ":", "/", 1)
 	}
 
-	anyUrl, err := url.Parse(workURL)
+	anyUrl, err := safeParse(workURL)
 	if err != nil {
 		return gitURL{}, err
 	}
