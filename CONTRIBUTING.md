@@ -224,15 +224,25 @@ See also the next section.
 
 These suggestions apply to the development of any Concourse resource.
 
-After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image used to be the `fly check-resource-type` command. Unfortunately sometimes in the Concourse 7.6.x series this broke (details: [registry-image-resource #316](https://github.com/concourse/registry-image-resource/issues/316)).
+### Building a new image and ensuring that the pipeline picks it up 
 
-Luckily, since Concourse 7.8.0, the new fly command [`clear-versions`](https://github.com/concourse/concourse/pull/8196), can be used as a workaround.
+After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image used to be the `fly check-resource-type` command. Unfortunately somewhere in the Concourse 7.6.x series this broke (details: [registry-image-resource #316](https://github.com/concourse/registry-image-resource/issues/316)).
 
-For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `autocat` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), you can do:
+#### Using fly clear-version
 
-```
-$ fly -t cogito login --concourse-url=http://localhost:8080 --open-browser
-```
+Since Concourse 7.8.0, the new fly command [`clear-versions`](https://github.com/concourse/concourse/pull/8196), can be used as a workaround.
+
+Note that the workaround doesn't always succeed (especially if you have `--enable-global-resources
+` for Concourse web). In this case, follow the next section [Issuing a new tag for the Docker image](#issuing-a-new-tag-for-the-Docker-image).
+
+You can follow two steps:
+
+1. `fly set-pipeline` with a check_interval for the resource type of 1m instead of the recommended 24h.
+2. `fly clear-version`.
+
+For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `motormouse` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), 
+
+Step 1:
 
 ```
 $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
@@ -240,17 +250,26 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
   -y github-owner=(gopass show cogito/test_repo_owner) \
   -y repo-name=(gopass show cogito/test_repo_name) \
   -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
-  -y tag=(git branch --show-current) \
+  -y cogito-tag=(git branch --show-current) \
+  -y cogito-image-check_every=1m \
   -y gchat_webhook=(gopass show cogito/test_gchat_webhook)
 ```
 
+Step 2 (the sleep is fundamental to let check_every expire):
+
 ```
 $ task test:all docker:build docker:smoke docker:push &&
-  fly -t cogito clear-versions --resource-type cogito-test/cogito &&
-  fly -t cogito trigger-job -j cogito-test/autocat -w
+  fly -t cogito clear-versions --resource-type=cogito-test/cogito &&
+  echo "sleeping and hoping :-(" && 
+  sleep 70 &&
+  fly -t cogito trigger-job -j cogito-test/motormouse -w
 ```
 
-If you are stuck on a Concourse release < 7.8.0, thus you are missing `clear-versions`, an effective workaround is to issue a new tag for the Docker image. Following the suggested workflow, this is achieved by renaming the branch, building a new Docker image and re-setting the pipeline.
+#### Issuing a new tag for the Docker image
+
+If you are stuck on a Concourse release < 7.8.0 or `fly clear-versions` is not effective, a guaranteed workaround :-) is to issue a new tag for the Docker image. Following the suggested workflow, this is achieved by renaming the branch, building a new Docker image and re-setting the pipeline. If you follow this path, the check_interval can stay at 24h.
+
+### Validating which version of cogito a pipeline build is using
 
 On each `check`, `put` and `get` step, the cogito resource will print its version, git commit SHA and build date to help validate which version a given build is using:
 
@@ -271,7 +290,8 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
   -y github-owner=(gopass show cogito/test_repo_owner) \
   -y repo-name=(gopass show cogito/test_repo_name) \
   -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
-  -y tag=(git branch --show-current) \
+  -y cogito-tag=(git branch --show-current) \
+  -y cogito-image-check_every=24h \
   --instance-var branch=stable
 ```
 
@@ -282,7 +302,8 @@ $ fly -t cogito set-pipeline -p cogito-test -c pipelines/cogito.yml \
   -y github-owner=(gopass show cogito/test_repo_owner) \
   -y repo-name=(gopass show cogito/test_repo_name) \
   -y oauth-personal-access-token=(gopass show cogito/test_oauth_token) \
-  -y tag=(git branch --show-current) \
+  -y cogito-tag=(git branch --show-current) \
+  -y cogito-image-check_every=24h \
   --instance-var branch=another-branch
 ```
 
@@ -335,6 +356,7 @@ A release is performed by the GitHub Action CI, triggered by a git tag of the fo
 - When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
 - Prepare the PR to also contain an updated CHANGELOG.
 - Merge the PR to master.
+- git checkout master && git pull
 - Create and then push a git tag.
 - Double-check that the GitHub Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
 

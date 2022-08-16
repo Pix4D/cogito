@@ -281,3 +281,43 @@ func TestEnvironment(t *testing.T) {
 	have := fmt.Sprint(env)
 	assert.Assert(t, strings.Contains(have, "banana-mango"), "\n%s", have)
 }
+
+func TestBuildStateUnmarshalJSONSuccess(t *testing.T) {
+	var state cogito.BuildState
+
+	err := state.UnmarshalJSON([]byte(`"pending"`))
+
+	assert.NilError(t, err)
+	assert.Equal(t, state, cogito.StatePending)
+}
+
+func TestBuildStateUnmarshalJSONFailure(t *testing.T) {
+	type testCase struct {
+		name    string
+		data    []byte
+		wantErr string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		var state cogito.BuildState
+
+		assert.Error(t, state.UnmarshalJSON(tc.data), tc.wantErr)
+	}
+
+	testCases := []testCase{
+		{
+			name:    "no input",
+			data:    nil,
+			wantErr: "unexpected end of JSON input",
+		},
+		{
+			name:    "",
+			data:    []byte(`"pizza"`),
+			wantErr: "invalid build state: pizza",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}

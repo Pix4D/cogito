@@ -22,17 +22,20 @@ resource_types:
 
 - name: cogito
   type: registry-image
-  check_every: 24h
+  # For production use, `24h` is a good tradeoff to get a new release with a maximum delay
+  # of 24h. Here we parametrize it to work around a concourse bug when doing development.
+  # See CONTRIBUTING for details
+  check_every: ((cogito-image-check_every))
   source:
     repository: pix4d/cogito
-    tag: ((tag))
+    tag: ((cogito-tag))
 
 resources:
 
 - name: gh-status
   type: cogito
-  # Since check is a no-op, we check infrequently to reduce load on the system.
-  check_every: 24h
+  # Since check is a no-op, we do not check, to reduce load on the system.
+  check_every: never
   source:
     # Optional, for debugging only.
     log_level: debug

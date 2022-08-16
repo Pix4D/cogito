@@ -58,7 +58,7 @@ resource_types:
 resources:
 - name: gh-status
   type: cogito
-  check_every: 24h
+  check_every: never
   source:
     owner: ((github-owner))
     repo: ((your-repo-name))
@@ -116,7 +116,7 @@ The absolute minimum is adding key `gchat_webhook` to the `source` configuration
 ```yaml
 - name: gh-status
   type: cogito
-  check_every: 24h
+  check_every: never
   source:
     owner: ((github-owner))
     repo: ((your-repo-name))

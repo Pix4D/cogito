@@ -95,7 +95,7 @@ func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&putter.Request); err != nil {
-		return fmt.Errorf("put: parsing JSON from stdin: %s", err)
+		return fmt.Errorf("put: parsing request: %s", err)
 	}
 	putter.Request.Env.Fill()
 
@@ -123,9 +123,6 @@ func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	putter.log.Debug("", "input-directory", putter.InputDir)
 
 	buildState := putter.Request.Params.State
-	if err := buildState.Validate(); err != nil {
-		return fmt.Errorf("put: params: %s", err)
-	}
 	putter.log.Debug("", "state", buildState)
 
 	return nil

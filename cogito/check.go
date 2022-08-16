@@ -17,13 +17,12 @@ import (
 // It is given the configured source and current version on stdin, and must print the
 // array of new versions, in chronological order (oldest first), to stdout, including
 // the requested version if it is still valid.
-//
 func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	var request CheckRequest
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&request); err != nil {
-		return fmt.Errorf("check: parsing JSON from stdin: %s", err)
+		return fmt.Errorf("check: parsing request: %s", err)
 	}
 	request.Env.Fill()
 

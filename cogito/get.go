@@ -24,13 +24,12 @@ import (
 // The program must emit a JSON object containing the fetched version, and may emit
 // metadata as a list of key-value pairs.
 // This data is intended for public consumption and will be shown on the build page.
-//
 func Get(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
 	var request GetRequest
 	dec := json.NewDecoder(in)
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&request); err != nil {
-		return fmt.Errorf("get: parsing JSON from stdin: %s", err)
+		return fmt.Errorf("get: parsing request: %s", err)
 	}
 	request.Env.Fill()
 
