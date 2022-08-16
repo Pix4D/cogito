@@ -229,11 +229,11 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 			},
 		},
 		{
-			name:  "valid HTTP URL with username:password",
-			inURL: "http://username:password@github.com/Pix4D/cogito.git",
+			name:  "valid HTTPS URL with username:password",
+			inURL: "https://username:password@github.com/Pix4D/cogito.git",
 			wantGU: gitURL{
 				URL: &url.URL{
-					Scheme: "http",
+					Scheme: "https",
 					User:   url.UserPassword("username", "password"),
 					Host:   "github.com",
 					Path:   "/Pix4D/cogito.git",
@@ -244,10 +244,10 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 		},
 		{
 			name:  "valid HTTP URL with username:password",
-			inURL: "https://username:password@github.com/Pix4D/cogito.git",
+			inURL: "http://username:password@github.com/Pix4D/cogito.git",
 			wantGU: gitURL{
 				URL: &url.URL{
-					Scheme: "https",
+					Scheme: "http",
 					User:   url.UserPassword("username", "password"),
 					Host:   "github.com",
 					Path:   "/Pix4D/cogito.git",
