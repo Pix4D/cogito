@@ -284,7 +284,8 @@ func safeUrlParse(rawURL string) (*url.URL, error) {
 	if err != nil {
 		var uerr *url.Error
 		if errors.As(err, &uerr) {
-			// url.Parse returns a wrapped error that contains also the URL. Instead, we return only the error.
+			// url.Parse returns a wrapped error that contains also the URL.
+			// Instead, we return only the error.
 			return nil, uerr.Err
 		}
 		return nil, errors.New("invalid URL")
