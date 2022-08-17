@@ -292,16 +292,14 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 			wantErr: "invalid git SSH URL git@github.com/Pix4D/cogito.git: want exactly one ':'",
 		},
 		{
-			// currently failing due to the new safeParse method returning only the error
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantErr: `parse "https://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
+			wantErr: `invalid port ":Pix4D" after host`,
 		},
 		{
-			// currently failing due to the new safeParse method returning only the error
 			name:    "invalid HTTP URL",
 			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantErr: `parse "http://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
+			wantErr: `invalid port ":Pix4D" after host`,
 		},
 		{
 			name:    "too few path components",
