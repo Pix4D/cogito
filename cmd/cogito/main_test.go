@@ -117,6 +117,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
 	t.Setenv("BUILD_PIPELINE_NAME", "the-test-pipeline")
 	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
+	t.Setenv("BUILD_NAME", "42")
 
 	err := run(in, &out, &logOut, []string{"out", inputDir})
 

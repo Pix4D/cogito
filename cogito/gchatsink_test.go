@@ -42,7 +42,6 @@ func TestSinkGoogleChatSendSuccess(t *testing.T) {
 	ts.Close() // Avoid races before the following asserts.
 	assert.Assert(t, cmp.Contains(message.Text, "*state* 🟠 error"))
 	assert.Assert(t, cmp.Contains(message.Text, "*pipeline* the-test-pipeline"))
-	assert.Assert(t, cmp.Contains(message.Text, "*job* the-test-job"))
 	assert.Assert(t, cmp.Contains(URL.String(), "/?threadKey=the-test-pipeline+deadbeef"))
 }
 
