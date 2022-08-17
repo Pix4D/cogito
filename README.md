@@ -201,6 +201,7 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 ## Optional params
 
 - `context`: The value of the non-prefix part of the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). Default: the job name. See also the optional `context_prefix` in the [source configuration](#source-configuration).
+- `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
 
 ## Note
 

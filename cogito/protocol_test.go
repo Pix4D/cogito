@@ -268,6 +268,48 @@ notify_on_states: []`
 	})
 }
 
+func TestPutParamsPrintLogRedaction(t *testing.T) {
+	params := cogito.PutParams{
+		State:        cogito.StatePending,
+		Context:      "johnny",
+		GChatWebHook: "sensitive-gchat-webhook",
+	}
+
+	t.Run("fmt.Print redacts fields", func(t *testing.T) {
+		want := `state:         pending
+context:       johnny
+gchat_webhook: ***REDACTED***`
+
+		have := fmt.Sprint(params)
+
+		assert.Equal(t, have, want)
+	})
+
+	t.Run("empty fields are not marked as redacted", func(t *testing.T) {
+		input := cogito.PutParams{
+			State: cogito.StateFailure,
+		}
+		want := `state:         failure
+context:       
+gchat_webhook: `
+
+		have := fmt.Sprint(input)
+
+		assert.Equal(t, have, want)
+	})
+
+	t.Run("hclog redacts fields", func(t *testing.T) {
+		var logBuf bytes.Buffer
+		log := hclog.New(&hclog.LoggerOptions{Output: &logBuf})
+
+		log.Info("log test", "params", params)
+		have := logBuf.String()
+
+		assert.Assert(t, cmp.Contains(have, "| gchat_webhook: ***REDACTED***"))
+		assert.Assert(t, !strings.Contains(have, "sensitive"))
+	})
+}
+
 func TestVersion_String(t *testing.T) {
 	version := cogito.Version{Ref: "pizza"}
 
