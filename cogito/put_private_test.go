@@ -228,6 +228,34 @@ func TestParseGitPseudoURLSuccess(t *testing.T) {
 				Repo:  "cogito",
 			},
 		},
+		{
+			name:  "valid HTTPS URL with username:password",
+			inURL: "https://username:password@github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "https",
+					User:   url.UserPassword("username", "password"),
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
+		},
+		{
+			name:  "valid HTTP URL with username:password",
+			inURL: "http://username:password@github.com/Pix4D/cogito.git",
+			wantGU: gitURL{
+				URL: &url.URL{
+					Scheme: "http",
+					User:   url.UserPassword("username", "password"),
+					Host:   "github.com",
+					Path:   "/Pix4D/cogito.git",
+				},
+				Owner: "Pix4D",
+				Repo:  "cogito",
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -266,12 +294,12 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 		{
 			name:    "invalid HTTPS URL",
 			inURL:   "https://github.com:Pix4D/cogito.git",
-			wantErr: `parse "https://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
+			wantErr: `invalid port ":Pix4D" after host`,
 		},
 		{
 			name:    "invalid HTTP URL",
 			inURL:   "http://github.com:Pix4D/cogito.git",
-			wantErr: `parse "http://github.com:Pix4D/cogito.git": invalid port ":Pix4D" after host`,
+			wantErr: `invalid port ":Pix4D" after host`,
 		},
 		{
 			name:    "too few path components",
@@ -282,6 +310,11 @@ func TestParseGitPseudoURLFailure(t *testing.T) {
 			name:    "too many path components",
 			inURL:   "http://github.com/1/2/cogito.git",
 			wantErr: "invalid git URL: path: want: 3 components; have: 4 [ 1 2 cogito.git]",
+		},
+		{
+			name:    "No leaked password in invalid URL with username:password",
+			inURL:   "http://username:password@github.com/Pix4D/cogito.git\n",
+			wantErr: `net/url: invalid control character in URL`,
 		},
 	}
 
