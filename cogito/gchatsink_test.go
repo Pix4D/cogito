@@ -20,20 +20,23 @@ func TestSinkGoogleChatSendSuccess(t *testing.T) {
 	var message googlechat.BasicMessage
 	var URL *url.URL
 	ts := testhelp.SpyHttpServer(&message, &URL, http.StatusOK)
+	request := basePutRequest
+	request.Source.GChatWebHook = ts.URL
+	request.Params = cogito.PutParams{State: wantState}
+	request.Env = cogito.Environment{
+		BuildPipelineName: "the-test-pipeline",
+		BuildJobName:      "the-test-job",
+	}
+	assert.NilError(t, request.Source.Validate())
 	sink := cogito.GoogleChatSink{
-		Log:    hclog.NewNullLogger(),
-		GitRef: wantGitRef,
-		Request: cogito.PutRequest{
-			Source: cogito.Source{GChatWebHook: ts.URL},
-			Params: cogito.PutParams{State: wantState},
-			Env: cogito.Environment{
-				BuildPipelineName: "the-test-pipeline",
-				BuildJobName:      "the-test-job",
-			},
-		},
+		Log:     hclog.NewNullLogger(),
+		GitRef:  wantGitRef,
+		Request: request,
 	}
 
 	err := sink.Send()
+	// Return only the error and not the URL to avoid leaking passwords of the form
+	// http://user:password@example.com
 
 	assert.NilError(t, err)
 	ts.Close() // Avoid races before the following asserts.
@@ -87,12 +90,12 @@ func TestSinkGoogleChatSendFailure(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusTeapot)
 		}))
+	request := basePutRequest
+	request.Source.GChatWebHook = ts.URL
+	assert.NilError(t, request.Source.Validate())
 	sink := cogito.GoogleChatSink{
-		Log: hclog.NewNullLogger(),
-		Request: cogito.PutRequest{
-			Source: cogito.Source{GChatWebHook: ts.URL},
-			Params: cogito.PutParams{State: cogito.StateError}, // sent by default
-		},
+		Log:     hclog.NewNullLogger(),
+		Request: request,
 	}
 
 	err := sink.Send()

@@ -22,9 +22,10 @@ var (
 		AccessToken: "the-token",
 	}
 
-	baseParams = cogito.PutParams{State: cogito.StatePending}
+	// StateError is sent to notification sinks by default.
+	baseParams = cogito.PutParams{State: cogito.StateError}
 
-	basePutInput = cogito.PutRequest{
+	basePutRequest = cogito.PutRequest{
 		Source: baseSource,
 		Params: baseParams,
 	}
@@ -122,7 +123,7 @@ func TestPutFailure(t *testing.T) {
 }
 
 func TestPutterLoadConfigurationSuccess(t *testing.T) {
-	in := bytes.NewReader(testhelp.ToJSON(t, basePutInput))
+	in := bytes.NewReader(testhelp.ToJSON(t, basePutRequest))
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, []string{"dummy-dir"})
@@ -171,7 +172,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 		},
 		{
 			name:     "arguments: missing input directory",
-			putInput: basePutInput,
+			putInput: basePutRequest,
 			args:     []string{},
 			wantErr:  "put: arguments: missing input directory",
 		},
