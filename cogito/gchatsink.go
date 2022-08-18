@@ -3,6 +3,7 @@ package cogito
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/Pix4D/cogito/googlechat"
@@ -38,11 +39,8 @@ func (sink GoogleChatSink) Send() error {
 	defer cancel()
 
 	pipeline := sink.Request.Env.BuildPipelineName
-	job := sink.Request.Env.BuildJobName
-	buildURL := concourseBuildURL(sink.Request.Env)
-
 	threadKey := fmt.Sprintf("%s %s", pipeline, sink.GitRef)
-	text := gChatFormatText(sink.GitRef, pipeline, job, state, buildURL)
+	text := gChatFormatText(sink.GitRef, state, sink.Request.Source, sink.Request.Env)
 
 	if err := googlechat.TextMessage(ctx, sink.Request.Source.GChatWebHook, threadKey,
 		text); err != nil {
@@ -50,7 +48,7 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	sink.Log.Info("state posted successfully to chat",
-		"state", state, "pipeline", pipeline, "job", job, "buildURL", buildURL)
+		"state", state, "text", text)
 	return nil
 }
 
@@ -65,12 +63,33 @@ func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
 }
 
 // gChatFormatText returns a plain text message to be sent to Google Chat.
-func gChatFormatText(gitRef string, pipeline string, job string, state BuildState,
-	buildURL string,
-) string {
-	ts := time.Now().Format("2006-01-02 15:04:05 MST")
-	gitRef = fmt.Sprintf("%.10s", gitRef)
+func gChatFormatText(gitRef string, state BuildState, src Source, env Environment) string {
+	now := time.Now().Format("2006-01-02 15:04:05 MST")
 
+	// Google Chat format for links with alternate name:
+	// <https://example.com/foo|my link text>
+	// GitHub link to commit:
+	// https://github.com/Pix4D/cogito/commit/e8c6e2ac0318b5f0baa3f55
+	job := fmt.Sprintf("<%s|%s/%s>",
+		concourseBuildURL(env), env.BuildJobName, env.BuildName)
+	commitUrl := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
+		src.Owner, src.Repo, gitRef)
+	commit := fmt.Sprintf("<%s|%.10s> (repo: %s/%s)",
+		commitUrl, gitRef, src.Owner, src.Repo)
+
+	// Unfortunately the font is proportional and doesn't support tabs,
+	// so we cannot align in columns.
+	var bld strings.Builder
+	fmt.Fprintf(&bld, "%s\n", now)
+	fmt.Fprintf(&bld, "*pipeline* %s\n", env.BuildPipelineName)
+	fmt.Fprintf(&bld, "*job* %s\n", job)
+	fmt.Fprintf(&bld, "*state* %s\n", decorateState(state))
+	fmt.Fprintf(&bld, "*commit* %s\n", commit)
+
+	return bld.String()
+}
+
+func decorateState(state BuildState) string {
 	var icon string
 	switch state {
 	case StateAbort:
@@ -87,18 +106,5 @@ func gChatFormatText(gitRef string, pipeline string, job string, state BuildStat
 		icon = "❓"
 	}
 
-	// Unfortunately the font is proportional and doesn't support tabs,
-	// so we cannot align in columns.
-	return fmt.Sprintf(`%s
-*pipeline* %s
-*job* %s
-*commit* %s
-*state* %s %s
-*build* %s`,
-		ts,
-		pipeline,
-		job,
-		gitRef,
-		icon, state,
-		buildURL)
+	return fmt.Sprintf("%s %s", icon, state)
 }
