@@ -27,6 +27,8 @@ func SpyHttpServer(request any, reply any, theUrl **url.URL, successCode int,
 	// instead, we return the assert error via the HTTP protocol itself.
 	return httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			*theUrl = req.URL
+
 			dec := json.NewDecoder(req.Body)
 			if err := dec.Decode(request); err != nil {
 				w.WriteHeader(http.StatusTeapot)
@@ -34,17 +36,23 @@ func SpyHttpServer(request any, reply any, theUrl **url.URL, successCode int,
 				return
 			}
 
-			if reply != nil {
-				enc := json.NewEncoder(w)
-				if err := enc.Encode(reply); err != nil {
-					w.WriteHeader(http.StatusTeapot)
-					fmt.Fprintln(w, "test: encoding response:", err)
-					return
-				}
+			if reply == nil {
+				w.WriteHeader(successCode)
+				return
 			}
 
-			*theUrl = req.URL
-
+			// Since we allow a custom success code, we must write it explicitly now.
+			// If we didn't write it now, the first call to Write (in this case, the JSON
+			// encoder just below) will trigger an implicit w.WriteHeader(http.StatusOK).
 			w.WriteHeader(successCode)
+
+			enc := json.NewEncoder(w)
+			if err := enc.Encode(reply); err != nil {
+				// Too late to write the header, we have already done it (this would
+				// still be the case also if we didn't write a custom code!). This is
+				// true for any language, it is not Go specific, it is the HTTP protocol.
+				// Since this is test code, it is appropriate to panic.
+				panic(fmt.Errorf("test: encoding response: %s", err))
+			}
 		}))
 }
