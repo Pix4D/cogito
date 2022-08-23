@@ -9,6 +9,8 @@ import (
 	"time"
 
 	"github.com/Pix4D/cogito/googlechat"
+	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
 )
 
 func TestTextMessageIntegration(t *testing.T) {
@@ -22,30 +24,26 @@ func TestTextMessageIntegration(t *testing.T) {
 		user = "unknown"
 	}
 	threadKey := "banana-" + user
-	text := fmt.Sprintf("%s message oink! 🐷 sent to thread %s by user %s", ts, threadKey, user)
+	text := fmt.Sprintf("%s message oink! 🐷 sent to thread %s by user %s",
+		ts, threadKey, user)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	err := googlechat.TextMessage(ctx, gchatUrl, threadKey, text)
+	reply, err := googlechat.TextMessage(ctx, gchatUrl, threadKey, text)
 
-	if err != nil {
-		t.Fatalf("have: %s; want: <no error>", err)
-	}
+	assert.NilError(t, err)
+	assert.Assert(t, cmp.Contains(reply.Text, text))
 }
 
 func TestRedactURL(t *testing.T) {
 	hook := "https://chat.googleapis.com/v1/spaces/SSS/messages?key=KKK&token=TTT"
 	want := "https://chat.googleapis.com/v1/spaces/SSS/messages?REDACTED"
 	theURL, err := url.Parse(hook)
-	if err != nil {
-		t.Fatal(err)
-	}
+	assert.NilError(t, err)
 
 	have := googlechat.RedactURL(theURL).String()
 
-	if have != want {
-		t.Fatalf("\nhave: %s\nwant: %s", have, want)
-	}
+	assert.Equal(t, have, want)
 }
 
 func TestRedactString(t *testing.T) {
@@ -54,7 +52,5 @@ func TestRedactString(t *testing.T) {
 
 	have := googlechat.RedactURLString(hook)
 
-	if have != want {
-		t.Fatalf("\nhave: %s\nwant: %s", have, want)
-	}
+	assert.Equal(t, have, want)
 }

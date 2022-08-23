@@ -14,33 +14,73 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
-// BasicMessage represents the JSON payload of a Google Chat basic message.
+// BasicMessage is the request for a Google Chat basic message.
 type BasicMessage struct {
 	Text string `json:"text"`
 }
 
-// TextMessage sends a one-off text message with threadKey to webhook theURL.
+// MessageReply is the reply to [TextMessage].
+// Compared to the full API reply, some uninteresting fields are removed.
+type MessageReply struct {
+	Name       string        `json:"name"` // Absolute message ID.
+	Sender     MessageSender `json:"sender"`
+	Text       string        `json:"text"` // The message text, as sent.
+	Thread     MessageThread `json:"thread"`
+	Space      MessageSpace  `json:"space"`
+	CreateTime time.Time     `json:"createTime"`
+}
+
+// MessageSender is part of [MessageReply].
+// Compared to the full API reply, some uninteresting fields are removed.
+type MessageSender struct {
+	Name        string `json:"name"`        // Absolute user ID.
+	DisplayName string `json:"displayName"` // Name of the webhook in the UI.
+	Type        string `json:"type"`        // "BOT", ...
+}
+
+// MessageThread is part of [MessageReply].
+// Compared to the full API reply, some uninteresting fields are removed.
+type MessageThread struct {
+	Name string `json:"name"` // Absolute thread ID.
+}
+
+// MessageSpace is part of [MessageReply].
+// Compared to the full API reply, some uninteresting fields are removed.
+type MessageSpace struct {
+	Name        string `json:"name"`        // Absolute space ID.
+	Type        string `json:"type"`        // "ROOM", ...
+	Threaded    bool   `json:"threaded"`    // Has the space been created as "threaded"?
+	DisplayName string `json:"displayName"` // Name of the space in the UI.
+}
+
+// TextMessage sends the one-off message `text` with `threadKey` to webhook `theURL` and
+// returns an abridged response.
+//
 // Note that the Google Chat API encodes the secret in the webhook itself.
 //
-// If instead we need to send multiple messages, we should reuse the http.Client,
-// so we should add another API function to do so.
+// Implementation note: if instead we need to send multiple messages, we should reuse the
+// http.Client, so we should add another API function to do so.
 //
 // References:
+// REST Resource: v1.spaces.messages
+// https://developers.google.com/chat/api/reference/rest
 // webhooks: https://developers.google.com/chat/how-tos/webhooks
 // payload: https://developers.google.com/chat/api/guides/message-formats/basic
 // threadKey: https://developers.google.com/chat/reference/rest/v1/spaces.messages/create
-func TextMessage(ctx context.Context, theURL string, threadKey string, text string) error {
+func TextMessage(ctx context.Context, theURL, threadKey, text string) (MessageReply, error) {
 	body, err := json.Marshal(BasicMessage{Text: text})
 	if err != nil {
-		return fmt.Errorf("TextMessage: %s", err)
+		return MessageReply{}, fmt.Errorf("TextMessage: %s", err)
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, theURL,
 		bytes.NewBuffer(body))
 	if err != nil {
-		return fmt.Errorf("TextMessage: new request: %w", RedactErrorURL(err))
+		return MessageReply{},
+			fmt.Errorf("TextMessage: new request: %w", RedactErrorURL(err))
 	}
 	req.Header.Set("Content-Type", "application/json; charset=UTF-8")
 
@@ -54,18 +94,25 @@ func TextMessage(ctx context.Context, theURL string, threadKey string, text stri
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("TextMessage: send: %s", RedactErrorURL(err))
+		return MessageReply{}, fmt.Errorf("TextMessage: send: %s", RedactErrorURL(err))
 	}
 	defer resp.Body.Close()
 
-	respBody, _ := io.ReadAll(resp.Body)
-
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("TextMessage: status: %s; URL: %s; body: %s",
-			resp.Status, RedactURL(req.URL), strings.TrimSpace(string(respBody)))
+		respBody, _ := io.ReadAll(resp.Body)
+		return MessageReply{},
+			fmt.Errorf("TextMessage: status: %s; URL: %s; body: %s",
+				resp.Status, RedactURL(req.URL), strings.TrimSpace(string(respBody)))
 	}
 
-	return nil
+	var reply MessageReply
+	dec := json.NewDecoder(resp.Body)
+	if err := dec.Decode(&reply); err != nil {
+		return MessageReply{},
+			fmt.Errorf("HTTP status OK but failed to parse response: %s", err)
+	}
+
+	return reply, nil
 }
 
 // RedactURL returns a _best effort_ redacted copy of theURL.

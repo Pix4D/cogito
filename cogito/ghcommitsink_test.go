@@ -21,7 +21,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	wantContext := jobName
 	var ghReq github.AddRequest
 	var URL *url.URL
-	ts := testhelp.SpyHttpServer(&ghReq, &URL, http.StatusCreated)
+	ts := testhelp.SpyHttpServer(&ghReq, nil, &URL, http.StatusCreated)
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
 		GhAPI:  ts.URL,
