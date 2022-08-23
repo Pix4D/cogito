@@ -18,8 +18,9 @@ func TestSinkGoogleChatSendSuccess(t *testing.T) {
 	wantGitRef := "deadbeef"
 	wantState := cogito.StateError // We want a state that is sent by default
 	var message googlechat.BasicMessage
+	reply := googlechat.MessageReply{}
 	var URL *url.URL
-	ts := testhelp.SpyHttpServer(&message, &URL, http.StatusOK)
+	ts := testhelp.SpyHttpServer(&message, reply, &URL, http.StatusOK)
 	request := basePutRequest
 	request.Source.GChatWebHook = ts.URL
 	request.Params = cogito.PutParams{State: wantState}

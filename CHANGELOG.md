@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Google Chat: allow selecting which states trigger a notification to the chat, via configuration `source.notify_on_states`. Default (as before this tunable): [`abort`, `error`, `failure`].
+- Google Chat: enrich cogito logging with human-readable information about the chat space.
 
 ## [v0.8.0] - 2022-08-11
 

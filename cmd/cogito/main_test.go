@@ -59,10 +59,11 @@ func TestRunPutSuccess(t *testing.T) {
 	wantGitRef := "dummyHead"
 	var ghReq github.AddRequest
 	var ghUrl *url.URL
-	gitHubSpy := testhelp.SpyHttpServer(&ghReq, &ghUrl, http.StatusCreated)
+	gitHubSpy := testhelp.SpyHttpServer(&ghReq, nil, &ghUrl, http.StatusCreated)
 	var chatMsg googlechat.BasicMessage
+	chatReply := googlechat.MessageReply{}
 	var gchatUrl *url.URL
-	googleChatSpy := testhelp.SpyHttpServer(&chatMsg, &gchatUrl, http.StatusOK)
+	googleChatSpy := testhelp.SpyHttpServer(&chatMsg, chatReply, &gchatUrl, http.StatusOK)
 	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
 			Owner:        "the-owner",

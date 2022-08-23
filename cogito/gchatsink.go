@@ -42,13 +42,15 @@ func (sink GoogleChatSink) Send() error {
 	threadKey := fmt.Sprintf("%s %s", pipeline, sink.GitRef)
 	text := gChatFormatText(sink.GitRef, state, sink.Request.Source, sink.Request.Env)
 
-	if err := googlechat.TextMessage(ctx, sink.Request.Source.GChatWebHook, threadKey,
-		text); err != nil {
+	reply, err := googlechat.TextMessage(ctx, sink.Request.Source.GChatWebHook, threadKey,
+		text)
+	if err != nil {
 		return fmt.Errorf("GoogleChatSink: %s", err)
 	}
 
 	sink.Log.Info("state posted successfully to chat",
-		"state", state, "text", text)
+		"state", state, "text", text, "space", reply.Space.DisplayName,
+		"sender", reply.Sender.DisplayName)
 	return nil
 }
 
