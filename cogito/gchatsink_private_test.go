@@ -1,8 +1,10 @@
 package cogito
 
 import (
+	"strings"
 	"testing"
 
+	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
@@ -55,7 +57,58 @@ func TestShouldSendToChatCustomConfig(t *testing.T) {
 	}
 }
 
-func TestGChatFormatText(t *testing.T) {
+func TestPrepareChatMessage(t *testing.T) {
+	type testCase struct {
+		name        string
+		request     PutRequest
+		gitRef      string
+		wantPresent []string
+		wantAbsent  []string
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		have := prepareChatMessage(tc.request, tc.gitRef)
+
+		for _, elem := range tc.wantPresent {
+			assert.Check(t, strings.Contains(have, elem))
+		}
+		for _, elem := range tc.wantAbsent {
+			assert.Check(t, !strings.Contains(have, elem))
+		}
+	}
+
+	baseRequest := PutRequest{
+		Source: Source{Owner: "the-owner"},
+		Params: PutParams{State: StateError},
+		Env:    Environment{BuildJobName: "the-job"},
+	}
+
+	testCases := []testCase{
+		{
+			name:    "default build summary",
+			request: baseRequest,
+			gitRef:  "deadbeef",
+			wantPresent: []string{
+				baseRequest.Source.Owner, baseRequest.Env.BuildJobName, "deadbeef"},
+		},
+		{
+			name: "chat_message overrides default",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{Params: PutParams{ChatMessage: "the-custom-message"}}),
+			gitRef:      "deadbeef",
+			wantPresent: []string{"the-custom-message"},
+			wantAbsent: []string{
+				baseRequest.Source.Owner, baseRequest.Env.BuildJobName, "deadbeef"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestGChatBuildSummaryText(t *testing.T) {
 	commit := "deadbeef"
 	state := StatePending
 	src := Source{
@@ -69,7 +122,7 @@ func TestGChatFormatText(t *testing.T) {
 		AtcExternalUrl:    "https://cogito.invalid",
 	}
 
-	have := gChatFormatText(commit, state, src, env)
+	have := gChatBuildSummaryText(commit, state, src, env)
 
 	assert.Assert(t, cmp.Contains(have, "*pipeline* the-pipeline"))
 	assert.Assert(t, cmp.Regexp(`\*job\* <https:.+\|the-job\/42>`, have))

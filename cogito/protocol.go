@@ -239,6 +239,7 @@ type PutParams struct {
 	// Optional
 	//
 	Context      string `json:"context"`
+	ChatMessage  string `json:"chat_message"`
 	GChatWebHook string `json:"gchat_webhook"` // SENSITIVE
 }
 
@@ -248,6 +249,7 @@ func (params PutParams) String() string {
 
 	fmt.Fprintf(&bld, "state:         %s\n", params.State)
 	fmt.Fprintf(&bld, "context:       %s\n", params.Context)
+	fmt.Fprintf(&bld, "chat_message:  %s\n", params.ChatMessage)
 	// Last one: no newline.
 	fmt.Fprintf(&bld, "gchat_webhook: %s", redact(params.GChatWebHook))
 

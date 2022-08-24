@@ -165,3 +165,9 @@ jobs:
                 set -o errexit
                 echo Hello from Kitty Jo
                 exit 0
+      - put: gh-status-2
+        inputs: [repo.git]
+        params:
+          state: success
+          # This overrides the default build summary message
+          chat_message: "hello from kitty-jo"

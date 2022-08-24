@@ -272,12 +272,14 @@ func TestPutParamsPrintLogRedaction(t *testing.T) {
 	params := cogito.PutParams{
 		State:        cogito.StatePending,
 		Context:      "johnny",
+		ChatMessage:  "stecchino",
 		GChatWebHook: "sensitive-gchat-webhook",
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `state:         pending
 context:       johnny
+chat_message:  stecchino
 gchat_webhook: ***REDACTED***`
 
 		have := fmt.Sprint(params)
@@ -291,6 +293,7 @@ gchat_webhook: ***REDACTED***`
 		}
 		want := `state:         failure
 context:       
+chat_message:  
 gchat_webhook: `
 
 		have := fmt.Sprint(input)

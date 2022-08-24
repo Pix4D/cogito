@@ -198,10 +198,16 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 
 - `state`: The state to set. One of `error`, `failure`, `pending`, `success`, `abort`. Subject to the mapping explained in section [Effects](#effects).
 
-## Optional params
+## Optional params for GitHub commit status
 
 - `context`: The value of the non-prefix part of the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). Default: the job name. See also the optional `context_prefix` in the [source configuration](#source-configuration).
+
+## Optional params for chat
+
 - `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
+- `chat_message`: Custom chat message; overrides the build summary. Default: empty.
+- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty.
+- `chat_message_append`: (one of: true, false). If true, append the default build summary to the custom `chat_message` and/or `chat_message_file`. Default: false.
 
 ## Note
 
