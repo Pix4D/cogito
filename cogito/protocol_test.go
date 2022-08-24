@@ -277,10 +277,11 @@ func TestPutParamsPrintLogRedaction(t *testing.T) {
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
-		want := `state:         pending
-context:       johnny
-chat_message:  stecchino
-gchat_webhook: ***REDACTED***`
+		want := `state:               pending
+context:             johnny
+chat_message:        stecchino
+chat_message_append: false
+gchat_webhook:       ***REDACTED***`
 
 		have := fmt.Sprint(params)
 
@@ -291,10 +292,11 @@ gchat_webhook: ***REDACTED***`
 		input := cogito.PutParams{
 			State: cogito.StateFailure,
 		}
-		want := `state:         failure
-context:       
-chat_message:  
-gchat_webhook: `
+		want := `state:               failure
+context:             
+chat_message:        
+chat_message_append: false
+gchat_webhook:       `
 
 		have := fmt.Sprint(input)
 
@@ -308,7 +310,7 @@ gchat_webhook: `
 		log.Info("log test", "params", params)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "| gchat_webhook: ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:       ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }

@@ -70,11 +70,17 @@ func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
 // prepareChatMessage returns a message ready to be sent to the chat sink.
 func prepareChatMessage(request PutRequest, gitRef string) string {
 	var text string
+
+	buildSummary := gChatBuildSummaryText(gitRef, request.Params.State, request.Source,
+		request.Env)
+
 	if request.Params.ChatMessage != "" {
 		text = request.Params.ChatMessage
+		if request.Params.ChatMessageAppend {
+			text += "\n\n" + buildSummary
+		}
 	} else {
-		text = gChatBuildSummaryText(gitRef, request.Params.State, request.Source,
-			request.Env)
+		text = buildSummary
 	}
 
 	return text

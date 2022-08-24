@@ -110,13 +110,7 @@ jobs:
             type: registry-image
             source: { repository: alpine }
           run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                set -o errexit
-                echo Hello from autocat
-                exit 1
+            path: /bin/false
 
   - name: motormouse
     <<: *gh-status-1-handlers
@@ -133,13 +127,7 @@ jobs:
             type: registry-image
             source: { repository: alpine }
           run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                set -o errexit
-                echo Hello from motormouse
-                exit 0
+            path: /bin/true
 
   - name: kitty-jo
     <<: *gh-status-2-handlers
@@ -151,23 +139,34 @@ jobs:
         params:
           state: pending
           gchat_webhook: ((gchat_webhook_2))
-      - task: meoooow
+      - task: task-1
         config:
           platform: linux
           image_resource:
             type: registry-image
             source: { repository: alpine }
           run:
-            path: /bin/sh
-            args:
-              - -c
-              - |
-                set -o errexit
-                echo Hello from Kitty Jo
-                exit 0
+            path: /bin/true
+      - put: gh-status-2
+        inputs: [repo.git]
+        params:
+          # FIXME Here the state doesn't really make sense, because we are in the middle
+          #  of a job and there are further tasks: the state could change...
+          state: success
+          # Override the default build summary with the custom message.
+          chat_message: "overriding hello from kitty-jo"
+      - task: task-2
+        config:
+          platform: linux
+          image_resource:
+            type: registry-image
+            source: { repository: alpine }
+          run:
+            path: /bin/true
       - put: gh-status-2
         inputs: [repo.git]
         params:
           state: success
-          # This overrides the default build summary message
-          chat_message: "hello from kitty-jo"
+          # Append the default build summary to the custom message.
+          chat_message: "appending hello from kitty-jo"
+          chat_message_append: true

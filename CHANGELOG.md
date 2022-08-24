@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Google Chat: enrich cogito logging with human-readable information about the chat space.
 - Google Chat: allow to specify a different chat space/webhook during put (see `params.gchat_webhook`).
 - Google Chat: allow to specify a custom chat message, overriding the default build summary (see `params.chat_message`).
+- Google Chat: when passing a custom message, choose whether to append to it the default build summary or not (see `params.chat_message_append`).
 
 ## [v0.8.0] - 2022-08-11
 

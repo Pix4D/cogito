@@ -61,20 +61,8 @@ func TestPrepareChatMessage(t *testing.T) {
 	type testCase struct {
 		name        string
 		request     PutRequest
-		gitRef      string
 		wantPresent []string
 		wantAbsent  []string
-	}
-
-	test := func(t *testing.T, tc testCase) {
-		have := prepareChatMessage(tc.request, tc.gitRef)
-
-		for _, elem := range tc.wantPresent {
-			assert.Check(t, strings.Contains(have, elem))
-		}
-		for _, elem := range tc.wantAbsent {
-			assert.Check(t, !strings.Contains(have, elem))
-		}
 	}
 
 	baseRequest := PutRequest{
@@ -83,23 +71,48 @@ func TestPrepareChatMessage(t *testing.T) {
 		Env:    Environment{BuildJobName: "the-job"},
 	}
 
+	baseGitRef := "deadbeef"
+
+	basePresent := []string{
+		baseRequest.Source.Owner, baseRequest.Env.BuildJobName, baseGitRef}
+
+	test := func(t *testing.T, tc testCase) {
+		have := prepareChatMessage(tc.request, baseGitRef)
+
+		for _, elem := range tc.wantPresent {
+			assert.Check(t, strings.Contains(have, elem), elem)
+		}
+		for _, elem := range tc.wantAbsent {
+			assert.Check(t, !strings.Contains(have, elem), elem)
+		}
+	}
+
 	testCases := []testCase{
 		{
-			name:    "default build summary",
-			request: baseRequest,
-			gitRef:  "deadbeef",
-			wantPresent: []string{
-				baseRequest.Source.Owner, baseRequest.Env.BuildJobName, "deadbeef"},
+			name:        "default build summary",
+			request:     baseRequest,
+			wantPresent: basePresent,
 		},
 		{
 			name: "chat_message overrides default",
 			request: testhelp.MergeStructs(
 				baseRequest,
 				PutRequest{Params: PutParams{ChatMessage: "the-custom-message"}}),
-			gitRef:      "deadbeef",
 			wantPresent: []string{"the-custom-message"},
-			wantAbsent: []string{
-				baseRequest.Source.Owner, baseRequest.Env.BuildJobName, "deadbeef"},
+			wantAbsent:  basePresent,
+		},
+		{
+			name: "chat_message and append",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{
+					Params: PutParams{
+						ChatMessage:       "the-custom-message",
+						ChatMessageAppend: true,
+					},
+				}),
+			wantPresent: append(basePresent, "the-custom-message"),
+			wantAbsent:  nil,
 		},
 	}
 
