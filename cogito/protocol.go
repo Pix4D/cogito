@@ -79,7 +79,7 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "gchat_webhook:    %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:        %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:   %s\n", src.ContextPrefix)
-	// Last one: no newline
+	// Last one: no newline.
 	fmt.Fprintf(&bld, "notify_on_states: %s", src.NotifyOnStates)
 
 	return bld.String()
@@ -238,7 +238,20 @@ type PutParams struct {
 	//
 	// Optional
 	//
-	Context string `json:"context"`
+	Context      string `json:"context"`
+	GChatWebHook string `json:"gchat_webhook"` // SENSITIVE
+}
+
+// String renders PutParams, redacting the sensitive fields.
+func (params PutParams) String() string {
+	var bld strings.Builder
+
+	fmt.Fprintf(&bld, "state:         %s\n", params.State)
+	fmt.Fprintf(&bld, "context:       %s\n", params.Context)
+	// Last one: no newline.
+	fmt.Fprintf(&bld, "gchat_webhook: %s", redact(params.GChatWebHook))
+
+	return bld.String()
 }
 
 // Environment represents the environment variables made available to the program.

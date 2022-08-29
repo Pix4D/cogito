@@ -148,7 +148,9 @@ jobs:
         trigger: true
       - put: gh-status-2
         inputs: [repo.git]
-        params: {state: pending}
+        params:
+          state: pending
+          gchat_webhook: ((gchat_webhook_2))
       - task: meoooow
         config:
           platform: linux

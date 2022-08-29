@@ -22,9 +22,14 @@ func (sink GoogleChatSink) Send() error {
 	sink.Log.Debug("send: started")
 	defer sink.Log.Debug("send: finished")
 
-	if sink.Request.Source.GChatWebHook == "" {
-		sink.Log.Debug("not sending to chat",
-			"reason", "feature not enabled")
+	// If present, params.gchat_webhook overrides source.gchat_webhook.
+	webHook := sink.Request.Source.GChatWebHook
+	if sink.Request.Params.GChatWebHook != "" {
+		webHook = sink.Request.Params.GChatWebHook
+		sink.Log.Debug("params.gchat_webhook is overriding source.gchat_webhook")
+	}
+	if webHook == "" {
+		sink.Log.Info("not sending to chat", "reason", "feature not enabled")
 		return nil
 	}
 
@@ -42,15 +47,14 @@ func (sink GoogleChatSink) Send() error {
 	threadKey := fmt.Sprintf("%s %s", pipeline, sink.GitRef)
 	text := gChatFormatText(sink.GitRef, state, sink.Request.Source, sink.Request.Env)
 
-	reply, err := googlechat.TextMessage(ctx, sink.Request.Source.GChatWebHook, threadKey,
-		text)
+	reply, err := googlechat.TextMessage(ctx, webHook, threadKey, text)
 	if err != nil {
 		return fmt.Errorf("GoogleChatSink: %s", err)
 	}
 
 	sink.Log.Info("state posted successfully to chat",
-		"state", state, "text", text, "space", reply.Space.DisplayName,
-		"sender", reply.Sender.DisplayName)
+		"state", state, "space", reply.Space.DisplayName,
+		"sender", reply.Sender.DisplayName, "text", text)
 	return nil
 }
 

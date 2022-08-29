@@ -15,38 +15,62 @@ import (
 )
 
 func TestSinkGoogleChatSendSuccess(t *testing.T) {
-	wantGitRef := "deadbeef"
-	wantState := cogito.StateError // We want a state that is sent by default
-	var message googlechat.BasicMessage
-	reply := googlechat.MessageReply{}
-	var URL *url.URL
-	ts := testhelp.SpyHttpServer(&message, reply, &URL, http.StatusOK)
-	request := basePutRequest
-	request.Source.GChatWebHook = ts.URL
-	request.Params = cogito.PutParams{State: wantState}
-	request.Env = cogito.Environment{
-		BuildPipelineName: "the-test-pipeline",
-		BuildJobName:      "the-test-job",
-	}
-	assert.NilError(t, request.Source.Validate())
-	sink := cogito.GoogleChatSink{
-		Log:     hclog.NewNullLogger(),
-		GitRef:  wantGitRef,
-		Request: request,
+	type testCase struct {
+		name       string
+		setWebHook func(req *cogito.PutRequest, url string)
 	}
 
-	err := sink.Send()
-	// Return only the error and not the URL to avoid leaking passwords of the form
-	// http://user:password@example.com
+	test := func(t *testing.T, tc testCase) {
+		wantGitRef := "deadbeef"
+		wantState := cogito.StateError // We want a state that is sent by default
+		var message googlechat.BasicMessage
+		reply := googlechat.MessageReply{}
+		var URL *url.URL
+		ts := testhelp.SpyHttpServer(&message, reply, &URL, http.StatusOK)
+		request := basePutRequest
+		request.Params = cogito.PutParams{State: wantState}
+		request.Env = cogito.Environment{
+			BuildPipelineName: "the-test-pipeline",
+			BuildJobName:      "the-test-job",
+		}
+		tc.setWebHook(&request, ts.URL)
+		assert.NilError(t, request.Source.Validate())
+		sink := cogito.GoogleChatSink{
+			Log:     hclog.NewNullLogger(),
+			GitRef:  wantGitRef,
+			Request: request,
+		}
 
-	assert.NilError(t, err)
-	ts.Close() // Avoid races before the following asserts.
-	assert.Assert(t, cmp.Contains(message.Text, "*state* 🟠 error"))
-	assert.Assert(t, cmp.Contains(message.Text, "*pipeline* the-test-pipeline"))
-	assert.Assert(t, cmp.Contains(URL.String(), "/?threadKey=the-test-pipeline+deadbeef"))
+		err := sink.Send()
+
+		assert.NilError(t, err)
+		ts.Close() // Avoid races before the following asserts.
+		assert.Assert(t, cmp.Contains(message.Text, "*state* 🟠 error"))
+		assert.Assert(t, cmp.Contains(message.Text, "*pipeline* the-test-pipeline"))
+		assert.Assert(t, cmp.Contains(URL.String(), "/?threadKey=the-test-pipeline+deadbeef"))
+	}
+
+	testCases := []testCase{
+		{
+			name: "default chat space",
+			setWebHook: func(req *cogito.PutRequest, url string) {
+				req.Source.GChatWebHook = url
+			},
+		},
+		{
+			name: "multiple chat spaces",
+			setWebHook: func(req *cogito.PutRequest, url string) {
+				req.Params.GChatWebHook = url
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
 }
 
-func TestSinkGoogleChatDoesNotSendSuccess(t *testing.T) {
+func TestSinkGoogleChatDecidesNotToSendSuccess(t *testing.T) {
 	type testCase struct {
 		name    string
 		request cogito.PutRequest
