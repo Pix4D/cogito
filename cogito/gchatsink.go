@@ -3,6 +3,7 @@ package cogito
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -12,9 +13,10 @@ import (
 
 // GoogleChatSink is an implementation of [Sinker] for the Cogito resource.
 type GoogleChatSink struct {
-	Log     hclog.Logger
-	GitRef  string
-	Request PutRequest
+	Log      hclog.Logger
+	InputDir fs.FS
+	GitRef   string
+	Request  PutRequest
 }
 
 // Send sends a message to Google Chat if the configuration matches.
@@ -40,10 +42,12 @@ func (sink GoogleChatSink) Send() error {
 		return nil
 	}
 
-	// Prepare the message.
-	threadKey := fmt.Sprintf("%s %s", sink.Request.Env.BuildPipelineName, sink.GitRef)
-	text := prepareChatMessage(sink.Request, sink.GitRef)
+	text, err := prepareChatMessage(sink.InputDir, sink.Request, sink.GitRef)
+	if err != nil {
+		return fmt.Errorf("GoogleChatSink: %s", err)
+	}
 
+	threadKey := fmt.Sprintf("%s %s", sink.Request.Env.BuildPipelineName, sink.GitRef)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	reply, err := googlechat.TextMessage(ctx, webHook, threadKey, text)
@@ -68,22 +72,29 @@ func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
 }
 
 // prepareChatMessage returns a message ready to be sent to the chat sink.
-func prepareChatMessage(request PutRequest, gitRef string) string {
-	var text string
+func prepareChatMessage(inputDir fs.FS, request PutRequest, gitRef string,
+) (string, error) {
+	params := request.Params
 
-	buildSummary := gChatBuildSummaryText(gitRef, request.Params.State, request.Source,
-		request.Env)
-
-	if request.Params.ChatMessage != "" {
-		text = request.Params.ChatMessage
-		if request.Params.ChatMessageAppend {
-			text += "\n\n" + buildSummary
+	var parts []string
+	if params.ChatMessage != "" {
+		parts = append(parts, params.ChatMessage)
+	}
+	if params.ChatMessageFile != "" {
+		contents, err := fs.ReadFile(inputDir, params.ChatMessageFile)
+		if err != nil {
+			return "", fmt.Errorf("reading chat_message_file: %s", err)
 		}
-	} else {
-		text = buildSummary
+		parts = append(parts, string(contents))
 	}
 
-	return text
+	if len(parts) == 0 || (len(parts) > 0 && params.ChatMessageAppend) {
+		parts = append(
+			parts,
+			gChatBuildSummaryText(gitRef, params.State, request.Source, request.Env))
+	}
+
+	return strings.Join(parts, "\n\n"), nil
 }
 
 // gChatBuildSummaryText returns a plain text message to be sent to Google Chat.

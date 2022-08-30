@@ -270,16 +270,18 @@ notify_on_states: []`
 
 func TestPutParamsPrintLogRedaction(t *testing.T) {
 	params := cogito.PutParams{
-		State:        cogito.StatePending,
-		Context:      "johnny",
-		ChatMessage:  "stecchino",
-		GChatWebHook: "sensitive-gchat-webhook",
+		State:           cogito.StatePending,
+		Context:         "johnny",
+		ChatMessage:     "stecchino",
+		ChatMessageFile: "dir/msg.txt",
+		GChatWebHook:    "sensitive-gchat-webhook",
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `state:               pending
 context:             johnny
 chat_message:        stecchino
+chat_message_file:   dir/msg.txt
 chat_message_append: false
 gchat_webhook:       ***REDACTED***`
 
@@ -295,6 +297,7 @@ gchat_webhook:       ***REDACTED***`
 		want := `state:               failure
 context:             
 chat_message:        
+chat_message_file:   
 chat_message_append: false
 gchat_webhook:       `
 
