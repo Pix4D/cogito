@@ -195,6 +195,7 @@ tasks:
     desc: Build the Docker image.
     cmds:
       - docker build --build-arg BUILD_INFO --tag {{.DOCKER_FULL_NAME}} .
+      - docker images {{.DOCKER_FULL_NAME}}
     env:
       BUILD_INFO: "{{.BUILD_INFO}}"
 
@@ -210,6 +211,7 @@ tasks:
     desc: Push the Docker image.
     cmds:
       - docker push {{.DOCKER_FULL_NAME}}
+      - docker images {{.DOCKER_FULL_NAME}}
     preconditions:
       - sh: test -z "$IS_RELEASE" || test -n "$CI"
         msg: Release tag detected ({{.DOCKER_TAG}}); releases are made only on CI.
