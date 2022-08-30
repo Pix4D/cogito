@@ -8,6 +8,8 @@ vars:
   REPO: github.com/Pix4D/cogito
   COMMIT:
     sh: git log -n 1 --format=%h
+  BRANCH:
+    sh: git branch --show-current
   DOCKER_ORG: '{{default "pix4d" .DOCKER_ORG}}'
   DOCKER_IMAGE: cogito
   DOCKER_TAG:
@@ -116,6 +118,43 @@ tasks:
         # We only want to capture stderr, because the Cogito resource protocol uses
         # stderr for logging.
         sh: echo '{{.INPUT}}' | ./bin/check 2>&1 1>/dev/null
+
+  test:acceptance:
+    desc: Run the Cogito acceptance tests. Needs a running Concourse.
+    cmds:
+      - task: test:acceptance:set-pipeline
+      - task: test:acceptance:chat-message-file
+      - task: test:acceptance:chat-message-append
+
+  test:acceptance:fly-login:
+    desc: Performs a fly login in the target to be used in the acceptance tests.
+    cmds:
+      - fly -t cogito login -c $(gopass show cogito/concourse_url) --open-browser
+
+  test:acceptance:set-pipeline:
+    desc: Set the acceptance test pipeline
+    cmds:
+      - >
+        fly -t cogito set-pipeline --non-interactive -p cogito-acceptance-{{.BRANCH}}
+        -c pipelines/cogito-acceptance.yml
+        -y target-branch=stable
+        -y cogito-branch={{.BRANCH}}
+        -y github-owner=$(gopass show cogito/test_repo_owner)
+        -y repo-name=$(gopass show cogito/test_repo_name)
+        -y oauth-personal-access-token=$(gopass show cogito/test_oauth_token)
+        -y cogito-tag={{.BRANCH}}
+        -y gchat_webhook=$(gopass show cogito/test_gchat_webhook)
+      - fly -t cogito unpause-pipeline -p cogito-acceptance-{{.BRANCH}}
+
+  test:acceptance:chat-message-file:
+    desc: Run a pipeline job to test chat_message_file
+    cmds:
+      - fly -t cogito tj -j cogito-acceptance-{{.BRANCH}}/chat-message-file.job -w
+
+  test:acceptance:chat-message-append:
+    desc: Run a pipeline job to test chat_message_append
+    cmds:
+      - fly -t cogito tj -j cogito-acceptance-{{.BRANCH}}/chat-message-append.job -w
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"

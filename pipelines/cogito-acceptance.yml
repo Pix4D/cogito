@@ -1,0 +1,68 @@
+# NOTE
+# This pipeline doesn't have the standard handlers (on_success, on_failure, on_error,
+# on_abort) because it is meant to be run by tests for cogito itself.
+# The handler output just adds noise to the tests.
+
+###########################################################
+
+resource_types:
+
+  - name: cogito
+    type: registry-image
+    check_every: 24h
+    source:
+      repository: pix4d/cogito
+      tag: ((cogito-tag))
+
+###########################################################
+
+resources:
+
+  - name: cogito
+    type: cogito
+    check_every: never
+    source:
+      log_level: debug
+      owner: ((github-owner))
+      repo: ((repo-name))
+      access_token: ((oauth-personal-access-token))
+      gchat_webhook: ((gchat_webhook))
+      notify_on_states:  [abort, error, failure, pending, success]
+
+  - name: target-repo.git
+    type: git
+    source:
+      uri: https://github.com/((github-owner))/((repo-name)).git
+      branch: ((target-branch))
+
+  - name: cogito-repo.git
+    type: git
+    source:
+      uri: https://github.com/Pix4D/cogito.git
+      branch: ((cogito-branch))
+
+###########################################################
+
+jobs:
+
+  - name: chat-message-append.job
+    plan:
+      - get: target-repo.git
+      - put: cogito
+        inputs: [target-repo.git]
+        params:
+          state: success
+          chat_message: "This is the custom chat message. Below, the default build summary:"
+          chat_message_append: true
+
+  - name: chat-message-file.job
+    plan:
+      - get: cogito-repo.git
+      - get: target-repo.git
+      - task: generate-message-file
+        file: cogito-repo.git/pipelines/tasks/generate-message-file.yml
+      - put: cogito
+        inputs: [target-repo.git, messagedir]
+        params:
+          state: success
+          chat_message_file: "messagedir/message.txt"

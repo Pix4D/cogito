@@ -1,0 +1,19 @@
+platform: linux
+
+image_resource:
+  type: registry-image
+  source: { repository: alpine }
+
+outputs:
+  - name: messagedir
+
+run:
+  path: /bin/sh
+  args:
+    - -c
+    - |
+      set -o errexit
+      cat << EOF > messagedir/message.txt
+      1 hello this is the message file for cogito
+      2 time now: $(date)
+      EOF

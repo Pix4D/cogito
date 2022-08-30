@@ -349,11 +349,20 @@ Update the expired secrets as follows.
 
 Trigger a manual run of the CI to verify that everything works fine.
 
+## Preparing a PR
+
+Run the acceptance tests:
+
+```
+$ task test:acceptance
+```
+
 # Making a release
 
 A release is performed by the GitHub Action CI, triggered by a git tag of the form `v1.2.3`.
 
 - When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
+- Run the acceptance tests (`task test:acceptance`).
 - Prepare the PR to also contain an updated CHANGELOG.
 - Merge the PR to master.
 - git checkout master && git pull
