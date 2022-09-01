@@ -40,17 +40,13 @@ Run the default tests:
 $ task test:unit
 ```
 
-# Integration tests
+# Integration and acceptance tests
 
 There are the following integration tests:
 
 * tests upon GitHub
 * tests upon Google Chat
 * tests upon the Docker image as resource inside Concourse
-
-# Integration tests upon GitHub
-
-The integration tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
 
 We require environment variables to pass test configuration. The reason is twofold:
 
@@ -59,18 +55,43 @@ We require environment variables to pass test configuration. The reason is twofo
 
 The following sections contain first instructions for the setup, then instructions on how to run the tests.
 
-## Default test repository
-
-* https://github.com/Pix4D/cogito-test-read-write
-
-## Secure handling of the GitHub OAuth token
+## Secure handling of secrets
 
 We use the [gopass] tool, that stores secrets in the file system using GPG. We then make the secrets available as environment variables in the [Taskfile.yml](Taskfile.yml).
 
-Add the GitHub OAuth token:
+## Concourse URL
+
+This is used in the acceptance tests.
+
+```console
+$ gopass insert cogito/concourse_url
+```
+
+## Integration tests upon GitHub
+
+The integration tests (tests that interact with GitHub) are disabled by default because they require some out of band setup, explained below.
+
+### Default test repository
+
+* https://github.com/Pix4D/cogito-test-read-write
+
+### Add the GitHub OAuth token
 
 ```console
 $ gopass insert cogito/test_oauth_token
+```
+
+### Prepare the test repository
+
+1. In your GitHub account, create a test repository, say for example `cogito-test`.
+2. In the test repository, push at least one commit, on any branch you fancy. Take note of the 40 digits commit SHA (the API wants the full SHA).
+
+### Add test repository information as environment variables
+
+```console
+$ gopass insert cogito/test_repo_owner # Your GitHub user or organization
+$ gopass insert cogito/test_repo_name  # The repo name (without the trailing .git)
+$ gopass insert cogito/test_commit_sha
 ```
 
 ## Secure handling of the DockerHub token
@@ -97,22 +118,9 @@ $ gopass insert cogito/docker_org
 $ gopass insert cogito/docker_token
 ```
 
-## Prepare the test repository
-
-1. In your GitHub account, create a test repository, say for example `cogito-test`.
-2. In the test repository, push at least one commit, on any branch you fancy. Take note of the 40 digits commit SHA (the API wants the full SHA).
-
-## Add test repository information as environment variables
-
-```console
-$ gopass insert cogito/test_repo_owner # Your GitHub user or organization
-$ gopass insert cogito/test_repo_name  # The repo name (without the trailing .git)
-$ gopass insert cogito/test_commit_sha
-```
-
 ## Add Google Chat webhook
 
-Pix4D team member: see Google chat space "cogito-test", which is already configured.
+Pix4D team member: see Google chat spaces "cogito-test" and "cogito-test-2", which are already configured.
 
 If you are not using this feature, just add an empty string. This will allow to use the sample pipeline cogito.yml without modification.
 

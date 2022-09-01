@@ -294,6 +294,7 @@ gchat_webhook:       ***REDACTED***`
 		input := cogito.PutParams{
 			State: cogito.StateFailure,
 		}
+		// Trailing spaces here are needed.
 		want := `state:               failure
 context:             
 chat_message:        

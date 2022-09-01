@@ -45,7 +45,7 @@ resources:
 
 jobs:
 
-  - name: chat-message-append.job
+  - name: chat-message-append
     plan:
       - get: target-repo.git
       - put: cogito
@@ -55,7 +55,7 @@ jobs:
           chat_message: "This is the custom chat message. Below, the default build summary:"
           chat_message_append: true
 
-  - name: chat-message-file.job
+  - name: chat-message-file
     plan:
       - get: cogito-repo.git
       - get: target-repo.git

@@ -126,7 +126,7 @@ tasks:
       - task: test:acceptance:chat-message-file
       - task: test:acceptance:chat-message-append
 
-  test:acceptance:fly-login:
+  fly-login:
     desc: Performs a fly login in the target to be used in the acceptance tests.
     cmds:
       - fly -t cogito login -c $(gopass show cogito/concourse_url) --open-browser
@@ -135,7 +135,7 @@ tasks:
     desc: Set the acceptance test pipeline
     cmds:
       - >
-        fly -t cogito set-pipeline --non-interactive -p cogito-acceptance-{{.BRANCH}}
+        fly -t cogito set-pipeline --non-interactive -p {{.PIPELINE}}
         -c pipelines/cogito-acceptance.yml
         -y target-branch=stable
         -y cogito-branch={{.BRANCH}}
@@ -144,17 +144,28 @@ tasks:
         -y oauth-personal-access-token=$(gopass show cogito/test_oauth_token)
         -y cogito-tag={{.BRANCH}}
         -y gchat_webhook=$(gopass show cogito/test_gchat_webhook)
-      - fly -t cogito unpause-pipeline -p cogito-acceptance-{{.BRANCH}}
+      - fly -t cogito unpause-pipeline -p {{.PIPELINE}}
+    vars:
+      PIPELINE: cogito-acceptance-{{.BRANCH}}
+
+  trigger-job:
+    cmds:
+      - fly -t cogito trigger-job -j {{.PIPELINE}}/{{.JOB}} -w
+    vars:
+      PIPELINE: cogito-acceptance-{{.BRANCH}}
+      JOB: '{{.JOB}}'
 
   test:acceptance:chat-message-file:
     desc: Run a pipeline job to test chat_message_file
     cmds:
-      - fly -t cogito tj -j cogito-acceptance-{{.BRANCH}}/chat-message-file.job -w
+      - task: trigger-job
+        vars: {JOB: chat-message-file}
 
   test:acceptance:chat-message-append:
     desc: Run a pipeline job to test chat_message_append
     cmds:
-      - fly -t cogito tj -j cogito-acceptance-{{.BRANCH}}/chat-message-append.job -w
+      - task: trigger-job
+        vars: {JOB: chat-message-append}
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"

@@ -80,7 +80,7 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Pu
 type ProdPutter struct {
 	Request  PutRequest
 	InputDir string
-	//
+	// Cogito specific fields.
 	ghAPI  string
 	log    hclog.Logger
 	gitRef string
