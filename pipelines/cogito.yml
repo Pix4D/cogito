@@ -81,7 +81,7 @@ resources:
     access_token: ((oauth-personal-access-token))
     gchat_webhook: ((gchat_webhook))
     # These two states make sense only for testing the resource itself...
-    notify_on_states: [pending, success]
+    chat_notify_on_states: [pending, success]
 
 - name: repo.git
   type: git

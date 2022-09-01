@@ -36,7 +36,7 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	state := sink.Request.Params.State
-	if !shouldSendToChat(state, sink.Request.Source.NotifyOnStates) {
+	if !shouldSendToChat(state, sink.Request.Source.ChatNotifyOnStates) {
 		sink.Log.Debug("not sending to chat",
 			"reason", "state not in enabled states", "state", state)
 		return nil

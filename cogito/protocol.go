@@ -62,25 +62,25 @@ type Source struct {
 	//
 	// Optional
 	//
-	GChatWebHook   string       `json:"gchat_webhook"` // SENSITIVE
-	LogLevel       string       `json:"log_level"`
-	LogUrl         string       `json:"log_url"` // DEPRECATED
-	ContextPrefix  string       `json:"context_prefix"`
-	NotifyOnStates []BuildState `json:"notify_on_states"`
+	GChatWebHook       string       `json:"gchat_webhook"` // SENSITIVE
+	LogLevel           string       `json:"log_level"`
+	LogUrl             string       `json:"log_url"` // DEPRECATED
+	ContextPrefix      string       `json:"context_prefix"`
+	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 }
 
 // String renders Source, redacting the sensitive fields.
 func (src Source) String() string {
 	var bld strings.Builder
 
-	fmt.Fprintf(&bld, "owner:            %s\n", src.Owner)
-	fmt.Fprintf(&bld, "repo:             %s\n", src.Repo)
-	fmt.Fprintf(&bld, "access_token:     %s\n", redact(src.AccessToken))
-	fmt.Fprintf(&bld, "gchat_webhook:    %s\n", redact(src.GChatWebHook))
-	fmt.Fprintf(&bld, "log_level:        %s\n", src.LogLevel)
-	fmt.Fprintf(&bld, "context_prefix:   %s\n", src.ContextPrefix)
+	fmt.Fprintf(&bld, "owner:                 %s\n", src.Owner)
+	fmt.Fprintf(&bld, "repo:                  %s\n", src.Repo)
+	fmt.Fprintf(&bld, "access_token:          %s\n", redact(src.AccessToken))
+	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
+	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
+	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "notify_on_states: %s", src.NotifyOnStates)
+	fmt.Fprintf(&bld, "chat_notify_on_states: %s", src.ChatNotifyOnStates)
 
 	return bld.String()
 }
@@ -154,8 +154,8 @@ func (src *Source) Validate() error {
 	//
 	// Apply defaults.
 	//
-	if len(src.NotifyOnStates) == 0 {
-		src.NotifyOnStates = defaultNotifyStates
+	if len(src.ChatNotifyOnStates) == 0 {
+		src.ChatNotifyOnStates = defaultNotifyStates
 	}
 
 	return nil
