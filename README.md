@@ -205,8 +205,8 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 ## Optional params for chat
 
 - `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
-- `chat_message`: Custom chat message; overrides the build summary. Default: empty.
-- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty.
+- `chat_message`: Custom chat message; overrides the build summary. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
+- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
 - `chat_message_append`: (one of: true, false). If true, append the default build summary to the custom `chat_message` and/or `chat_message_file`. Default: false.
 
 ## Note on the put inputs

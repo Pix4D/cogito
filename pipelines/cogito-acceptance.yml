@@ -27,7 +27,6 @@ resources:
       repo: ((repo-name))
       access_token: ((oauth-personal-access-token))
       gchat_webhook: ((gchat_webhook))
-      chat_notify_on_states:  [abort, error, failure, pending, success]
 
   - name: target-repo.git
     type: git

@@ -36,9 +36,9 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	state := sink.Request.Params.State
-	if !shouldSendToChat(state, sink.Request.Source.ChatNotifyOnStates) {
+	if !shouldSendToChat(sink.Request) {
 		sink.Log.Debug("not sending to chat",
-			"reason", "state not in enabled states", "state", state)
+			"reason", "state not in configured states", "state", state)
 		return nil
 	}
 
@@ -62,9 +62,12 @@ func (sink GoogleChatSink) Send() error {
 }
 
 // shouldSendToChat returns true if the state is configured to do so.
-func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
-	for _, x := range notifyOnStates {
-		if state == x {
+func shouldSendToChat(request PutRequest) bool {
+	if request.Params.ChatMessage != "" || request.Params.ChatMessageFile != "" {
+		return true
+	}
+	for _, x := range request.Source.ChatNotifyOnStates {
+		if request.Params.State == x {
 			return true
 		}
 	}
