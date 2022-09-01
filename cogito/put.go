@@ -156,6 +156,13 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	source := putter.Request.Source
 	var msgDir string
 
+	collected, err := collectInputDirs(putter.InputDir)
+	if err != nil {
+		return err
+	}
+
+	inputDirs := sets.From(collected...)
+
 	if params.ChatMessageFile != "" {
 		msgDir, _ = path.Split(params.ChatMessageFile)
 		msgDir = strings.TrimSuffix(msgDir, "/")
@@ -163,33 +170,22 @@ func (putter *ProdPutter) ProcessInputDir() error {
 			return fmt.Errorf("chat_message_file: wrong format: have: %s, want: path of the form: <dir>/<file>",
 				params.ChatMessageFile)
 		}
+
+		found := inputDirs.Remove(msgDir)
+		if !found {
+			return fmt.Errorf("put:inputs: directory for chat_message_file not found: have: %v, chat_message_file: %s",
+				collected, params.ChatMessageFile)
+		}
 	}
 
-	collected, err := collectInputDirs(putter.InputDir)
-	if err != nil {
-		return err
-	}
-	inputDirs := sets.From(collected...)
-
-	if params.ChatMessageFile == "" {
-		// We want 1 input directory.
-		if inputDirs.Size() != 1 {
-			return fmt.Errorf(
-				"put:inputs: wrong size: have: %v, want: one, for GitHub repo: %s/%s",
-				inputDirs, source.Owner, source.Repo)
-		}
-	} else {
-		// We want 2 input directories.
-		if inputDirs.Size() != 2 {
-			return fmt.Errorf(
-				"put:inputs: wrong size: have: %v, want: two, one for GitHub repo: %s/%s, one for chat_message_file: %s",
-				inputDirs, source.Owner, source.Repo, msgDir)
-		}
-
-		if !inputDirs.Contains(msgDir) {
-			return fmt.Errorf("put:inputs: chat_message_file mismatch: have: %v, want: %s, chat_message_file: %s",
-				inputDirs, msgDir, params.ChatMessageFile)
-		}
+	if inputDirs.Size() == 0 {
+		return fmt.Errorf(
+			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+			collected, source.Owner, source.Repo)
+	} else if inputDirs.Size() > 1 {
+		return fmt.Errorf(
+			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
+			inputDirs, source.Owner, source.Repo)
 	}
 
 	// The set has one or two elements. if it exists, remove from the set the message

@@ -269,9 +269,14 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
+			name:     "no input dirs",
+			inputDir: "testdata/empty-dir",
+			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
+		},
+		{
 			name:     "two input dirs",
 			inputDir: "testdata/two-dirs",
-			wantErr:  "put:inputs: wrong size: have: [dir-1 dir-2], want: one, for GitHub repo: dummy-owner/dummy-repo",
+			wantErr:  "put:inputs: want only directory for GitHub repo: have: [dir-1 dir-2], GitHub: dummy-owner/dummy-repo",
 		},
 		{
 			name:     "one input dir but not a repo",
@@ -293,13 +298,13 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 			name:     "chat_message_file specified but different put:inputs",
 			inputDir: "testdata/repo-and-msgdir",
 			params:   cogito.PutParams{ChatMessageFile: "banana/msg.txt"},
-			wantErr:  "put:inputs: chat_message_file mismatch: have: [a-repo msgdir], want: banana, chat_message_file: banana/msg.txt",
+			wantErr:  "put:inputs: directory for chat_message_file not found: have: [a-repo msgdir], chat_message_file: banana/msg.txt",
 		},
 		{
 			name:     "chat_message_file specified but too few put:inputs",
 			inputDir: "testdata/one-repo",
 			params:   cogito.PutParams{ChatMessageFile: "banana/msg.txt"},
-			wantErr:  "put:inputs: wrong size: have: [a-repo], want: two, one for GitHub repo: dummy-owner/dummy-repo, one for chat_message_file: banana",
+			wantErr:  "put:inputs: directory for chat_message_file not found: have: [a-repo], chat_message_file: banana/msg.txt",
 		},
 	}
 

@@ -140,3 +140,74 @@ func TestDifference(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
+
+func TestRemoveFound(t *testing.T) {
+	type testCase struct {
+		name     string
+		items    []int
+		remove   int
+		wantList []int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		s := sets.From(tc.items...)
+
+		found := s.Remove(tc.remove)
+
+		assert.DeepEqual(t, s.OrderedList(), tc.wantList)
+		assert.Assert(t, found)
+	}
+
+	testCases := []testCase{
+		{
+			name:     "set with one element",
+			items:    []int{42},
+			remove:   42,
+			wantList: []int{},
+		},
+		{
+			name:     "set with multiple elements",
+			items:    []int{-5, 100, 42},
+			remove:   42,
+			wantList: []int{-5, 100},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestRemoveNotFound(t *testing.T) {
+	type testCase struct {
+		name   string
+		items  []int
+		remove int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		s := sets.From(tc.items...)
+
+		found := s.Remove(tc.remove)
+
+		assert.DeepEqual(t, s.OrderedList(), tc.items)
+		assert.Assert(t, !found)
+	}
+
+	testCases := []testCase{
+		{
+			name:   "empty set",
+			items:  []int{},
+			remove: 42,
+		},
+		{
+			name:   "non empty set",
+			items:  []int{10, 50},
+			remove: 42,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
