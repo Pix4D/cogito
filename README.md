@@ -169,8 +169,8 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 - `context_prefix`: The prefix for the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
 - `gchat_webhook`. Default: empty. URL of a [Google Chat webhook].
     A notification about the build status will be sent to the associated chat space, using a thread key composed by the pipeline name and commit hash (since v0.7.0).
-    See also: `notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
-- `notify_on_states`. Default: [`abort`, `error`, `failure`]. The build states that will cause a chat notification. One or more of [`abort`, `error`, `failure`, `pending`, `success`].
+    See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
+- `chat_notify_on_states`. Default: [`abort`, `error`, `failure`]. The build states that will cause a chat notification. One or more of [`abort`, `error`, `failure`, `pending`, `success`].
   See section [Build states mapping](#build-states-mapping).
 - `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
 - `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
@@ -205,8 +205,8 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 ## Optional params for chat
 
 - `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
-- `chat_message`: Custom chat message; overrides the build summary. Default: empty.
-- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty.
+- `chat_message`: Custom chat message; overrides the build summary. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
+- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
 - `chat_message_append`: (one of: true, false). If true, append the default build summary to the custom `chat_message` and/or `chat_message_file`. Default: false.
 
 ## Note on the put inputs

@@ -215,40 +215,40 @@ func TestSourceParseRawFailure(t *testing.T) {
 
 func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
-		Owner:          "the-owner",
-		Repo:           "the-repo",
-		AccessToken:    "sensitive-the-access-token",
-		GChatWebHook:   "sensitive-gchat-webhook",
-		LogLevel:       "debug",
-		ContextPrefix:  "the-prefix",
-		NotifyOnStates: []cogito.BuildState{cogito.StateSuccess, cogito.StateFailure},
+		Owner:              "the-owner",
+		Repo:               "the-repo",
+		AccessToken:        "sensitive-the-access-token",
+		GChatWebHook:       "sensitive-gchat-webhook",
+		LogLevel:           "debug",
+		ContextPrefix:      "the-prefix",
+		ChatNotifyOnStates: []cogito.BuildState{cogito.StateSuccess, cogito.StateFailure},
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
-		want := `owner:            the-owner
-repo:             the-repo
-access_token:     ***REDACTED***
-gchat_webhook:    ***REDACTED***
-log_level:        debug
-context_prefix:   the-prefix
-notify_on_states: [success failure]`
+		want := `owner:                 the-owner
+repo:                  the-repo
+access_token:          ***REDACTED***
+gchat_webhook:         ***REDACTED***
+log_level:             debug
+context_prefix:        the-prefix
+chat_notify_on_states: [success failure]`
 
 		have := fmt.Sprint(source)
 
 		assert.Equal(t, have, want)
 	})
-
+	// Trailing spaces here are needed.
 	t.Run("empty fields are not marked as redacted", func(t *testing.T) {
 		input := cogito.Source{
 			Owner: "the-owner",
 		}
-		want := `owner:            the-owner
-repo:             
-access_token:     
-gchat_webhook:    
-log_level:        
-context_prefix:   
-notify_on_states: []`
+		want := `owner:                 the-owner
+repo:                  
+access_token:          
+gchat_webhook:         
+log_level:             
+context_prefix:        
+chat_notify_on_states: []`
 
 		have := fmt.Sprint(input)
 
@@ -262,8 +262,8 @@ notify_on_states: []`
 		log.Info("log test", "source", source)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "| access_token:     ***REDACTED***"))
-		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:    ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| access_token:          ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:         ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }

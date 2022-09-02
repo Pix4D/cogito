@@ -17,7 +17,11 @@ func TestShouldSendToChatDefaultConfig(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		assert.Equal(t, shouldSendToChat(tc.state, defaultNotifyStates), tc.want)
+		request := PutRequest{}
+		request.Source.ChatNotifyOnStates = defaultNotifyStates
+		request.Params.State = tc.state
+
+		assert.Equal(t, shouldSendToChat(request), tc.want)
 	}
 
 	testCases := []testCase{
@@ -39,10 +43,12 @@ func TestShouldSendToChatCustomConfig(t *testing.T) {
 		want  bool
 	}
 
-	baseNotifyStates := []BuildState{StatePending, StateSuccess}
-
 	test := func(t *testing.T, tc testCase) {
-		assert.Equal(t, shouldSendToChat(tc.state, baseNotifyStates), tc.want)
+		request := PutRequest{}
+		request.Source.ChatNotifyOnStates = []BuildState{StatePending, StateSuccess}
+		request.Params.State = tc.state
+
+		assert.Equal(t, shouldSendToChat(request), tc.want)
 	}
 
 	testCases := []testCase{
