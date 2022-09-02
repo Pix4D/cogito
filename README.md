@@ -198,32 +198,45 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 
 - `state`: The state to set. One of `error`, `failure`, `pending`, `success`, `abort`. Subject to the mapping explained in section [Effects](#effects).
 
-## Optional params
+## Optional params for GitHub commit status
 
 - `context`: The value of the non-prefix part of the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). Default: the job name. See also the optional `context_prefix` in the [source configuration](#source-configuration).
+
+## Optional params for chat
+
 - `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
+- `chat_message`: Custom chat message; overrides the build summary. Default: empty.
+- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty.
+- `chat_message_append`: (one of: true, false). If true, append the default build summary to the custom `chat_message` and/or `chat_message_file`. Default: false.
 
-## Note
+## Note on the put inputs
 
-The put step requires one and only one ["put inputs"] to be specified, otherwise it will error out. For example:
+If using only GitHub commit status (no chat), the put step requires only one ["put inputs"]. For example:
 
 ```yaml
 on_success:
   put: gh-status
-  # This is the name of the git resource corresponding to the GitHub repo to be updated.
-  inputs: [the-repo]
+  inputs: [the-repo] # name of the git resource corresponding to the GitHub repo to be updated.
   params: {state: success}
 ```
 
-As all the other GitHub commit status resources, it requires as input the git repo passed by the git resource because it will look inside it to gather information such as the commit hash for which to set the commit status.
+If using both GitHub Commit status and the `chat_message_file` parameter, the put step requires only two ["put inputs"]. For example:
 
-It requires only one put input to help you have an efficient pipeline, since if the "put inputs" list is not set explicitly, Concourse will stream all inputs used by the job to this resource, which can have a big performance impact. From the ["put inputs"] documentation:
+```yaml
+on_success:
+  put: gh-status
+  # the-repo: git resource; the-message-dir: "output" of a previous task
+  inputs: [the-repo, the-message-dir]
+  params:
+    state: success
+    chat_message_file: the-message-dir/msg.txt
+```
+
+The reasons of this strictness is to help you have an efficient pipeline, since if the "put inputs" list is not set explicitly, then Concourse will stream all inputs used by the job to this resource, which can have a big performance impact. From the ["put inputs"] documentation:
 
 > inputs: [string]
 >
 > Optional. If specified, only the listed artifacts will be provided to the container. If not specified, all artifacts will be provided.
-
-To better understand from where `the-repo` comes from, see the full example at the beginning of this document.
 
 ["put inputs"]: https://concourse-ci.org/put-step.html#put-step-inputs
 

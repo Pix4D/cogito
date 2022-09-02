@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"testing/fstest"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/googlechat"
@@ -109,7 +110,7 @@ func TestSinkGoogleChatDecidesNotToSendSuccess(t *testing.T) {
 	}
 }
 
-func TestSinkGoogleChatSendFailure(t *testing.T) {
+func TestSinkGoogleChatSendBackendFailure(t *testing.T) {
 	ts := httptest.NewServer(
 		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusTeapot)
@@ -126,4 +127,20 @@ func TestSinkGoogleChatSendFailure(t *testing.T) {
 
 	assert.ErrorContains(t, err, "GoogleChatSink: TextMessage: status: 418 I'm a teapot")
 	ts.Close()
+}
+
+func TestSinkGoogleChatSendInputFailure(t *testing.T) {
+	request := basePutRequest
+	request.Params.ChatMessageFile = "foo/msg.txt"
+	request.Source.GChatWebHook = "dummy-url"
+	assert.NilError(t, request.Source.Validate())
+	sink := cogito.GoogleChatSink{
+		Log:      hclog.NewNullLogger(),
+		InputDir: fstest.MapFS{"bar/msg.txt": {Data: []byte("from-custom-file")}},
+		Request:  request,
+	}
+
+	err := sink.Send()
+
+	assert.ErrorContains(t, err, "GoogleChatSink: reading chat_message_file: open")
 }

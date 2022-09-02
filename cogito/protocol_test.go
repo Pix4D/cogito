@@ -270,15 +270,20 @@ notify_on_states: []`
 
 func TestPutParamsPrintLogRedaction(t *testing.T) {
 	params := cogito.PutParams{
-		State:        cogito.StatePending,
-		Context:      "johnny",
-		GChatWebHook: "sensitive-gchat-webhook",
+		State:           cogito.StatePending,
+		Context:         "johnny",
+		ChatMessage:     "stecchino",
+		ChatMessageFile: "dir/msg.txt",
+		GChatWebHook:    "sensitive-gchat-webhook",
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
-		want := `state:         pending
-context:       johnny
-gchat_webhook: ***REDACTED***`
+		want := `state:               pending
+context:             johnny
+chat_message:        stecchino
+chat_message_file:   dir/msg.txt
+chat_message_append: false
+gchat_webhook:       ***REDACTED***`
 
 		have := fmt.Sprint(params)
 
@@ -289,9 +294,13 @@ gchat_webhook: ***REDACTED***`
 		input := cogito.PutParams{
 			State: cogito.StateFailure,
 		}
-		want := `state:         failure
-context:       
-gchat_webhook: `
+		// Trailing spaces here are needed.
+		want := `state:               failure
+context:             
+chat_message:        
+chat_message_file:   
+chat_message_append: false
+gchat_webhook:       `
 
 		have := fmt.Sprint(input)
 
@@ -305,7 +314,7 @@ gchat_webhook: `
 		log.Info("log test", "params", params)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "| gchat_webhook: ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:       ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }

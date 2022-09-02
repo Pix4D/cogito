@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Pix4D/cogito/sets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/sasbury/mini"
 )
@@ -77,11 +78,12 @@ func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Pu
 // ProdPutter is an implementation of a [Putter] for the Cogito resource.
 // Use [NewPutter] to create an instance.
 type ProdPutter struct {
-	ghAPI    string
-	log      hclog.Logger
-	gitRef   string
 	Request  PutRequest
 	InputDir string
+	// Cogito specific fields.
+	ghAPI  string
+	log    hclog.Logger
+	gitRef string
 }
 
 // NewPutter returns a Cogito ProdPutter.
@@ -136,21 +138,63 @@ func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	inputDirs, err := collectInputDirs(putter.InputDir)
+	// putter.InputDir, corresponding to key "put:inputs:", should contain 1 or 2 dirs.
+	// If it contains one, we support autodiscovery by not requiring to name it, we know
+	// that it should be the git repo.
+	// If on the other hand it contains two, one should be the git repo (still nameless)
+	// and the other should be the directory containing the chat_message_file, which is
+	// named by the first element of the path in "chat_message_file".
+	// This allows (although clumsily) to distinguish which is which.
+	// This complexity has historical reasons to preserve backwards compatibility
+	// (the nameless git repo).
+	//
+	// Somehow independent is the reason why we enforce the count of directories to be
+	// max 2: this is to avoid the default Concourse behavior of streaming _all_ the
+	// volumes "just in case".
+
+	params := putter.Request.Params
+	source := putter.Request.Source
+	var msgDir string
+
+	collected, err := collectInputDirs(putter.InputDir)
 	if err != nil {
 		return err
 	}
-	if len(inputDirs) != 1 {
-		return fmt.Errorf(
-			"found %d input dirs: %v. Want exactly 1, corresponding to the GitHub repo %s/%s",
-			len(inputDirs), inputDirs, putter.Request.Source.Owner, putter.Request.Source.Repo)
+
+	inputDirs := sets.From(collected...)
+
+	if params.ChatMessageFile != "" {
+		msgDir, _ = path.Split(params.ChatMessageFile)
+		msgDir = strings.TrimSuffix(msgDir, "/")
+		if msgDir == "" {
+			return fmt.Errorf("chat_message_file: wrong format: have: %s, want: path of the form: <dir>/<file>",
+				params.ChatMessageFile)
+		}
+
+		found := inputDirs.Remove(msgDir)
+		if !found {
+			return fmt.Errorf("put:inputs: directory for chat_message_file not found: have: %v, chat_message_file: %s",
+				collected, params.ChatMessageFile)
+		}
 	}
 
-	// Since we require InputDir to contain only one directory, we assume that this
-	// directory is the git repo.
-	repoDir := filepath.Join(putter.InputDir, inputDirs[0])
-	if err := checkGitRepoDir(
-		repoDir, putter.Request.Source.Owner, putter.Request.Source.Repo); err != nil {
+	if inputDirs.Size() == 0 {
+		return fmt.Errorf(
+			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+			collected, source.Owner, source.Repo)
+	} else if inputDirs.Size() > 1 {
+		return fmt.Errorf(
+			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
+			inputDirs, source.Owner, source.Repo)
+	}
+
+	// The set has one or two elements. if it exists, remove from the set the message
+	// directory. The remaining one is the git repo.
+	putter.log.Debug("", "inputDirs", inputDirs, "msgDir", msgDir)
+	remaining := inputDirs.Difference(sets.From(msgDir))
+	repoDir := filepath.Join(putter.InputDir, remaining.OrderedList()[0])
+
+	if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
 		return err
 	}
 
@@ -172,9 +216,11 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request: putter.Request,
 		},
 		GoogleChatSink{
-			Log:     putter.log.Named("gChat"),
-			GitRef:  putter.gitRef,
-			Request: putter.Request,
+			Log: putter.log.Named("gChat"),
+			// TODO putter.InputDir itself should be of type fs.FS.
+			InputDir: os.DirFS(putter.InputDir),
+			GitRef:   putter.gitRef,
+			Request:  putter.Request,
 		},
 	}
 }
@@ -306,7 +352,7 @@ func safeUrlParse(rawURL string) (*url.URL, error) {
 //   - ssh:   			git@github.com:Pix4D/cogito.git; will be rewritten to the valid URL
 //     ssh://git@github.com/Pix4D/cogito.git
 //   - https: 			https://github.com/Pix4D/cogito.git
-//	 - https with u:p: 	https//username:password@github.com/Pix4D/cogito.git
+//   - https with u:p: 	https//username:password@github.com/Pix4D/cogito.git
 //   - http: 			http://github.com/Pix4D/cogito.git
 //   - http with u:p: 	http://username:password@github.com/Pix4D/cogito.git
 func parseGitPseudoURL(rawURL string) (gitURL, error) {

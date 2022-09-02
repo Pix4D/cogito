@@ -1,8 +1,11 @@
 package cogito
 
 import (
+	"strings"
 	"testing"
+	"testing/fstest"
 
+	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
@@ -55,7 +58,118 @@ func TestShouldSendToChatCustomConfig(t *testing.T) {
 	}
 }
 
-func TestGChatFormatText(t *testing.T) {
+func TestPrepareChatMessageSuccess(t *testing.T) {
+	type testCase struct {
+		name        string
+		request     PutRequest
+		inputDir    fstest.MapFS
+		wantPresent []string
+		wantAbsent  []string
+	}
+
+	baseRequest := PutRequest{
+		Source: Source{Owner: "the-owner"},
+		Params: PutParams{State: StateError},
+		Env:    Environment{BuildJobName: "the-job"},
+	}
+
+	baseGitRef := "deadbeef"
+
+	basePresent := []string{
+		baseRequest.Source.Owner, baseRequest.Env.BuildJobName, baseGitRef}
+
+	test := func(t *testing.T, tc testCase) {
+		have, err := prepareChatMessage(tc.inputDir, tc.request, baseGitRef)
+
+		assert.NilError(t, err)
+		for _, elem := range tc.wantPresent {
+			assert.Check(t, strings.Contains(have, elem), "wanted: %s", elem)
+		}
+		for _, elem := range tc.wantAbsent {
+			assert.Check(t, !strings.Contains(have, elem), "not wanted: %s", elem)
+		}
+	}
+
+	testCases := []testCase{
+		{
+			name:        "default build summary",
+			request:     baseRequest,
+			wantPresent: basePresent,
+		},
+		{
+			name: "chat_message overrides default",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{Params: PutParams{ChatMessage: "the-custom-message"}}),
+			wantPresent: []string{"the-custom-message"},
+			wantAbsent:  basePresent,
+		},
+		{
+			name: "chat_message and append",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{
+					Params: PutParams{
+						ChatMessage:       "the-custom-message",
+						ChatMessageAppend: true,
+					},
+				}),
+			wantPresent: append(basePresent, "the-custom-message"),
+		},
+		{
+			name: "chat message file",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{Params: PutParams{ChatMessageFile: "registration/msg.txt"}}),
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			},
+			wantPresent: []string{"from-custom-file"},
+			wantAbsent:  basePresent,
+		},
+		{
+			name: "chat message and chat message file",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{Params: PutParams{
+					ChatMessage:     "the-chat-message",
+					ChatMessageFile: "registration/msg.txt"}}),
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			},
+			wantPresent: []string{"the-chat-message", "from-custom-file"},
+			wantAbsent:  basePresent,
+		},
+		{
+			name: "chat message file and append",
+			request: testhelp.MergeStructs(
+				baseRequest,
+				PutRequest{Params: PutParams{
+					ChatMessageAppend: true,
+					ChatMessageFile:   "registration/msg.txt"}}),
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			},
+			wantPresent: append(basePresent, "from-custom-file"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestPrepareChatMessageFailure(t *testing.T) {
+	request := PutRequest{Params: PutParams{ChatMessageFile: "foo/msg.txt"}}
+	inputDir := fstest.MapFS{"bar/msg.txt": {Data: []byte("from-custom-file")}}
+
+	_, err := prepareChatMessage(inputDir, request, "deadbeef")
+
+	assert.Error(t, err,
+		"reading chat_message_file: open foo/msg.txt: file does not exist")
+}
+
+func TestGChatBuildSummaryText(t *testing.T) {
 	commit := "deadbeef"
 	state := StatePending
 	src := Source{
@@ -69,7 +183,7 @@ func TestGChatFormatText(t *testing.T) {
 		AtcExternalUrl:    "https://cogito.invalid",
 	}
 
-	have := gChatFormatText(commit, state, src, env)
+	have := gChatBuildSummaryText(commit, state, src, env)
 
 	assert.Assert(t, cmp.Contains(have, "*pipeline* the-pipeline"))
 	assert.Assert(t, cmp.Regexp(`\*job\* <https:.+\|the-job\/42>`, have))

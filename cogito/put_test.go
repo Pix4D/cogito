@@ -206,36 +206,61 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
 }
 
 func TestPutterProcessInputDirSuccess(t *testing.T) {
-	inputDir := "testdata/one-repo"
-	tmpDir := testhelp.MakeGitRepoFromTestdata(t, inputDir,
-		"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-	putter.InputDir = filepath.Join(tmpDir, filepath.Base(inputDir))
-	putter.Request = cogito.PutRequest{
-		Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+	type testCase struct {
+		name     string
+		inputDir string
+		params   cogito.PutParams
 	}
 
-	err := putter.ProcessInputDir()
+	test := func(t *testing.T, tc testCase) {
+		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
+			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
+		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
+		putter.Request = cogito.PutRequest{
+			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+			Params: tc.params,
+		}
 
-	assert.NilError(t, err)
+		err := putter.ProcessInputDir()
+
+		assert.NilError(t, err)
+	}
+
+	testCases := []testCase{
+		{
+			name:     "one dir with a repo",
+			inputDir: "testdata/one-repo",
+		},
+		{
+			name:     "two dirs: repo and msg file",
+			inputDir: "testdata/repo-and-msgdir",
+			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
 }
 
 func TestPutterProcessInputDirFailure(t *testing.T) {
 	type testCase struct {
 		name     string
 		inputDir string
+		params   cogito.PutParams
 		wantErr  string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
-		putter := &cogito.ProdPutter{
-			InputDir: filepath.Join(tmpDir, filepath.Base(tc.inputDir)),
-			Request: cogito.PutRequest{
-				Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
-			},
+		putter := cogito.NewPutter("dummy-api", hclog.NewNullLogger())
+		putter.Request = cogito.PutRequest{
+			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+			Params: tc.params,
 		}
+		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
 
 		err := putter.ProcessInputDir()
 
@@ -244,9 +269,14 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
+			name:     "no input dirs",
+			inputDir: "testdata/empty-dir",
+			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
+		},
+		{
 			name:     "two input dirs",
 			inputDir: "testdata/two-dirs",
-			wantErr:  "found 2 input dirs: [dir-1 dir-2]. Want exactly 1, corresponding to the GitHub repo dummy-owner/dummy-repo",
+			wantErr:  "put:inputs: want only directory for GitHub repo: have: [dir-1 dir-2], GitHub: dummy-owner/dummy-repo",
 		},
 		{
 			name:     "one input dir but not a repo",
@@ -257,6 +287,24 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 			name:     "git repo, but something wrong",
 			inputDir: "testdata/one-repo",
 			wantErr:  "git commit: branch checkout: read SHA file: open ",
+		},
+		{
+			name:     "repo and msgdir, but missing dir in chat_message_file",
+			inputDir: "testdata/repo-and-msgdir",
+			params:   cogito.PutParams{ChatMessageFile: "msg.txt"},
+			wantErr:  "chat_message_file: wrong format: have: msg.txt, want: path of the form: <dir>/<file>",
+		},
+		{
+			name:     "chat_message_file specified but different put:inputs",
+			inputDir: "testdata/repo-and-msgdir",
+			params:   cogito.PutParams{ChatMessageFile: "banana/msg.txt"},
+			wantErr:  "put:inputs: directory for chat_message_file not found: have: [a-repo msgdir], chat_message_file: banana/msg.txt",
+		},
+		{
+			name:     "chat_message_file specified but too few put:inputs",
+			inputDir: "testdata/one-repo",
+			params:   cogito.PutParams{ChatMessageFile: "banana/msg.txt"},
+			wantErr:  "put:inputs: directory for chat_message_file not found: have: [a-repo], chat_message_file: banana/msg.txt",
 		},
 	}
 

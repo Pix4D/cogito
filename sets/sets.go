@@ -61,6 +61,15 @@ func (s *Set[T]) Contains(item T) bool {
 	return found
 }
 
+// Remove deletes item from s. Returns true if the item was present.
+func (s *Set[T]) Remove(item T) bool {
+	if !s.Contains(item) {
+		return false
+	}
+	delete(s.items, item)
+	return true
+}
+
 // Difference returns a set containing the elements of s that are not in x.
 func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 	result := New[T](max(0, s.Size()-x.Size()))

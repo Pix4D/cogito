@@ -3,6 +3,7 @@ package cogito
 import (
 	"context"
 	"fmt"
+	"io/fs"
 	"strings"
 	"time"
 
@@ -12,9 +13,10 @@ import (
 
 // GoogleChatSink is an implementation of [Sinker] for the Cogito resource.
 type GoogleChatSink struct {
-	Log     hclog.Logger
-	GitRef  string
-	Request PutRequest
+	Log      hclog.Logger
+	InputDir fs.FS
+	GitRef   string
+	Request  PutRequest
 }
 
 // Send sends a message to Google Chat if the configuration matches.
@@ -40,13 +42,14 @@ func (sink GoogleChatSink) Send() error {
 		return nil
 	}
 
+	text, err := prepareChatMessage(sink.InputDir, sink.Request, sink.GitRef)
+	if err != nil {
+		return fmt.Errorf("GoogleChatSink: %s", err)
+	}
+
+	threadKey := fmt.Sprintf("%s %s", sink.Request.Env.BuildPipelineName, sink.GitRef)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-
-	pipeline := sink.Request.Env.BuildPipelineName
-	threadKey := fmt.Sprintf("%s %s", pipeline, sink.GitRef)
-	text := gChatFormatText(sink.GitRef, state, sink.Request.Source, sink.Request.Env)
-
 	reply, err := googlechat.TextMessage(ctx, webHook, threadKey, text)
 	if err != nil {
 		return fmt.Errorf("GoogleChatSink: %s", err)
@@ -68,8 +71,35 @@ func shouldSendToChat(state BuildState, notifyOnStates []BuildState) bool {
 	return false
 }
 
-// gChatFormatText returns a plain text message to be sent to Google Chat.
-func gChatFormatText(gitRef string, state BuildState, src Source, env Environment) string {
+// prepareChatMessage returns a message ready to be sent to the chat sink.
+func prepareChatMessage(inputDir fs.FS, request PutRequest, gitRef string,
+) (string, error) {
+	params := request.Params
+
+	var parts []string
+	if params.ChatMessage != "" {
+		parts = append(parts, params.ChatMessage)
+	}
+	if params.ChatMessageFile != "" {
+		contents, err := fs.ReadFile(inputDir, params.ChatMessageFile)
+		if err != nil {
+			return "", fmt.Errorf("reading chat_message_file: %s", err)
+		}
+		parts = append(parts, string(contents))
+	}
+
+	if len(parts) == 0 || (len(parts) > 0 && params.ChatMessageAppend) {
+		parts = append(
+			parts,
+			gChatBuildSummaryText(gitRef, params.State, request.Source, request.Env))
+	}
+
+	return strings.Join(parts, "\n\n"), nil
+}
+
+// gChatBuildSummaryText returns a plain text message to be sent to Google Chat.
+func gChatBuildSummaryText(gitRef string, state BuildState, src Source, env Environment,
+) string {
 	now := time.Now().Format("2006-01-02 15:04:05 MST")
 
 	// Google Chat format for links with alternate name:
