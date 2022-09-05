@@ -4,6 +4,7 @@
 package cogito
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -48,6 +49,39 @@ type PutRequest struct {
 	Env    Environment
 }
 
+func (req *PutRequest) UnmarshalJSON(data []byte) error {
+	type request PutRequest // Alias to avoid infinite loops.
+
+	//
+	// Parse Source. The method [Source.UnmarshalJSON] will set the needed defaults.
+	//
+	var aux1 request
+	if err := json.Unmarshal(data, &aux1); err != nil {
+		return err
+	}
+	req.Source = aux1.Source
+
+	//
+	// Parse Params with default values set from Source.
+	//
+	aux2 := request{
+		Params: PutParams{
+			ChatAppendSummary: req.Source.ChatAppendSummary, // default value
+		},
+	}
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder :-/
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&aux2); err != nil {
+		return err
+	}
+	req.Params = aux2.Params
+
+	return nil
+}
+
 // DO NOT REASSIGN.
 var defaultNotifyStates = []BuildState{StateAbort, StateError, StateFailure}
 
@@ -66,6 +100,7 @@ type Source struct {
 	LogLevel           string       `json:"log_level"`
 	LogUrl             string       `json:"log_url"` // DEPRECATED
 	ContextPrefix      string       `json:"context_prefix"`
+	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 }
 
@@ -79,18 +114,33 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
+	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
 	// Last one: no newline.
 	fmt.Fprintf(&bld, "chat_notify_on_states: %s", src.ChatNotifyOnStates)
 
 	return bld.String()
 }
 
-// redact returns a redacted version of s. If s is empty, it returns the empty string.
-func redact(s string) string {
-	if s != "" {
-		s = "***REDACTED***"
+// UnmarshalJSON is used to set some default values of the struct.
+// See https://www.orsolabs.com/post/go-json-default-values/
+func (src *Source) UnmarshalJSON(data []byte) error {
+	type source Source // Alias to avoid infinite loop.
+
+	// Set the default value before JSON parsing.
+	aux := source{
+		ChatAppendSummary: true,
 	}
-	return s
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder :-/
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&aux); err != nil {
+		return err
+	}
+	*src = Source(aux)
+
+	return nil
 }
 
 // ValidateLog validates and applies defaults for the logging configuration of Source.
@@ -159,6 +209,14 @@ func (src *Source) Validate() error {
 	}
 
 	return nil
+}
+
+// redact returns a redacted version of s. If s is empty, it returns the empty string.
+func redact(s string) string {
+	if s != "" {
+		s = "***REDACTED***"
+	}
+	return s
 }
 
 // Version is a JSON object part of the Concourse resource protocol. The only requirement
@@ -241,7 +299,7 @@ type PutParams struct {
 	Context           string `json:"context"`
 	ChatMessage       string `json:"chat_message"`
 	ChatMessageFile   string `json:"chat_message_file"`
-	ChatMessageAppend bool   `json:"chat_message_append"`
+	ChatAppendSummary bool   `json:"chat_append_summary"`
 	GChatWebHook      string `json:"gchat_webhook"` // SENSITIVE
 }
 
@@ -253,7 +311,7 @@ func (params PutParams) String() string {
 	fmt.Fprintf(&bld, "context:             %s\n", params.Context)
 	fmt.Fprintf(&bld, "chat_message:        %s\n", params.ChatMessage)
 	fmt.Fprintf(&bld, "chat_message_file:   %s\n", params.ChatMessageFile)
-	fmt.Fprintf(&bld, "chat_message_append: %v\n", params.ChatMessageAppend)
+	fmt.Fprintf(&bld, "chat_append_summary: %v\n", params.ChatAppendSummary)
 	// Last one: no newline.
 	fmt.Fprintf(&bld, "gchat_webhook:       %s", redact(params.GChatWebHook))
 

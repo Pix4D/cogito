@@ -28,6 +28,17 @@ resources:
       access_token: ((oauth-personal-access-token))
       gchat_webhook: ((gchat_webhook))
 
+  - name: cogito-notify-always
+    type: cogito
+    check_every: never
+    source:
+      log_level: debug
+      owner: ((github-owner))
+      repo: ((repo-name))
+      access_token: ((oauth-personal-access-token))
+      gchat_webhook: ((gchat_webhook))
+      chat_notify_on_states: [abort, error, failure, pending, success]
+
   - name: target-repo.git
     type: git
     source:
@@ -44,7 +55,15 @@ resources:
 
 jobs:
 
-  - name: chat-message-append
+  - name: chat-only-summary
+    plan:
+      - get: target-repo.git
+      - put: cogito-notify-always
+        inputs: [target-repo.git]
+        params:
+          state: success
+
+  - name: chat-message-default
     plan:
       - get: target-repo.git
       - put: cogito
@@ -52,9 +71,18 @@ jobs:
         params:
           state: success
           chat_message: "This is the custom chat message. Below, the default build summary:"
-          chat_message_append: true
 
-  - name: chat-message-file
+  - name: chat-message-no-summary
+    plan:
+      - get: target-repo.git
+      - put: cogito
+        inputs: [target-repo.git]
+        params:
+          state: success
+          chat_message: "This is the custom chat message. No summary below."
+          chat_append_summary: false
+
+  - name: chat-message-file-default
     plan:
       - get: cogito-repo.git
       - get: target-repo.git

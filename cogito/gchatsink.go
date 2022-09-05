@@ -91,7 +91,7 @@ func prepareChatMessage(inputDir fs.FS, request PutRequest, gitRef string,
 		parts = append(parts, string(contents))
 	}
 
-	if len(parts) == 0 || (len(parts) > 0 && params.ChatMessageAppend) {
+	if len(parts) == 0 || (len(parts) > 0 && params.ChatAppendSummary) {
 		parts = append(
 			parts,
 			gChatBuildSummaryText(gitRef, params.State, request.Source, request.Env))

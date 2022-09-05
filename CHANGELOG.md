@@ -7,14 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.8.1] - UNRELEASED
 
+This release allows to use cogito for all chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
+
 ### Added
 
-- Google Chat: allow selecting which states trigger a notification to the chat, via configuration `source.chat_notify_on_states`. Default (as before this tunable): [`abort`, `error`, `failure`].
+- Google Chat: allow selecting which states trigger a notification to the chat, via configuration `source.chat_notify_on_states`. Default (as before this tunable): `[abort, error, failure]`.
 - Google Chat: enrich cogito logging with human-readable information about the chat space.
-- Google Chat: allow to specify a different chat space/webhook during put (see `params.gchat_webhook`).
-- Google Chat: allow to specify a custom chat message, overriding the default build summary (see `params.chat_message`).
-- Google Chat: when passing a custom message or a custom message file, choose whether to append to it the default build summary or not (see `params.chat_message_append`).
-- Google Chat: allow to specify a file containing a custom chat message (see `params.chat_message_file`).
+- Google Chat: allow to specify a different chat space/webhook during put (see `put.params.gchat_webhook`).
+- Google Chat: allow to specify a custom chat message, (see `params.chat_message`).
+- Google Chat: allow to specify a file containing a custom chat message (see `put.params.chat_message_file`).
+- Google Chat: when passing a custom message or a custom message file, choose whether to append to it the default build summary or not (see `source.chat_append_summary`, `put.params.chat_append_summary`). Default: `true`.
 
 ## [v0.8.0] - 2022-08-11
 

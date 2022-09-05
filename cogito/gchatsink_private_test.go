@@ -5,7 +5,6 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/Pix4D/cogito/testhelp"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
@@ -67,25 +66,33 @@ func TestShouldSendToChatCustomConfig(t *testing.T) {
 func TestPrepareChatMessageSuccess(t *testing.T) {
 	type testCase struct {
 		name        string
-		request     PutRequest
+		makeReq     func() PutRequest
 		inputDir    fstest.MapFS
 		wantPresent []string
 		wantAbsent  []string
 	}
 
 	baseRequest := PutRequest{
-		Source: Source{Owner: "the-owner"},
-		Params: PutParams{State: StateError},
-		Env:    Environment{BuildJobName: "the-job"},
+		Source: Source{
+			Owner:             "the-owner",
+			ChatAppendSummary: true, // the default
+		},
+		Params: PutParams{
+			State:             StateError,
+			ChatAppendSummary: true, // the default
+		},
+		Env: Environment{BuildJobName: "the-job"},
 	}
 
 	baseGitRef := "deadbeef"
 
-	basePresent := []string{
+	buildSummary := []string{
 		baseRequest.Source.Owner, baseRequest.Env.BuildJobName, baseGitRef}
+	customMessage := "the-custom-message"
+	customFile := "from-custom-file"
 
 	test := func(t *testing.T, tc testCase) {
-		have, err := prepareChatMessage(tc.inputDir, tc.request, baseGitRef)
+		have, err := prepareChatMessage(tc.inputDir, tc.makeReq(), baseGitRef)
 
 		assert.NilError(t, err)
 		for _, elem := range tc.wantPresent {
@@ -98,65 +105,85 @@ func TestPrepareChatMessageSuccess(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:        "default build summary",
-			request:     baseRequest,
-			wantPresent: basePresent,
+			name:        "build summary only",
+			makeReq:     func() PutRequest { return baseRequest },
+			wantPresent: buildSummary,
+			wantAbsent:  []string{customMessage},
 		},
 		{
-			name: "chat_message overrides default",
-			request: testhelp.MergeStructs(
-				baseRequest,
-				PutRequest{Params: PutParams{ChatMessage: "the-custom-message"}}),
-			wantPresent: []string{"the-custom-message"},
-			wantAbsent:  basePresent,
-		},
-		{
-			name: "chat_message and append",
-			request: testhelp.MergeStructs(
-				baseRequest,
-				PutRequest{
-					Params: PutParams{
-						ChatMessage:       "the-custom-message",
-						ChatMessageAppend: true,
-					},
-				}),
-			wantPresent: append(basePresent, "the-custom-message"),
-		},
-		{
-			name: "chat message file",
-			request: testhelp.MergeStructs(
-				baseRequest,
-				PutRequest{Params: PutParams{ChatMessageFile: "registration/msg.txt"}}),
-			inputDir: fstest.MapFS{
-				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			name: "chat_message, all defaults",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessage = customMessage
+				return req
 			},
-			wantPresent: []string{"from-custom-file"},
-			wantAbsent:  basePresent,
+			wantPresent: append([]string{customMessage}, buildSummary...),
 		},
 		{
-			name: "chat message and chat message file",
-			request: testhelp.MergeStructs(
-				baseRequest,
-				PutRequest{Params: PutParams{
-					ChatMessage:     "the-chat-message",
-					ChatMessageFile: "registration/msg.txt"}}),
-			inputDir: fstest.MapFS{
-				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			name: "chat_message, params.append false",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessage = customMessage
+				req.Params.ChatAppendSummary = false
+				return req
 			},
-			wantPresent: []string{"the-chat-message", "from-custom-file"},
-			wantAbsent:  basePresent,
+			wantPresent: []string{customMessage},
+			wantAbsent:  buildSummary,
 		},
 		{
-			name: "chat message file and append",
-			request: testhelp.MergeStructs(
-				baseRequest,
-				PutRequest{Params: PutParams{
-					ChatMessageAppend: true,
-					ChatMessageFile:   "registration/msg.txt"}}),
-			inputDir: fstest.MapFS{
-				"registration/msg.txt": {Data: []byte("from-custom-file")},
+			name: "chat_message_file, all defaults",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessageFile = "registration/msg.txt"
+				return req
 			},
-			wantPresent: append(basePresent, "from-custom-file"),
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte(customFile)},
+			},
+			wantPresent: append([]string{customFile}, buildSummary...),
+			wantAbsent:  []string{customMessage},
+		},
+		{
+			name: "chat_message_file, params.append false",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessageFile = "registration/msg.txt"
+				req.Params.ChatAppendSummary = false
+				return req
+			},
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte(customFile)},
+			},
+			wantPresent: []string{customFile},
+			wantAbsent:  append([]string{customMessage}, buildSummary...),
+		},
+		{
+			name: "chat_message and chat_message_file, all defaults",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessage = customMessage
+				req.Params.ChatMessageFile = "registration/msg.txt"
+				return req
+			},
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte(customFile)},
+			},
+			wantPresent: append([]string{customMessage, customFile}, buildSummary...),
+		},
+		{
+			name: "chat_message and chat_message_file, params.append false",
+			makeReq: func() PutRequest {
+				req := baseRequest
+				req.Params.ChatMessage = customMessage
+				req.Params.ChatMessageFile = "registration/msg.txt"
+				req.Params.ChatAppendSummary = false
+				return req
+			},
+			inputDir: fstest.MapFS{
+				"registration/msg.txt": {Data: []byte(customFile)},
+			},
+			wantPresent: []string{customMessage, customFile},
+			wantAbsent:  buildSummary,
 		},
 	}
 

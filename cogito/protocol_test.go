@@ -191,7 +191,7 @@ func TestSourceParseRawFailure(t *testing.T) {
 {
   "owner": 123
 }`,
-			wantErr: `json: cannot unmarshal number into Go struct field Source.owner of type string`,
+			wantErr: `json: cannot unmarshal number into Go struct field source.owner of type string`,
 		},
 		{
 			name: "Unknown fields are caught automatically by the JSON decoder",
@@ -221,6 +221,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
 		ContextPrefix:      "the-prefix",
+		ChatAppendSummary:  true,
 		ChatNotifyOnStates: []cogito.BuildState{cogito.StateSuccess, cogito.StateFailure},
 	}
 
@@ -231,6 +232,7 @@ access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
+chat_append_summary:   true
 chat_notify_on_states: [success failure]`
 
 		have := fmt.Sprint(source)
@@ -248,6 +250,7 @@ access_token:
 gchat_webhook:         
 log_level:             
 context_prefix:        
+chat_append_summary:   false
 chat_notify_on_states: []`
 
 		have := fmt.Sprint(input)
@@ -282,7 +285,7 @@ func TestPutParamsPrintLogRedaction(t *testing.T) {
 context:             johnny
 chat_message:        stecchino
 chat_message_file:   dir/msg.txt
-chat_message_append: false
+chat_append_summary: false
 gchat_webhook:       ***REDACTED***`
 
 		have := fmt.Sprint(params)
@@ -299,7 +302,7 @@ gchat_webhook:       ***REDACTED***`
 context:             
 chat_message:        
 chat_message_file:   
-chat_message_append: false
+chat_append_summary: false
 gchat_webhook:       `
 
 		have := fmt.Sprint(input)

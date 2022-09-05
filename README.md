@@ -187,6 +187,11 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   Default: `[abort, error, failure]`.\
   See also: section [Build states mapping](#build-states-mapping).
 
+- `chat_append_summary`\
+  One of: `true`, `false`. If `true`, append the default build summary to the custom `put.params.chat_message` and/or `put.params.chat_message_file`.\
+  Default: `true`.\
+  See also: the default build summary in [Effects on Google Chat](#effects-on-google-chat).
+
 - `log_level`:\
   The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
   Default: `info`.
@@ -240,9 +245,9 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
   Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Its presence is enough for the chat message to be sent, overriding `source.chat_notify_on_states`.\
   Default: empty.
 
-- `chat_message_append`\
-  One of: `true`, `false`. If `true`, append the default build summary to the custom `chat_message` and/or `chat_message_file`.\
-  Default: false.
+- `chat_append_summary`\
+  Overrides `source.chat_append_summary`.  
+  Default: `source.chat_append_summary`.
 
 ## Note on the put inputs
 

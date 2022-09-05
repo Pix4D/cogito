@@ -169,4 +169,3 @@ jobs:
           state: success
           # Append the default build summary to the custom message.
           chat_message: "appending hello from kitty-jo"
-          chat_message_append: true

@@ -119,13 +119,6 @@ tasks:
         # stderr for logging.
         sh: echo '{{.INPUT}}' | ./bin/check 2>&1 1>/dev/null
 
-  test:acceptance:
-    desc: Run the Cogito acceptance tests. Needs a running Concourse.
-    cmds:
-      - task: test:acceptance:set-pipeline
-      - task: test:acceptance:chat-message-file
-      - task: test:acceptance:chat-message-append
-
   fly-login:
     desc: Performs a fly login in the target to be used in the acceptance tests.
     cmds:
@@ -146,26 +139,47 @@ tasks:
         -y gchat_webhook=$(gopass show cogito/test_gchat_webhook)
       - fly -t cogito unpause-pipeline -p {{.PIPELINE}}
     vars:
-      PIPELINE: cogito-acceptance-{{.BRANCH}}
+      PIPELINE: cogito-acceptance---{{.BRANCH}}
 
   trigger-job:
     cmds:
       - fly -t cogito trigger-job -j {{.PIPELINE}}/{{.JOB}} -w
     vars:
-      PIPELINE: cogito-acceptance-{{.BRANCH}}
+      PIPELINE: cogito-acceptance---{{.BRANCH}}
       JOB: '{{.JOB}}'
 
-  test:acceptance:chat-message-file:
+  test:acceptance:
+    desc: Run the Cogito acceptance tests. Needs a running Concourse.
+    cmds:
+      - task: test:acceptance:set-pipeline
+      - task: test:acceptance:chat-only-summary
+      - task: test:acceptance:chat-message-default
+      - task: test:acceptance:chat-message-no-summary
+      - task: test:acceptance:chat-message-file-default
+
+  test:acceptance:chat-only-summary:
+    desc: Run a pipeline job to test default chat
+    cmds:
+      - task: trigger-job
+        vars: {JOB: chat-only-summary}
+
+  test:acceptance:chat-message-default:
+    desc: Run a pipeline job to test chat_message
+    cmds:
+      - task: trigger-job
+        vars: {JOB: chat-message-default}
+
+  test:acceptance:chat-message-no-summary:
+    desc: Run a pipeline job to test chat_message and chat_append_summary
+    cmds:
+      - task: trigger-job
+        vars: {JOB: chat-message-no-summary}
+
+  test:acceptance:chat-message-file-default:
     desc: Run a pipeline job to test chat_message_file
     cmds:
       - task: trigger-job
-        vars: {JOB: chat-message-file}
-
-  test:acceptance:chat-message-append:
-    desc: Run a pipeline job to test chat_message_append
-    cmds:
-      - task: trigger-job
-        vars: {JOB: chat-message-append}
+        vars: {JOB: chat-message-file-default}
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
