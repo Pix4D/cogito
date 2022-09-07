@@ -96,7 +96,6 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 
 func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
 	dec := json.NewDecoder(in)
-	dec.DisallowUnknownFields()
 	if err := dec.Decode(&putter.Request); err != nil {
 		return fmt.Errorf("put: parsing request: %s", err)
 	}

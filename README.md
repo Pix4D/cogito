@@ -160,20 +160,44 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 ## Required keys
 
-- `owner`: The GitHub user or organization.
-- `repo`: The GitHub repository name.
-- `access_token`: The OAuth access token. See section [GitHub OAuth token](#github-oauth-token).
+- `owner`\
+  The GitHub user or organization.
+
+- `repo`\
+  The GitHub repository name.
+
+- `access_token`\
+  The OAuth access token.\
+  See also: section [GitHub OAuth token](#github-oauth-token).
 
 ## Optional keys
 
-- `context_prefix`: The prefix for the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). If present, the context will be `context_prefix/job_name`. Default: empty. See also the optional `context` in the [put step](#the-put-step).
-- `gchat_webhook`. Default: empty. URL of a [Google Chat webhook].
-    A notification about the build status will be sent to the associated chat space, using a thread key composed by the pipeline name and commit hash (since v0.7.0).
-    See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
-- `chat_notify_on_states`. Default: [`abort`, `error`, `failure`]. The build states that will cause a chat notification. One or more of [`abort`, `error`, `failure`, `pending`, `success`].
-  See section [Build states mapping](#build-states-mapping).
-- `log_level`: The log level (one of `debug`, `info`, `warn`, `error`, `silent`). Default: `info`.
-- `log_url`. **DEPRECATED, no-op, will be removed** A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < 7.
+- `context_prefix`\
+  The prefix for the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). If present, the context will be set as `context_prefix/job_name`.\
+  Default: empty.\
+  See also: the optional `context` in the [put step](#the-put-step).
+
+- `gchat_webhook`\
+  URL of a [Google Chat webhook]. A notification about the build status will be sent to the associated chat space, using a thread key composed by the pipeline name and commit hash.\
+  Default: empty.\
+  See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
+
+- `chat_notify_on_states`\
+  The build states that will cause a chat notification. One or more of `abort`, `error`, `failure`, `pending`, `success`.\
+  Default: `[abort, error, failure]`.\
+  See also: section [Build states mapping](#build-states-mapping).
+
+- `chat_append_summary`\
+  One of: `true`, `false`. If `true`, append the default build summary to the custom `put.params.chat_message` and/or `put.params.chat_message_file`.\
+  Default: `true`.\
+  See also: the default build summary in [Effects on Google Chat](#effects-on-google-chat).
+
+- `log_level`:\
+  The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
+  Default: `info`.
+
+- `log_url`. **DEPRECATED, no-op, will be removed**\
+  A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < v7.x
 
 ## Suggestions
 
@@ -196,18 +220,34 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 
 ## Required params
 
-- `state`: The state to set. One of `error`, `failure`, `pending`, `success`, `abort`. Subject to the mapping explained in section [Effects](#effects).
+- `state`\
+  The state to set. One of `error`, `failure`, `pending`, `success`, `abort`.\
+  See also: the mapping explained in section [Effects](#effects).
 
 ## Optional params for GitHub commit status
 
-- `context`: The value of the non-prefix part of the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). Default: the job name. See also the optional `context_prefix` in the [source configuration](#source-configuration).
+- `context`\
+  The value of the non-prefix part of the GitHub Commit status API "context"\
+  Default: the job name.\
+  See also: [Effects on GitHub](#effects-on-github), `source.context_prefix`.
 
 ## Optional params for chat
 
-- `gchat_webhook`: If present, overrides `source.gchat_webhook`. Default: empty, thus the same as `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces. 
-- `chat_message`: Custom chat message; overrides the build summary. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
-- `chat_message_file`: Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Default: empty. If present, the chat message will be sent, no matter the value of `source.chat_notify_on_states`.
-- `chat_message_append`: (one of: true, false). If true, append the default build summary to the custom `chat_message` and/or `chat_message_file`. Default: false.
+- `gchat_webhook`\
+  If present, overrides `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces.\
+  Default: `source.gchat_webhook`. 
+
+- `chat_message`\
+  Custom chat message; overrides the build summary. Its presence is enough for the chat message to be sent, overriding `source.chat_notify_on_states`.\
+  Default: empty.
+
+- `chat_message_file`\
+  Path to file containing a custom chat message; overrides the build summary. Appended to `chat_message`. Its presence is enough for the chat message to be sent, overriding `source.chat_notify_on_states`.\
+  Default: empty.
+
+- `chat_append_summary`\
+  Overrides `source.chat_append_summary`.  
+  Default: `source.chat_append_summary`.
 
 ## Note on the put inputs
 
