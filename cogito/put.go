@@ -1,6 +1,7 @@
 package cogito
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -20,7 +21,7 @@ import (
 // Note: The methods will be called in the same order as they are listed here.
 type Putter interface {
 	// LoadConfiguration parses the resource source configuration and put params.
-	LoadConfiguration(in io.Reader, args []string) error
+	LoadConfiguration(input []byte, args []string) error
 	// ProcessInputDir validates and extract the needed information from the "put input".
 	ProcessInputDir() error
 	// Sinks return the list of configured sinks.
@@ -48,8 +49,8 @@ type Sinker interface {
 // Additionally, the script may emit metadata as a list of key-value pairs. This data is
 // intended for public consumption and will make it upstream, intended to be shown on the
 // build's page.
-func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Putter) error {
-	if err := putter.LoadConfiguration(in, args); err != nil {
+func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Putter) error {
+	if err := putter.LoadConfiguration(input, args); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
@@ -94,8 +95,11 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 	}
 }
 
-func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
-	dec := json.NewDecoder(in)
+func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder :-/
+	dec := json.NewDecoder(bytes.NewReader(input))
 	if err := dec.Decode(&putter.Request); err != nil {
 		return fmt.Errorf("put: parsing request: %s", err)
 	}

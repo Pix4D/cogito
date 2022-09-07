@@ -1,6 +1,7 @@
 package cogito
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -24,9 +25,12 @@ import (
 // The program must emit a JSON object containing the fetched version, and may emit
 // metadata as a list of key-value pairs.
 // This data is intended for public consumption and will be shown on the build page.
-func Get(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
+func Get(log hclog.Logger, input []byte, out io.Writer, args []string) error {
 	var request GetRequest
-	dec := json.NewDecoder(in)
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder.
+	dec := json.NewDecoder(bytes.NewReader(input))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&request); err != nil {
 		return fmt.Errorf("get: parsing request: %s", err)

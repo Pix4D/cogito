@@ -1,6 +1,7 @@
 package cogito
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -17,13 +18,18 @@ import (
 // It is given the configured source and current version on stdin, and must print the
 // array of new versions, in chronological order (oldest first), to stdout, including
 // the requested version if it is still valid.
-func Check(log hclog.Logger, in io.Reader, out io.Writer, args []string) error {
+func Check(log hclog.Logger, input []byte, out io.Writer, args []string) error {
 	var request CheckRequest
-	dec := json.NewDecoder(in)
+
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder.
+	dec := json.NewDecoder(bytes.NewReader(input))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&request); err != nil {
 		return fmt.Errorf("check: parsing request: %s", err)
 	}
+
 	request.Env.Fill()
 
 	if err := request.Source.ValidateLog(); err != nil {
