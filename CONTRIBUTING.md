@@ -374,7 +374,7 @@ A release is performed by the GitHub Action CI, triggered by a git tag of the fo
 - Prepare the PR to also contain an updated CHANGELOG.
 - Merge the PR to master.
 - git checkout master && git pull
-- Create and then push a git tag.
+- Create and then push a git tag (git tag -a -m '' v0.8.0 && git push origin v0.8.0)
 - Double-check that the GitHub Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
 
 # License
