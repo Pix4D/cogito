@@ -71,7 +71,7 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 
 // peekLogLevel decodes 'input' as JSON and looks for key source.log_level. If 'input'
 // is not JSON, peekLogLevel will return an error. If 'input' is JSON but does not
-// contain key source.log_level, peekLogLevel returns the empty string.
+// contain key source.log_level, peekLogLevel returns "info" as default value.
 //
 // Rationale: depending on the Concourse step we are invoked for, the JSON object we get
 // from stdin is different, but it always contains a struct with name "source", thus we
@@ -83,7 +83,7 @@ func peekLogLevel(input []byte) (string, error) {
 		} `json:"source"`
 	}
 	var peek Peek
-	peek.Source.LogLevel = "info"
+	peek.Source.LogLevel = "info" // default value
 	if err := json.Unmarshal(input, &peek); err != nil {
 		return "", fmt.Errorf("peeking into JSON for log_level: %s", err)
 	}

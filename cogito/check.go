@@ -1,7 +1,6 @@
 package cogito
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,34 +18,20 @@ import (
 // array of new versions, in chronological order (oldest first), to stdout, including
 // the requested version if it is still valid.
 func Check(log hclog.Logger, input []byte, out io.Writer, args []string) error {
-	var request CheckRequest
-
-	// Since we also want to enforce the parser to fail if it encounters unknown fields,
-	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
-	// a json decoder.
-	dec := json.NewDecoder(bytes.NewReader(input))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&request); err != nil {
-		return fmt.Errorf("check: parsing request: %s", err)
-	}
-
-	request.Env.Fill()
-
-	if err := request.Source.ValidateLog(); err != nil {
-		return fmt.Errorf("check: %s", err)
-	}
 	log = log.Named("check")
-	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
+	log.Debug("started")
+	defer log.Debug("finished")
 
-	log.Debug("started",
+	request, err := NewCheckRequest(input)
+	if err != nil {
+		return err
+	}
+	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
+	log.Debug("parsed check request",
 		"source", request.Source,
 		"version", request.Version,
 		"environment", request.Env,
 		"args", args)
-
-	if err := request.Source.Validate(); err != nil {
-		return fmt.Errorf("check: %s", err)
-	}
 
 	// We don't validate the presence of field request.Version because Concourse will
 	// omit it from the _first_ request of the check step.
@@ -63,9 +48,9 @@ func Check(log hclog.Logger, input []byte, out io.Writer, args []string) error {
 	versions := []Version{DummyVersion}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(versions); err != nil {
-		return fmt.Errorf("check: %s", err)
+		return fmt.Errorf("check: preparing output: %s", err)
 	}
 
-	log.Debug("success", "output", versions)
+	log.Debug("success", "output.version", versions)
 	return nil
 }

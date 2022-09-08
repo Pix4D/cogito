@@ -8,97 +8,20 @@ import (
 	"testing"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 )
 
-func TestSourceValidateLogSuccess(t *testing.T) {
-	type testCase struct {
-		name   string
-		source cogito.Source
-		want   cogito.Source
-	}
-
-	test := func(t *testing.T, tc testCase) {
-
-		err := tc.source.ValidateLog()
-
-		assert.NilError(t, err)
-		assert.DeepEqual(t, tc.source, tc.want)
-	}
-
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
-	testCases := []testCase{
-		{
-			name:   "apply defaults",
-			source: baseSource,
-			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "info"}),
-		},
-		{
-			name:   "override defaults",
-			source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
-			want:   testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "debug"}),
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
-	}
-}
-
-func TestSourceValidateLogFailure(t *testing.T) {
-	type testCase struct {
-		name    string
-		source  cogito.Source
-		wantErr string
-	}
-
-	test := func(t *testing.T, tc testCase) {
-		assert.Assert(t, tc.wantErr != "")
-
-		err := tc.source.ValidateLog()
-
-		assert.Error(t, err, tc.wantErr)
-	}
-
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
-	testCases := []testCase{
-		{
-			name:    "invalid log level",
-			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-			wantErr: "source: invalid log_level: pippo",
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			test(t, tc)
-		})
-	}
-}
-
 func TestSourceValidationSuccess(t *testing.T) {
 	type testCase struct {
-		name   string
-		source cogito.Source
+		name     string
+		mkSource func() cogito.Source
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		err := tc.source.Validate()
+		source := tc.mkSource()
+		err := source.Validate()
 
 		assert.NilError(t, err)
 	}
@@ -111,8 +34,16 @@ func TestSourceValidationSuccess(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:   "only mandatory keys",
-			source: baseSource,
+			name:     "only mandatory keys",
+			mkSource: func() cogito.Source { return baseSource },
+		},
+		{
+			name: "explicit log_level",
+			mkSource: func() cogito.Source {
+				source := baseSource
+				source.LogLevel = "debug"
+				return source
+			},
 		},
 	}
 

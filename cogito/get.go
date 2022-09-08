@@ -1,7 +1,6 @@
 package cogito
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,32 +25,20 @@ import (
 // metadata as a list of key-value pairs.
 // This data is intended for public consumption and will be shown on the build page.
 func Get(log hclog.Logger, input []byte, out io.Writer, args []string) error {
-	var request GetRequest
-	// Since we also want to enforce the parser to fail if it encounters unknown fields,
-	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
-	// a json decoder.
-	dec := json.NewDecoder(bytes.NewReader(input))
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&request); err != nil {
-		return fmt.Errorf("get: parsing request: %s", err)
-	}
-	request.Env.Fill()
-
-	if err := request.Source.ValidateLog(); err != nil {
-		return fmt.Errorf("get: %s", err)
-	}
 	log = log.Named("get")
-	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
+	log.Debug("started")
+	defer log.Debug("finished")
 
-	log.Debug("started",
+	request, err := NewGetRequest(input)
+	if err != nil {
+		return err
+	}
+	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
+	log.Debug("parsed get request",
 		"source", request.Source,
 		"version", request.Version,
 		"environment", request.Env,
 		"args", args)
-
-	if err := request.Source.Validate(); err != nil {
-		return fmt.Errorf("get: %s", err)
-	}
 
 	if request.Version.Ref == "" {
 		return fmt.Errorf("get: empty 'version' field")
@@ -69,9 +56,10 @@ func Get(log hclog.Logger, input []byte, out io.Writer, args []string) error {
 	output := Output{Version: request.Version}
 	enc := json.NewEncoder(out)
 	if err := enc.Encode(output); err != nil {
-		return fmt.Errorf("get: %s", err)
+		return fmt.Errorf("get: preparing output: %s", err)
 	}
 
-	log.Debug("success", "output", output)
+	log.Debug("success", "output.version", output.Version,
+		"output.metadata", output.Metadata)
 	return nil
 }

@@ -103,7 +103,7 @@ func TestCheckFailure(t *testing.T) {
 			name:    "write error",
 			source:  baseSource,
 			writer:  &testhelp.FailingWriter{},
-			wantErr: "check: test write error",
+			wantErr: "check: preparing output: test write error",
 		},
 	}
 

@@ -117,7 +117,7 @@ func TestGetFailure(t *testing.T) {
 			source:  baseSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  &testhelp.FailingWriter{},
-			wantErr: "get: test write error",
+			wantErr: "get: preparing output: test write error",
 		},
 	}
 

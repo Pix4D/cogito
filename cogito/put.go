@@ -1,7 +1,6 @@
 package cogito
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -96,32 +95,17 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 }
 
 func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
-	// Since we also want to enforce the parser to fail if it encounters unknown fields,
-	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
-	// a json decoder :-/
-	dec := json.NewDecoder(bytes.NewReader(input))
-	if err := dec.Decode(&putter.Request); err != nil {
-		return fmt.Errorf("put: parsing request: %s", err)
-	}
-	putter.Request.Env.Fill()
-
-	if err := putter.Request.Source.ValidateLog(); err != nil {
-		return fmt.Errorf("put: %s", err)
-	}
 	putter.log = putter.log.Named("put")
-	putter.log.SetLevel(hclog.LevelFromString(putter.Request.Source.LogLevel))
+	putter.log.Debug("started")
+	defer putter.log.Debug("finished")
 
-	putter.log.Debug("started",
-		"source", putter.Request.Source,
-		"params", putter.Request.Params,
-		"environment", putter.Request.Env,
-		"args", args)
-
-	if err := putter.Request.Source.Validate(); err != nil {
-		return fmt.Errorf("put: %s", err)
+	request, err := NewPutRequest(input)
+	if err != nil {
+		return err
 	}
-
-	putter.log.Debug("after validation and defaults",
+	putter.Request = request
+	putter.log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
+	putter.log.Debug("parsed put request",
 		"source", putter.Request.Source,
 		"params", putter.Request.Params,
 		"environment", putter.Request.Env,
@@ -240,7 +224,8 @@ func (putter *ProdPutter) Output(out io.Writer) error {
 		return fmt.Errorf("put: %s", err)
 	}
 
-	putter.log.Debug("success", "output", output)
+	putter.log.Debug("success", "output.version", output.Version,
+		"output.metadata", output.Metadata)
 
 	return nil
 }
