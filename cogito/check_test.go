@@ -94,12 +94,6 @@ func TestCheckFailure(t *testing.T) {
 			wantErr: "check: source: missing keys: owner, repo, access_token",
 		},
 		{
-			name:    "validation failure: log",
-			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-			writer:  io.Discard,
-			wantErr: "check: source: invalid log_level: pippo",
-		},
-		{
 			name:    "write error",
 			source:  baseSource,
 			writer:  &testhelp.FailingWriter{},

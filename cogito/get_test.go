@@ -93,12 +93,6 @@ func TestGetFailure(t *testing.T) {
 			wantErr: "get: source: missing keys: owner, repo, access_token",
 		},
 		{
-			name:    "user validation failure: log_level",
-			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-			writer:  io.Discard,
-			wantErr: "get: source: invalid log_level: pippo",
-		},
-		{
 			name:    "concourse validation failure: empty version field",
 			source:  baseSource,
 			writer:  io.Discard,

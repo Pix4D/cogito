@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.8.2] - UNRELEASED
+
+### Minor breaking change
+
+- `source.log_level`. If you were previously silencing the logging with level `silent`, it will now be interpreted as invalid and automatically remapped to `info`. If you really want no logging, the log level to use is `off`.
+  Note that there is no reason to disable logging, since it is not visible in the build log in the UI, and the default of `info` helps to, for example, know which version of cogito is being used. 
+
 ## [v0.8.1] - 2022-09-07
 
 This release allows to use cogito for all chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
@@ -203,3 +210,5 @@ This release allows to use cogito for all chat notifications where previously on
 [v0.7.0]: https://github.com/Pix4D/cogito/releases/tag/v0.7.0
 [v0.7.1]: https://github.com/Pix4D/cogito/releases/tag/v0.7.1
 [v0.8.0]: https://github.com/Pix4D/cogito/releases/tag/v0.8.0
+[v0.8.1]: https://github.com/Pix4D/cogito/releases/tag/v0.8.1
+

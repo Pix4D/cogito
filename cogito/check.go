@@ -26,7 +26,6 @@ func Check(log hclog.Logger, input []byte, out io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
 	log.Debug("parsed check request",
 		"source", request.Source,
 		"version", request.Version,

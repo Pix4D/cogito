@@ -152,14 +152,6 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 			wantErr:  "put: source: missing keys: owner, repo, access_token",
 		},
 		{
-			name: "source: invalid log_level",
-			putInput: cogito.PutRequest{
-				Source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-				Params: baseParams,
-			},
-			wantErr: "put: source: invalid log_level: pippo",
-		},
-		{
 			name: "params: invalid",
 			putInput: cogito.PutRequest{
 				Source: baseSource,

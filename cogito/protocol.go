@@ -231,29 +231,14 @@ func (src *Source) Validate() error {
 	//
 	// Validate optional fields.
 	//
-
-	// Normally we would leave this validation directly to the logging package, but since
-	// the log level names are part of the Cogito API and predate the removal of ofcourse,
-	// we need to handle the mapping and the error message, to avoid confusing the user.
-	logAdapter := map[string]string{
-		"debug":  "debug",
-		"info":   "info",
-		"warn":   "warn",
-		"error":  "error",
-		"silent": "off", // different
-	}
-	if src.LogLevel != "" {
-		if _, ok := logAdapter[src.LogLevel]; !ok {
-			return fmt.Errorf("source: invalid log_level: %s", src.LogLevel)
-		}
-		src.LogLevel = logAdapter[src.LogLevel]
-	} else {
-		src.LogLevel = "info" // default
-	}
+	// In this case, nothing to validate.
 
 	//
 	// Apply defaults.
 	//
+	if src.LogLevel == "" {
+		src.LogLevel = "info"
+	}
 	if len(src.ChatNotifyOnStates) == 0 {
 		src.ChatNotifyOnStates = defaultNotifyStates
 	}

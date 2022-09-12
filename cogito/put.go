@@ -104,7 +104,6 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		return err
 	}
 	putter.Request = request
-	putter.log.SetLevel(hclog.LevelFromString(request.Source.LogLevel))
 	putter.log.Debug("parsed put request",
 		"source", putter.Request.Source,
 		"params", putter.Request.Params,
