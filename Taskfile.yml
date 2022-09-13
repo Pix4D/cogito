@@ -156,6 +156,7 @@ tasks:
       - task: test:acceptance:chat-message-default
       - task: test:acceptance:chat-message-no-summary
       - task: test:acceptance:chat-message-file-default
+      - task: test:acceptance:default-log
 
   test:acceptance:chat-only-summary:
     desc: Run a pipeline job to test default chat
@@ -180,6 +181,12 @@ tasks:
     cmds:
       - task: trigger-job
         vars: {JOB: chat-message-file-default}
+
+  test:acceptance:default-log:
+    desc: Run a pipeline job to test default logging
+    cmds:
+      - task: trigger-job
+        vars: {JOB: default-log}
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"

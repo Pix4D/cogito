@@ -28,6 +28,14 @@ resources:
       access_token: ((oauth-personal-access-token))
       gchat_webhook: ((gchat_webhook))
 
+  - name: cogito-default-log
+    type: cogito
+    check_every: never
+    source:
+      owner: ((github-owner))
+      repo: ((repo-name))
+      access_token: ((oauth-personal-access-token))
+
   - name: cogito-notify-always
     type: cogito
     check_every: never
@@ -93,3 +101,12 @@ jobs:
         params:
           state: success
           chat_message_file: "messagedir/message.txt"
+
+  - name: default-log
+    plan:
+      - get: target-repo.git
+      - put: cogito-default-log
+        inputs: [target-repo.git]
+        params:
+          state: success
+
