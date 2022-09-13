@@ -17,6 +17,7 @@ var DummyVersion = Version{Ref: "dummy"}
 
 // CheckRequest contains the JSON object passed on the stdin of the "check" executable
 // (Source and Version) and the build metadata (Env, environment variables).
+// Use [NewCheckRequest] to instantiate.
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-check
 type CheckRequest struct {
@@ -26,8 +27,30 @@ type CheckRequest struct {
 	Env     Environment
 }
 
+// NewCheckRequest returns a [CheckRequest] ready to be used.
+func NewCheckRequest(input []byte) (CheckRequest, error) {
+	var request CheckRequest
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder.
+	dec := json.NewDecoder(bytes.NewReader(input))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		return CheckRequest{}, fmt.Errorf("check: parsing request: %s", err)
+	}
+
+	if err := request.Source.Validate(); err != nil {
+		return CheckRequest{}, fmt.Errorf("check: %s", err)
+	}
+
+	request.Env.Fill()
+
+	return request, nil
+}
+
 // GetRequest contains the JSON object passed on the stdin of the "request" executable
 // (Source and Version) and the build metadata (Env, environment variables).
+// Use [NewGetRequest] to instantiate.
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-in
 type GetRequest struct {
@@ -39,14 +62,57 @@ type GetRequest struct {
 	Env Environment
 }
 
+// NewGetRequest returns a [GetRequest] ready to be used.
+func NewGetRequest(input []byte) (GetRequest, error) {
+	var request GetRequest
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder.
+	dec := json.NewDecoder(bytes.NewReader(input))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		return GetRequest{}, fmt.Errorf("get: parsing request: %s", err)
+	}
+
+	if err := request.Source.Validate(); err != nil {
+		return GetRequest{}, fmt.Errorf("get: %s", err)
+	}
+
+	request.Env.Fill()
+
+	return request, nil
+}
+
 // PutRequest contains the JSON object passed to the stdin of the "out" executable
 // (Source and Params) and the build metadata (Env, environment variables).
+// Use [NewPutRequest] to instantiate.
 //
 // See https://concourse-ci.org/implementing-resource-types.html#resource-out
 type PutRequest struct {
 	Source Source    `json:"source"`
 	Params PutParams `json:"params"`
 	Env    Environment
+}
+
+// NewPutRequest returns a [PutRequest] ready to be used.
+func NewPutRequest(input []byte) (PutRequest, error) {
+	var request PutRequest
+	// Since we also want to enforce the parser to fail if it encounters unknown fields,
+	// we cannot use the customary json.Unmarshal(data, &aux) but we have to go through
+	// a json decoder.
+	dec := json.NewDecoder(bytes.NewReader(input))
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		return PutRequest{}, fmt.Errorf("put: parsing request: %s", err)
+	}
+
+	if err := request.Source.Validate(); err != nil {
+		return PutRequest{}, fmt.Errorf("put: %s", err)
+	}
+
+	request.Env.Fill()
+
+	return request, nil
 }
 
 func (req *PutRequest) UnmarshalJSON(data []byte) error {
@@ -143,41 +209,6 @@ func (src *Source) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// ValidateLog validates and applies defaults for the logging configuration of Source.
-//
-// This chicken-and-egg problem is due to the fact that logging configuration is passed
-// too late, at the same time as all the other resource Source configuration, so to give
-// as much debugging information as possible we need to get the log level as soon as
-// possible, also if the Source has other errors. This cannot be simplified, we are
-// working within the limits of the Concourse resource protocol.
-func (src *Source) ValidateLog() error {
-	// Normally we would leave this validation directly to the logging package, but since
-	// the log level names are part of the Cogito API and predate the removal of ofcourse,
-	// we need to handle the mapping and the error message, to avoid confusing the user.
-	logAdapter := map[string]string{
-		"debug":  "debug",
-		"info":   "info",
-		"warn":   "warn",
-		"error":  "error",
-		"silent": "off", // different
-	}
-	if src.LogLevel != "" {
-		if _, ok := logAdapter[src.LogLevel]; !ok {
-			return fmt.Errorf("source: invalid log_level: %s", src.LogLevel)
-		}
-		src.LogLevel = logAdapter[src.LogLevel]
-	}
-
-	//
-	// Apply defaults for logging.
-	//
-	if src.LogLevel == "" {
-		src.LogLevel = "info"
-	}
-
-	return nil
-}
-
 // Validate verifies the Source configuration and applies defaults.
 func (src *Source) Validate() error {
 	//
@@ -198,12 +229,16 @@ func (src *Source) Validate() error {
 	}
 
 	//
-	// Validate optional fields. In this case, nothing to do.
+	// Validate optional fields.
 	//
+	// In this case, nothing to validate.
 
 	//
 	// Apply defaults.
 	//
+	if src.LogLevel == "" {
+		src.LogLevel = "info"
+	}
 	if len(src.ChatNotifyOnStates) == 0 {
 		src.ChatNotifyOnStates = defaultNotifyStates
 	}

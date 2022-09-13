@@ -1,13 +1,10 @@
 package cogito_test
 
 import (
-	"bytes"
 	"errors"
 	"io"
 	"path/filepath"
-	"strings"
 	"testing"
-	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/testhelp"
@@ -38,7 +35,7 @@ type MockPutter struct {
 	sinkers              []cogito.Sinker
 }
 
-func (mp MockPutter) LoadConfiguration(in io.Reader, args []string) error {
+func (mp MockPutter) LoadConfiguration(input []byte, args []string) error {
 	return mp.loadConfigurationErr
 }
 
@@ -123,7 +120,7 @@ func TestPutFailure(t *testing.T) {
 }
 
 func TestPutterLoadConfigurationSuccess(t *testing.T) {
-	in := bytes.NewReader(testhelp.ToJSON(t, basePutRequest))
+	in := testhelp.ToJSON(t, basePutRequest)
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, []string{"dummy-dir"})
@@ -140,7 +137,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(testhelp.ToJSON(t, tc.putInput))
+		in := testhelp.ToJSON(t, tc.putInput)
 		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 		err := putter.LoadConfiguration(in, tc.args)
@@ -153,14 +150,6 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 			name:     "source: missing keys",
 			putInput: cogito.PutRequest{Source: cogito.Source{}, Params: baseParams},
 			wantErr:  "put: source: missing keys: owner, repo, access_token",
-		},
-		{
-			name: "source: invalid log_level",
-			putInput: cogito.PutRequest{
-				Source: testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-				Params: baseParams,
-			},
-			wantErr: "put: source: invalid log_level: pippo",
 		},
 		{
 			name: "params: invalid",
@@ -183,16 +172,8 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 	}
 }
 
-func TestPutterLoadConfigurationSystemFailure(t *testing.T) {
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-
-	err := putter.LoadConfiguration(iotest.ErrReader(errors.New("test read error")), nil)
-
-	assert.Error(t, err, "put: parsing request: test read error")
-}
-
 func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
-	in := strings.NewReader(`
+	in := []byte(`
 {
   "source": {},
   "params": {"pizza": "margherita"}

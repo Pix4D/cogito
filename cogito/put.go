@@ -20,7 +20,7 @@ import (
 // Note: The methods will be called in the same order as they are listed here.
 type Putter interface {
 	// LoadConfiguration parses the resource source configuration and put params.
-	LoadConfiguration(in io.Reader, args []string) error
+	LoadConfiguration(input []byte, args []string) error
 	// ProcessInputDir validates and extract the needed information from the "put input".
 	ProcessInputDir() error
 	// Sinks return the list of configured sinks.
@@ -48,8 +48,8 @@ type Sinker interface {
 // Additionally, the script may emit metadata as a list of key-value pairs. This data is
 // intended for public consumption and will make it upstream, intended to be shown on the
 // build's page.
-func Put(log hclog.Logger, in io.Reader, out io.Writer, args []string, putter Putter) error {
-	if err := putter.LoadConfiguration(in, args); err != nil {
+func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Putter) error {
+	if err := putter.LoadConfiguration(input, args); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}
 
@@ -94,30 +94,17 @@ func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
 	}
 }
 
-func (putter *ProdPutter) LoadConfiguration(in io.Reader, args []string) error {
-	dec := json.NewDecoder(in)
-	if err := dec.Decode(&putter.Request); err != nil {
-		return fmt.Errorf("put: parsing request: %s", err)
-	}
-	putter.Request.Env.Fill()
-
-	if err := putter.Request.Source.ValidateLog(); err != nil {
-		return fmt.Errorf("put: %s", err)
-	}
+func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 	putter.log = putter.log.Named("put")
-	putter.log.SetLevel(hclog.LevelFromString(putter.Request.Source.LogLevel))
+	putter.log.Debug("started")
+	defer putter.log.Debug("finished")
 
-	putter.log.Debug("started",
-		"source", putter.Request.Source,
-		"params", putter.Request.Params,
-		"environment", putter.Request.Env,
-		"args", args)
-
-	if err := putter.Request.Source.Validate(); err != nil {
-		return fmt.Errorf("put: %s", err)
+	request, err := NewPutRequest(input)
+	if err != nil {
+		return err
 	}
-
-	putter.log.Debug("after validation and defaults",
+	putter.Request = request
+	putter.log.Debug("parsed put request",
 		"source", putter.Request.Source,
 		"params", putter.Request.Params,
 		"environment", putter.Request.Env,
@@ -236,7 +223,8 @@ func (putter *ProdPutter) Output(out io.Writer) error {
 		return fmt.Errorf("put: %s", err)
 	}
 
-	putter.log.Debug("success", "output", output)
+	putter.log.Debug("success", "output.version", output.Version,
+		"output.metadata", output.Metadata)
 
 	return nil
 }

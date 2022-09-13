@@ -2,10 +2,8 @@ package cogito_test
 
 import (
 	"bytes"
-	"errors"
 	"io"
 	"testing"
-	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/testhelp"
@@ -21,7 +19,7 @@ func TestCheckSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := bytes.NewReader(testhelp.ToJSON(t, tc.request))
+		in := testhelp.ToJSON(t, tc.request)
 		var out bytes.Buffer
 		log := hclog.NewNullLogger()
 
@@ -68,17 +66,13 @@ func TestCheckFailure(t *testing.T) {
 	type testCase struct {
 		name    string
 		source  cogito.Source // will be embedded in cogito.CheckRequest
-		reader  io.Reader     // if set, will override field `source`.
 		writer  io.Writer
 		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
-		in := tc.reader
-		if in == nil {
-			in = bytes.NewReader(testhelp.ToJSON(t, cogito.CheckRequest{Source: tc.source}))
-		}
+		in := testhelp.ToJSON(t, cogito.CheckRequest{Source: tc.source})
 		log := hclog.NewNullLogger()
 
 		err := cogito.Check(log, in, tc.writer, nil)
@@ -100,23 +94,10 @@ func TestCheckFailure(t *testing.T) {
 			wantErr: "check: source: missing keys: owner, repo, access_token",
 		},
 		{
-			name:    "validation failure: log",
-			source:  testhelp.MergeStructs(baseSource, cogito.Source{LogLevel: "pippo"}),
-			writer:  io.Discard,
-			wantErr: "check: source: invalid log_level: pippo",
-		},
-		{
 			name:    "write error",
 			source:  baseSource,
 			writer:  &testhelp.FailingWriter{},
-			wantErr: "check: test write error",
-		},
-		{
-			name:    "read error",
-			source:  cogito.Source{},
-			reader:  iotest.ErrReader(errors.New("test read error")),
-			writer:  io.Discard,
-			wantErr: "check: parsing request: test read error",
+			wantErr: "check: preparing output: test write error",
 		},
 	}
 
@@ -125,4 +106,12 @@ func TestCheckFailure(t *testing.T) {
 			test(t, tc)
 		})
 	}
+}
+
+func TestCheckInputFailure(t *testing.T) {
+	log := hclog.NewNullLogger()
+
+	err := cogito.Check(log, nil, io.Discard, nil)
+
+	assert.Error(t, err, "check: parsing request: EOF")
 }

@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/github"
@@ -30,7 +32,7 @@ func TestRunCheckSuccess(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 
-	err := run(in, &out, &logOut, []string{"check"})
+	err := mainErr(in, &out, &logOut, []string{"check"})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
@@ -49,7 +51,7 @@ func TestRunGetSuccess(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 
-	err := run(in, &out, &logOut, []string{"in", "dummy-dir"})
+	err := mainErr(in, &out, &logOut, []string{"in", "dummy-dir"})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 }
@@ -80,7 +82,7 @@ func TestRunPutSuccess(t *testing.T) {
 		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", wantGitRef)
 	t.Setenv("COGITO_GITHUB_API", gitHubSpy.URL)
 
-	err := run(in, &out, &logOut, []string{"out", inputDir})
+	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 	//
@@ -120,7 +122,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
 	t.Setenv("BUILD_NAME", "42")
 
-	err := run(in, &out, &logOut, []string{"out", inputDir})
+	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout:\n%s\nlogOut:\n%s", out.String(), logOut.String())
 	assert.Assert(t, cmp.Contains(logOut.String(),
@@ -140,7 +142,7 @@ func TestRunFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		in := strings.NewReader(tc.in)
 
-		err := run(in, nil, io.Discard, tc.args)
+		err := mainErr(in, nil, io.Discard, tc.args)
 
 		assert.ErrorContains(t, err, tc.wantErr)
 	}
@@ -149,16 +151,22 @@ func TestRunFailure(t *testing.T) {
 		{
 			name:    "unknown command",
 			args:    []string{"foo"},
-			wantErr: `cogito: unexpected invocation as 'foo'; want: one of 'check', 'in', 'out'; (command-line: [foo])`,
+			wantErr: `invoked as 'foo'; want: one of [check in out]`,
 		},
 		{
-			name: "check, wrong in",
+			name: "check, wrong stdin",
 			args: []string{"check"},
 			in: `
 {
   "fruit": "banana" 
 }`,
 			wantErr: `check: parsing request: json: unknown field "fruit"`,
+		},
+		{
+			name:    "peeking for log_level",
+			args:    []string{"check"},
+			in:      "",
+			wantErr: "peeking into JSON for log_level: unexpected end of JSON input",
 		},
 	}
 
@@ -168,6 +176,14 @@ func TestRunFailure(t *testing.T) {
 			test(t, tc)
 		})
 	}
+}
+
+func TestRunSystemFailure(t *testing.T) {
+	in := iotest.ErrReader(errors.New("test read error"))
+
+	err := mainErr(in, nil, io.Discard, []string{"check"})
+
+	assert.ErrorContains(t, err, "test read error")
 }
 
 func TestRunPrintsBuildInformation(t *testing.T) {
@@ -182,7 +198,7 @@ func TestRunPrintsBuildInformation(t *testing.T) {
 	var logBuf bytes.Buffer
 	wantLog := "cogito: This is the Cogito GitHub status resource. unknown"
 
-	err := run(in, io.Discard, &logBuf, []string{"check"})
+	err := mainErr(in, io.Discard, &logBuf, []string{"check"})
 	assert.NilError(t, err)
 	haveLog := logBuf.String()
 
