@@ -135,15 +135,16 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	return nil
 }
 
-func (putter *ProdPutter) Sinks() []Sinker {
-	return []Sinker{
-		GitHubCommitStatusSink{
+func (putter *ProdPutter) Sinks() ([]Sinker, error) {
+	var err error
+	supportedSinks := map[string]Sinker{
+		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
-		GoogleChatSink{
+		"gchat": GoogleChatSink{
 			Log: putter.log.Named("gChat"),
 			// TODO putter.InputDir itself should be of type fs.FS.
 			InputDir: os.DirFS(putter.InputDir),
@@ -151,6 +152,23 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
+	sinksParams := putter.Request.Params.Sinks
+	if len(sinksParams) == 0 {
+		// No sink specified, it will return all supported sinks.
+		sinksParams = make([]string, 0, len(supportedSinks))
+		for k := range supportedSinks {
+			sinksParams = append(sinksParams, k)
+		}
+	}
+	sinkers := make([]Sinker, 0, len(sinksParams))
+	for _, s := range sinksParams {
+		sinkers = append(sinkers, supportedSinks[s])
+	}
+
+	if len(sinkers) == 0 {
+		err = fmt.Errorf("unsupported sink: %s", sinksParams)
+	}
+	return sinkers, err
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
