@@ -348,8 +348,9 @@ func (params PutParams) String() string {
 	fmt.Fprintf(&bld, "chat_message:        %s\n", params.ChatMessage)
 	fmt.Fprintf(&bld, "chat_message_file:   %s\n", params.ChatMessageFile)
 	fmt.Fprintf(&bld, "chat_append_summary: %v\n", params.ChatAppendSummary)
+	fmt.Fprintf(&bld, "gchat_webhook:       %s\n", redact(params.GChatWebHook))
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "gchat_webhook:       %s", redact(params.GChatWebHook))
+	fmt.Fprintf(&bld, "sinks:               %s", params.Sinks)
 
 	return bld.String()
 }
