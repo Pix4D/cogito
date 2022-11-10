@@ -65,8 +65,9 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	// putter.InputDir, corresponding to key "put:inputs:", should contain 1 or 2 dirs.
-	// If it contains one, we support autodiscovery by not requiring to name it, we know
+	// putter.InputDir, corresponding to key "put:inputs:", should contain 0, 1 or 2 dirs.
+	// If it contains one, it could be the git repo or the directory containing the chat message:
+	// in the first case we support autodiscovery by not requiring to name it, we know
 	// that it should be the git repo.
 	// If on the other hand it contains two, one should be the git repo (still nameless)
 	// and the other should be the directory containing the chat_message_file, which is
@@ -105,10 +106,10 @@ func (putter *ProdPutter) ProcessInputDir() error {
 		}
 	}
 
+	// If the size is 0 after removing the directory containing the chat message, this will be a chat only put.
 	if inputDirs.Size() == 0 {
-		return fmt.Errorf(
-			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-			collected, source.Owner, source.Repo)
+		putter.log.Debug("No GitHub repositories in inputs, Cogito will only send to chat")
+		return nil
 	} else if inputDirs.Size() > 1 {
 		return fmt.Errorf(
 			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
