@@ -16,7 +16,7 @@ type Putter interface {
 	// ProcessInputDir validates and extract the needed information from the "put input".
 	ProcessInputDir() error
 	// Sinks return the list of configured sinks.
-	Sinks() []Sinker
+	Sinks() ([]Sinker, error)
 	// Output emits the version and metadata required by the Concourse protocol.
 	Output(out io.Writer) error
 }
@@ -51,7 +51,11 @@ func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Pu
 
 	// We invoke all the sinks and keep going also if some of them return an error.
 	var sinkErrors []error
-	for _, sink := range putter.Sinks() {
+	sinks, err := putter.Sinks()
+	if err != nil {
+		return fmt.Errorf("put: %s", err)
+	}
+	for _, sink := range sinks {
 		if err := sink.Send(); err != nil {
 			sinkErrors = append(sinkErrors, err)
 		}
