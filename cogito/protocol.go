@@ -331,11 +331,12 @@ type PutParams struct {
 	//
 	// Optional
 	//
-	Context           string `json:"context"`
-	ChatMessage       string `json:"chat_message"`
-	ChatMessageFile   string `json:"chat_message_file"`
-	ChatAppendSummary bool   `json:"chat_append_summary"`
-	GChatWebHook      string `json:"gchat_webhook"` // SENSITIVE
+	Context           string   `json:"context"`
+	ChatMessage       string   `json:"chat_message"`
+	ChatMessageFile   string   `json:"chat_message_file"`
+	ChatAppendSummary bool     `json:"chat_append_summary"`
+	GChatWebHook      string   `json:"gchat_webhook"` // SENSITIVE
+	Sinks             []string `json:"sinks"`
 }
 
 // String renders PutParams, redacting the sensitive fields.
