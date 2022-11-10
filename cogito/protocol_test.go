@@ -209,6 +209,7 @@ func TestPutParamsPrintLogRedaction(t *testing.T) {
 		ChatMessage:     "stecchino",
 		ChatMessageFile: "dir/msg.txt",
 		GChatWebHook:    "sensitive-gchat-webhook",
+		Sinks:           []string{"gchat", "github"},
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
@@ -217,7 +218,8 @@ context:             johnny
 chat_message:        stecchino
 chat_message_file:   dir/msg.txt
 chat_append_summary: false
-gchat_webhook:       ***REDACTED***`
+gchat_webhook:       ***REDACTED***
+sinks:               [gchat github]`
 
 		have := fmt.Sprint(params)
 
@@ -234,7 +236,8 @@ context:
 chat_message:        
 chat_message_file:   
 chat_append_summary: false
-gchat_webhook:       `
+gchat_webhook:       
+sinks:               []`
 
 		have := fmt.Sprint(input)
 

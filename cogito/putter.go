@@ -65,8 +65,10 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	// putter.InputDir, corresponding to key "put:inputs:", should contain 1 or 2 dirs.
-	// If it contains one, we support autodiscovery by not requiring to name it, we know
+	// putter.InputDir, corresponding to key "put:inputs:", should contain 0, 1 or 2 dirs.
+	// If it contains zero, aka undefined, Cogito will only send to chat.
+	// If it contains one, it could be the git repo or the directory containing the chat message:
+	// in the first case we support autodiscovery by not requiring to name it, we know
 	// that it should be the git repo.
 	// If on the other hand it contains two, one should be the git repo (still nameless)
 	// and the other should be the directory containing the chat_message_file, which is
@@ -105,10 +107,10 @@ func (putter *ProdPutter) ProcessInputDir() error {
 		}
 	}
 
+	// If the size is 0 after removing the directory containing the chat message, this will be a chat only put.
 	if inputDirs.Size() == 0 {
-		return fmt.Errorf(
-			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-			collected, source.Owner, source.Repo)
+		putter.log.Debug("No GitHub repositories in inputs, Cogito will only send to chat")
+		return nil
 	} else if inputDirs.Size() > 1 {
 		return fmt.Errorf(
 			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
@@ -134,15 +136,16 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	return nil
 }
 
-func (putter *ProdPutter) Sinks() []Sinker {
-	return []Sinker{
-		GitHubCommitStatusSink{
+func (putter *ProdPutter) Sinks() ([]Sinker, error) {
+	var err error
+	supportedSinks := map[string]Sinker{
+		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
-		GoogleChatSink{
+		"gchat": GoogleChatSink{
 			Log: putter.log.Named("gChat"),
 			// TODO putter.InputDir itself should be of type fs.FS.
 			InputDir: os.DirFS(putter.InputDir),
@@ -150,6 +153,24 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
+
+	sinksParams := putter.Request.Params.Sinks
+	if len(sinksParams) == 0 {
+		// No sink specified, we default to github and ghcat for backward compatibility.
+		sinksParams = []string{"github", "gchat"}
+	}
+	sinkers := make([]Sinker, 0, len(sinksParams))
+	for _, s := range sinksParams {
+		// Check configured sink is in supported list.
+		sinker, ok := supportedSinks[s]
+		if !ok {
+			err = fmt.Errorf("unsupported sink: %s", s)
+		} else {
+			sinkers = append(sinkers, sinker)
+		}
+	}
+
+	return sinkers, err
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
