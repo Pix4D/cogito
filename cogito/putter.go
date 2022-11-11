@@ -51,13 +51,15 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
+	sinks := putter.Request.Source.Sinks
 	// args[0] contains the path to a directory containing all the "put inputs".
-	if len(args) == 0 {
+	if len(args) == 0 && len(sinks) == 0 {
 		return fmt.Errorf("put: arguments: missing input directory")
 	}
-	putter.InputDir = args[0]
-	putter.log.Debug("", "input-directory", putter.InputDir)
-
+	if len(args) > 0 {
+		putter.InputDir = args[0]
+		putter.log.Debug("", "input-directory", putter.InputDir)
+	}
 	buildState := putter.Request.Params.State
 	putter.log.Debug("", "state", buildState)
 

@@ -186,6 +186,34 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
 	assert.Error(t, err, wantErr)
 }
 
+func TestPutterLoadConfigurationMissingGchatwebHook(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["gchat"]},
+  "params": {}
+}`)
+	wantErr := `put: source: missing keys: gchat_webhook`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
+func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["pizza"]},
+  "params": {}
+}`)
+	wantErr := `put: source: invalid sink: [pizza]. Supported sinks: 'gchat', 'github'`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
 func TestPutterProcessInputDirSuccess(t *testing.T) {
 	type testCase struct {
 		name     string

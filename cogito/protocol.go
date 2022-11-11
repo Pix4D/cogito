@@ -231,6 +231,9 @@ func (src *Source) Validate() error {
 		if sinksSet.Contains("gchat") {
 			isGchatOptional = false
 		}
+		if !(sinksSet.Contains("gchat") || sinksSet.Contains("github")) {
+			return fmt.Errorf("source: invalid sink: %s. Supported sinks: 'gchat', 'github'", sinksSet)
+		}
 	}
 	var mandatory []string
 	if src.Owner == "" && isGitMandatory {
