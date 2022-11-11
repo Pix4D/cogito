@@ -191,6 +191,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 		name     string
 		inputDir string
 		params   cogito.PutParams
+		sink     string
 	}
 
 	test := func(t *testing.T, tc testCase) {
@@ -199,7 +200,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
 		putter.Request = cogito.PutRequest{
-			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo", Sinks: []string{tc.sink}},
 			Params: tc.params,
 		}
 
@@ -217,6 +218,11 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			name:     "two dirs: repo and msg file",
 			inputDir: "testdata/repo-and-msgdir",
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
+		},
+		{
+			name:     "no input dirs, but sink 'gchat' is set",
+			inputDir: "testdata/empty-dir",
+			sink:     "gchat",
 		},
 	}
 
@@ -251,6 +257,11 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "no input dirs",
+			inputDir: "testdata/empty-dir",
+			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
+		},
+		{
+			name:     "no input dirs and sink 'github' is set",
 			inputDir: "testdata/empty-dir",
 			params:   cogito.PutParams{Sinks: []string{"github"}},
 			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
