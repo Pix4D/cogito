@@ -91,6 +91,11 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	}
 
 	inputDirs := sets.From(collected...)
+	// If putter.InputDir is not set, it is likely only Cogito chat feature is requested.
+	// If there is an error in the configuration, the Validate() function will report.
+	if inputDirs.Size() == 0 {
+		return nil
+	}
 
 	if params.ChatMessageFile != "" {
 		msgDir, _ = path.Split(params.ChatMessageFile)
