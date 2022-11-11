@@ -164,7 +164,8 @@ gchat_webhook:         ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
 chat_append_summary:   true
-chat_notify_on_states: [success failure]`
+chat_notify_on_states: [success failure]
+sinks: []`
 
 		have := fmt.Sprint(source)
 
@@ -182,7 +183,8 @@ gchat_webhook:
 log_level:             
 context_prefix:        
 chat_append_summary:   false
-chat_notify_on_states: []`
+chat_notify_on_states: []
+sinks: []`
 
 		have := fmt.Sprint(input)
 

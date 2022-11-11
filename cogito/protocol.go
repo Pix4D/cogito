@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Pix4D/cogito/sets"
 )
 
 // DummyVersion is the version always returned by the Cogito resource.
@@ -168,6 +170,7 @@ type Source struct {
 	ContextPrefix      string       `json:"context_prefix"`
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
+	Sinks              []string     `json:"sinks"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -181,8 +184,9 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
+	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "chat_notify_on_states: %s", src.ChatNotifyOnStates)
+	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
 
 	return bld.String()
 }
@@ -212,17 +216,34 @@ func (src *Source) UnmarshalJSON(data []byte) error {
 // Validate verifies the Source configuration and applies defaults.
 func (src *Source) Validate() error {
 	//
-	// Validate mandatory fields.
+	// Evaluate mandatory fields.
 	//
+
+	isGitMandatory := true
+	isGchatOptional := true
+	// If sinks are specified and 'github' is not found, Git sources are not mandatory.
+	// If sinks are specified and 'gchat' is found, gChat sources are not optional.
+	if len(src.Sinks) > 0 {
+		sinksSet := sets.From(src.Sinks...)
+		if !sinksSet.Contains("github") {
+			isGitMandatory = false
+		}
+		if sinksSet.Contains("gchat") {
+			isGchatOptional = false
+		}
+	}
 	var mandatory []string
-	if src.Owner == "" {
+	if src.Owner == "" && isGitMandatory {
 		mandatory = append(mandatory, "owner")
 	}
-	if src.Repo == "" {
+	if src.Repo == "" && isGitMandatory {
 		mandatory = append(mandatory, "repo")
 	}
-	if src.AccessToken == "" {
+	if src.AccessToken == "" && isGitMandatory {
 		mandatory = append(mandatory, "access_token")
+	}
+	if src.GChatWebHook == "" && !isGchatOptional {
+		mandatory = append(mandatory, "gchat_webhook")
 	}
 	if len(mandatory) > 0 {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
