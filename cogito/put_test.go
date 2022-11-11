@@ -249,11 +249,12 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 	}
 
 	testCases := []testCase{
-		/*{
+		{
 			name:     "no input dirs",
 			inputDir: "testdata/empty-dir",
+			params:   cogito.PutParams{Sinks: []string{"github"}},
 			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
-		},*/
+		},
 		{
 			name:     "two input dirs",
 			inputDir: "testdata/two-dirs",

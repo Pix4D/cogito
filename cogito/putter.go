@@ -90,10 +90,19 @@ func (putter *ProdPutter) ProcessInputDir() error {
 		return err
 	}
 
+	sinks := sets.From(source.Sinks...)
+
 	inputDirs := sets.From(collected...)
 	// If putter.InputDir is not set, it is likely only Cogito chat feature is requested.
-	// If there is an error in the configuration, the Validate() function will report.
-	if inputDirs.Size() == 0 {
+	// Sinks can be set as Source, let check if is configured and 'github' keyword
+	// is present. Also we return an error if 'sinks' is not configured in this case.
+	if inputDirs.Size() == 0 && (sinks.Size() == 0 || sinks.Contains("github")) {
+		return fmt.Errorf(
+			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+			inputDirs, source.Owner, source.Repo)
+	}
+	// No errors, inputDirs is not mandatory at this point.
+	if inputDirs.Size() == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {
 		return nil
 	}
 
@@ -159,7 +168,12 @@ func (putter *ProdPutter) Sinks() ([]Sinker, error) {
 		},
 	}
 
-	sinksParams := putter.Request.Params.Sinks
+	// Sinks configured in Put params get priority.
+	sinksParams := putter.Request.Source.Sinks
+	sinksParamsPut := putter.Request.Params.Sinks
+	if len(sinksParamsPut) > 0 {
+		sinksParams = sinksParamsPut
+	}
 	if len(sinksParams) == 0 {
 		// No sink specified, we default to github and ghcat for backward compatibility.
 		sinksParams = []string{"github", "gchat"}
