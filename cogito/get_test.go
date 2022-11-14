@@ -31,17 +31,30 @@ func TestGetSuccess(t *testing.T) {
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
-	baseSource := cogito.Source{
+	baseGitSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
+	}
+
+	baseGchatSource := cogito.Source{
+		Sinks:        []string{"gchat"},
+		GChatWebHook: "https://the-webhook",
 	}
 
 	testCases := []testCase{
 		{
 			name: "returns requested version",
 			request: cogito.GetRequest{
-				Source:  baseSource,
+				Source:  baseGitSource,
+				Version: cogito.Version{Ref: "banana"},
+			},
+			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
+		},
+		{
+			name: "returns requested version, gchat only",
+			request: cogito.GetRequest{
+				Source:  baseGchatSource,
 				Version: cogito.Version{Ref: "banana"},
 			},
 			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
@@ -112,6 +125,13 @@ func TestGetFailure(t *testing.T) {
 			version: cogito.Version{Ref: "dummy"},
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "get: preparing output: test write error",
+		},
+		{
+			name:    "missing gchat webhook",
+			source:  cogito.Source{Sinks: []string{"gchat"}},
+			version: cogito.Version{Ref: "dummy"},
+			writer:  &testhelp.FailingWriter{},
+			wantErr: "get: source: missing keys: gchat_webhook",
 		},
 	}
 
