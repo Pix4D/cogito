@@ -71,9 +71,14 @@ func TestSourceValidationFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "missing mandatory source keys",
+			name:    "missing mandatory git source keys",
 			source:  cogito.Source{},
 			wantErr: "source: missing keys: owner, repo, access_token",
+		},
+		{
+			name:    "missing mandatory gchat source keys",
+			source:  cogito.Source{Sinks: []string{"gchat"}},
+			wantErr: "source: missing keys: gchat_webhook",
 		},
 	}
 
