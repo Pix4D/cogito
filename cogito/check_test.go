@@ -53,6 +53,16 @@ func TestCheckSuccess(t *testing.T) {
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
+		{
+			name: "first request (Concourse omits the version field) gchat only",
+			request: cogito.CheckRequest{
+				Source: cogito.Source{
+					Sinks:        []string{"gchat"},
+					GChatWebHook: "https://dummy-webhook",
+				},
+			},
+			wantOut: []cogito.Version{{Ref: "dummy"}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -88,10 +98,18 @@ func TestCheckFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "validation failure: missing keys",
+			name:    "validation failure: missing repo keys",
 			source:  cogito.Source{},
 			writer:  io.Discard,
 			wantErr: "check: source: missing keys: owner, repo, access_token",
+		},
+		{
+			name: "validation failure: missing gchat keys",
+			source: cogito.Source{
+				Sinks: []string{"gchat"},
+			},
+			writer:  io.Discard,
+			wantErr: "check: source: missing keys: gchat_webhook",
 		},
 		{
 			name:    "write error",
