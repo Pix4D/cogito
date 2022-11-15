@@ -31,24 +31,18 @@ func TestCheckSuccess(t *testing.T) {
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
 	testCases := []testCase{
 		{
 			name: "first request (Concourse omits the version field)",
 			request: cogito.CheckRequest{
-				Source: baseSource,
+				Source: baseGithubSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
 		{
 			name: "subsequent requests (Concourse adds the version field)",
 			request: cogito.CheckRequest{
-				Source:  baseSource,
+				Source:  baseGithubSource,
 				Version: cogito.Version{Ref: "dummy"},
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
@@ -56,10 +50,7 @@ func TestCheckSuccess(t *testing.T) {
 		{
 			name: "first request (Concourse omits the version field) gchat only",
 			request: cogito.CheckRequest{
-				Source: cogito.Source{
-					Sinks:        []string{"gchat"},
-					GChatWebHook: "https://dummy-webhook",
-				},
+				Source: baseGchatSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
@@ -90,12 +81,6 @@ func TestCheckFailure(t *testing.T) {
 		assert.Error(t, err, tc.wantErr)
 	}
 
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
 	testCases := []testCase{
 		{
 			name:    "validation failure: missing repo keys",
@@ -113,7 +98,7 @@ func TestCheckFailure(t *testing.T) {
 		},
 		{
 			name:    "write error",
-			source:  baseSource,
+			source:  baseGithubSource,
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "check: preparing output: test write error",
 		},

@@ -26,21 +26,15 @@ func TestSourceValidationSuccess(t *testing.T) {
 		assert.NilError(t, err)
 	}
 
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
 	testCases := []testCase{
 		{
 			name:     "only mandatory keys",
-			mkSource: func() cogito.Source { return baseSource },
+			mkSource: func() cogito.Source { return baseGithubSource },
 		},
 		{
 			name: "explicit log_level",
 			mkSource: func() cogito.Source {
-				source := baseSource
+				source := baseGithubSource
 				source.LogLevel = "debug"
 				return source
 			},

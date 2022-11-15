@@ -31,22 +31,11 @@ func TestGetSuccess(t *testing.T) {
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
-	baseGitSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
-	baseGchatSource := cogito.Source{
-		Sinks:        []string{"gchat"},
-		GChatWebHook: "https://the-webhook",
-	}
-
 	testCases := []testCase{
 		{
 			name: "returns requested version",
 			request: cogito.GetRequest{
-				Source:  baseGitSource,
+				Source:  baseGithubSource,
 				Version: cogito.Version{Ref: "banana"},
 			},
 			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
@@ -92,12 +81,6 @@ func TestGetFailure(t *testing.T) {
 		assert.Error(t, err, tc.wantErr)
 	}
 
-	baseSource := cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
 	testCases := []testCase{
 		{
 			name:    "user validation failure: missing keys",
@@ -107,13 +90,13 @@ func TestGetFailure(t *testing.T) {
 		},
 		{
 			name:    "concourse validation failure: empty version field",
-			source:  baseSource,
+			source:  baseGithubSource,
 			writer:  io.Discard,
 			wantErr: "get: empty 'version' field",
 		},
 		{
 			name:    "concourse validation failure: missing output directory",
-			source:  baseSource,
+			source:  baseGithubSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  io.Discard,
 			wantErr: "get: arguments: missing output directory",
@@ -121,7 +104,7 @@ func TestGetFailure(t *testing.T) {
 		{
 			name:    "system write error",
 			args:    []string{"dummy-dir"},
-			source:  baseSource,
+			source:  baseGithubSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "get: preparing output: test write error",

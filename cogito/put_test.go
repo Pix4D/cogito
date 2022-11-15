@@ -13,17 +13,11 @@ import (
 )
 
 var (
-	baseSource = cogito.Source{
-		Owner:       "the-owner",
-		Repo:        "the-repo",
-		AccessToken: "the-token",
-	}
-
 	// StateError is sent to notification sinks by default.
 	baseParams = cogito.PutParams{State: cogito.StateError}
 
 	basePutRequest = cogito.PutRequest{
-		Source: baseSource,
+		Source: baseGithubSource,
 		Params: baseParams,
 	}
 )
@@ -154,7 +148,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 		{
 			name: "params: invalid",
 			putInput: cogito.PutRequest{
-				Source: baseSource,
+				Source: baseGithubSource,
 				Params: cogito.PutParams{State: "burnt-pizza"},
 			},
 			wantErr: "put: parsing request: invalid build state: burnt-pizza",
@@ -337,7 +331,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 func TestPutterProcessInputDirNonExisting(t *testing.T) {
 	putter := &cogito.ProdPutter{
 		InputDir: "non-existing",
-		Request:  cogito.PutRequest{Source: baseSource},
+		Request:  cogito.PutRequest{Source: baseGithubSource},
 	}
 
 	err := putter.ProcessInputDir()
