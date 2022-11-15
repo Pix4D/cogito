@@ -206,7 +206,7 @@ func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
   "source": {"sinks": ["pizza"]},
   "params": {}
 }`)
-	wantErr := `put: source: invalid sink: [pizza]. Supported sinks: 'gchat', 'github'`
+	wantErr := `put: source: invalid sink: [pizza]. Supported sinks: [gchat github]`
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)

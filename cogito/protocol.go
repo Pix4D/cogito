@@ -221,18 +221,22 @@ func (src *Source) Validate() error {
 
 	isGitMandatory := true
 	isGchatOptional := true
+
 	// If sinks are specified and 'github' is not found, Git sources are not mandatory.
 	// If sinks are specified and 'gchat' is found, gChat sources are not optional.
 	if len(src.Sinks) > 0 {
 		sinksSet := sets.From(src.Sinks...)
+		defaultSinks := []string{"gchat", "github"}
+		defaultSinksSet := sets.From(defaultSinks...)
 		if !sinksSet.Contains("github") {
 			isGitMandatory = false
 		}
 		if sinksSet.Contains("gchat") {
 			isGchatOptional = false
 		}
-		if !(sinksSet.Contains("gchat") || sinksSet.Contains("github")) {
-			return fmt.Errorf("source: invalid sink: %s. Supported sinks: 'gchat', 'github'", sinksSet)
+		sinksNotValid := sinksSet.Difference(defaultSinksSet)
+		if sinksNotValid.Size() > 0 {
+			return fmt.Errorf("source: invalid sink: %s. Supported sinks: %s", sinksNotValid, defaultSinks)
 		}
 	}
 	var mandatory []string

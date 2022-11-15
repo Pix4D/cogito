@@ -80,6 +80,14 @@ func TestSourceValidationFailure(t *testing.T) {
 			source:  cogito.Source{Sinks: []string{"gchat"}},
 			wantErr: "source: missing keys: gchat_webhook",
 		},
+		{
+			name: "invalid sink source keys",
+			source: cogito.Source{
+				Sinks:        []string{"gchat", "slacks"},
+				GChatWebHook: "sensitive-gchat-webhook",
+			},
+			wantErr: "source: invalid sink: [slacks]. Supported sinks: [gchat github]",
+		},
 	}
 
 	for _, tc := range testCases {
