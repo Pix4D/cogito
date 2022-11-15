@@ -63,7 +63,7 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 	}
 	sinksSet := sets.From(sinks...)
 	// If only gchat is required, the next check will be skipped.
-	required := !(sinksSet.Contains("gchat") && len(sinks) == 1)
+	required := !sinksSet.Contains("gchat") || len(sinks) != 1
 
 	// args[0] contains the path to a directory containing all the "put inputs".
 	if len(args) == 0 && required {
