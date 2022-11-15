@@ -208,6 +208,20 @@ func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
 	assert.Error(t, err, wantErr)
 }
 
+func TestPutterLoadConfigurationUnknownSinkPutParams(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["gchat"], "gchat_webhook": "dummy-webhook"},
+  "params": {"sinks": ["pizza"]}
+}`)
+	wantErr := `put: arguments: unsupported sink: pizza`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
 func TestPutterProcessInputDirSuccess(t *testing.T) {
 	type testCase struct {
 		name     string

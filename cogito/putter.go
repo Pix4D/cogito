@@ -51,9 +51,22 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
+	// If sink github is not requested, input dir is not mandatory.
+	// Validate the sinks first.
+	_, err = putter.Sinks()
+	if err != nil {
+		return fmt.Errorf("put: arguments: %w", err)
+	}
 	sinks := putter.Request.Source.Sinks
+	if len(putter.Request.Params.Sinks) > 0 {
+		sinks = putter.Request.Params.Sinks
+	}
+	sinksSet := sets.From(sinks...)
+	// If only gchat is required, the next check will be skipped.
+	required := !(sinksSet.Contains("gchat") && len(sinks) == 1)
+
 	// args[0] contains the path to a directory containing all the "put inputs".
-	if len(args) == 0 && len(sinks) == 0 {
+	if len(args) == 0 && required {
 		return fmt.Errorf("put: arguments: missing input directory")
 	}
 	if len(args) > 0 {
