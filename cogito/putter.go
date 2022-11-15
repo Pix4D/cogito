@@ -85,18 +85,22 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	params := putter.Request.Params
 	source := putter.Request.Source
+	sinks := sets.From(source.Sinks...)
 	var msgDir string
 
+	if len(putter.InputDir) == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {
+		// Nothing to validate, InputDir is not mandatory if only chat feature is requested.
+		// Later, will repeat the check for collected directories.
+		return nil
+	}
 	collected, err := collectInputDirs(putter.InputDir)
 	if err != nil {
 		return err
 	}
 
-	sinks := sets.From(source.Sinks...)
-
 	inputDirs := sets.From(collected...)
 	// If putter.InputDir is not set, it is likely only Cogito chat feature is requested.
-	// Sinks can be set as Source, let check if is configured and 'github' keyword
+	// Sinks can be set as Source, let check if they are configured and 'github' keyword
 	// is present. Also we return an error if 'sinks' is not configured in this case.
 	if inputDirs.Size() == 0 && (sinks.Size() == 0 || sinks.Contains("github")) {
 		return fmt.Errorf(
