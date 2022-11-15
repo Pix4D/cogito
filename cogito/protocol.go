@@ -218,40 +218,41 @@ func (src *Source) Validate() error {
 	//
 	// Evaluate mandatory fields.
 	//
+	var mandatory []string
 
-	isGitMandatory := true
-	isGchatOptional := true
+	defaultSinks := []string{"gchat", "github"}
+	defaultSinksSet := sets.From(defaultSinks...)
+	sinksSet := sets.From(src.Sinks...)
 
-	// If sinks are specified and 'github' is not found, Git sources are not mandatory.
-	// If sinks are specified and 'gchat' is found, gChat sources are not optional.
-	if len(src.Sinks) > 0 {
-		sinksSet := sets.From(src.Sinks...)
-		defaultSinks := []string{"gchat", "github"}
-		defaultSinksSet := sets.From(defaultSinks...)
-		if !sinksSet.Contains("github") {
-			isGitMandatory = false
-		}
-		if sinksSet.Contains("gchat") {
-			isGchatOptional = false
-		}
+	if sinksSet.Size() > 0 {
+		// First validate sinks are known and supported.
 		sinksNotValid := sinksSet.Difference(defaultSinksSet)
 		if sinksNotValid.Size() > 0 {
 			return fmt.Errorf("source: invalid sink: %s. Supported sinks: %s", sinksNotValid, defaultSinks)
 		}
 	}
-	var mandatory []string
-	if src.Owner == "" && isGitMandatory {
-		mandatory = append(mandatory, "owner")
+
+	if sinksSet.Size() == 0 || sinksSet.Contains("github") {
+		// No sinks implies backward compatibility mode where github is mandatory and gchat optional.
+		if src.Owner == "" {
+			mandatory = append(mandatory, "owner")
+		}
+		if src.Repo == "" {
+			mandatory = append(mandatory, "repo")
+		}
+		if src.AccessToken == "" {
+			mandatory = append(mandatory, "access_token")
+		}
 	}
-	if src.Repo == "" && isGitMandatory {
-		mandatory = append(mandatory, "repo")
+
+	if sinksSet.Size() > 0 && sinksSet.Contains("gchat") {
+		// Gchat is explicitly required so makes its setting mandatory
+		if src.GChatWebHook == "" {
+			mandatory = append(mandatory, "gchat_webhook")
+		}
+
 	}
-	if src.AccessToken == "" && isGitMandatory {
-		mandatory = append(mandatory, "access_token")
-	}
-	if src.GChatWebHook == "" && !isGchatOptional {
-		mandatory = append(mandatory, "gchat_webhook")
-	}
+
 	if len(mandatory) > 0 {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
