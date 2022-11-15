@@ -217,10 +217,12 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
-			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
+		if tc.inputDir != "" {
+			tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
+				"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
+			putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
+		}
 		putter.Request = cogito.PutRequest{
 			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo", Sinks: []string{tc.sink}},
 			Params: tc.params,
@@ -242,9 +244,24 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
 		},
 		{
-			name:     "no input dirs, but sink 'gchat' is set",
-			inputDir: "testdata/empty-dir",
+			name: "no input dirs, but sink 'gchat' is set",
+			sink: "gchat",
+		},
+		{
+			name:     "only msg dir, but gchat is set",
+			inputDir: "testdata/repo-and-msgdir/msgdir",
 			sink:     "gchat",
+		},
+		{
+			name:     "only msg dir and message file, but gchat is set",
+			inputDir: "testdata/repo-and-msgdir/msgdir",
+			sink:     "gchat",
+			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
+		},
+		{
+			name:   "sinks are correctly overrides by put params",
+			sink:   "github",
+			params: cogito.PutParams{Sinks: []string{"gchat"}},
 		},
 	}
 

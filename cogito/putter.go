@@ -85,7 +85,12 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	params := putter.Request.Params
 	source := putter.Request.Source
+
 	sinks := sets.From(source.Sinks...)
+	if len(params.Sinks) > 0 {
+		sinks = sets.From(params.Sinks...)
+	}
+
 	var msgDir string
 
 	if len(putter.InputDir) == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {

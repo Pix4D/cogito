@@ -116,6 +116,14 @@ func TestGetFailure(t *testing.T) {
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "get: source: missing keys: gchat_webhook",
 		},
+		{
+			name: "validation failure: wrong sink key",
+			source: cogito.Source{
+				Sinks: []string{"slack", "gchat"},
+			},
+			writer:  io.Discard,
+			wantErr: "get: source: invalid sink: [slack]. Supported sinks: [gchat github]",
+		},
 	}
 
 	for _, tc := range testCases {
