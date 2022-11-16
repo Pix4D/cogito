@@ -200,7 +200,7 @@ func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
   "source": {"sinks": ["pizza"]},
   "params": {}
 }`)
-	wantErr := `put: source: invalid sink: [pizza]. Supported sinks: [gchat github]`
+	wantErr := `put: source: invalid sink(s): [pizza]. Supported sinks: [gchat github]`
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
@@ -273,7 +273,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
 		},
 		{
-			name:   "sinks are correctly overrides by put params",
+			name:   "sinks are correctly overridden by put params",
 			sink:   "github",
 			params: cogito.PutParams{Sinks: []string{"gchat"}},
 		},

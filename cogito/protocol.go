@@ -228,7 +228,7 @@ func (src *Source) Validate() error {
 		// First validate sinks are known and supported.
 		sinksNotValid := sinksSet.Difference(defaultSinksSet)
 		if sinksNotValid.Size() > 0 {
-			return fmt.Errorf("source: invalid sink: %s. Supported sinks: %s", sinksNotValid, defaultSinks)
+			return fmt.Errorf("source: invalid sink(s): %s. Supported sinks: %s", sinksNotValid, defaultSinks)
 		}
 	}
 
