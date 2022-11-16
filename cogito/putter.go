@@ -118,16 +118,18 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	inputDirs := sets.From(collected...)
 	// If putter.InputDir is not set, it is likely only Cogito chat feature is requested.
-	// Sinks can be set as Source, let check if they are configured and 'github' keyword
-	// is present. Also we return an error if 'sinks' is not configured in this case.
-	if inputDirs.Size() == 0 && (sinks.Size() == 0 || sinks.Contains("github")) {
-		return fmt.Errorf(
-			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-			inputDirs, source.Owner, source.Repo)
-	}
-	// No errors, inputDirs is not mandatory at this point.
-	if inputDirs.Size() == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {
-		return nil
+	if inputDirs.Size() == 0 {
+		// If there are no sinks specified or if they are specified and 'github' is found,
+		// the inputs parameter is missing.
+		if sinks.Size() == 0 || sinks.Contains("github") {
+			return fmt.Errorf(
+				"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+				inputDirs, source.Owner, source.Repo)
+		}
+		// If sinks are specified and 'github' is not found, that's ok.
+		if sinks.Size() > 0 && !sinks.Contains("github") {
+			return nil
+		}
 	}
 
 	if params.ChatMessageFile != "" {
