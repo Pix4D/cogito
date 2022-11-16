@@ -48,7 +48,7 @@ tasks:
     cmds:
       - '{{ .CLI_ARGS }}'
     env: &test-env
-      COGITO_TEST_COMMIT_SHA: '{{default "32e4b4f91bb8de500f6a7aa2011f93c3f322381c" .COGITO_TEST_COMMIT_SHA}}'
+      COGITO_TEST_COMMIT_SHA: '{{default "751affd155db7a00d936ee6e9f483deee69c5922" .COGITO_TEST_COMMIT_SHA}}'
       COGITO_TEST_OAUTH_TOKEN:
         sh: 'echo {{default "$(gopass show cogito/test_oauth_token)" .COGITO_TEST_OAUTH_TOKEN}}'
       COGITO_TEST_REPO_NAME: '{{default "cogito-test-read-write" .COGITO_TEST_REPO_NAME}}'
