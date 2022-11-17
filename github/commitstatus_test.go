@@ -168,23 +168,23 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		{
 			name:  "bad token: Unauthorized",
 			token: "bad-token",
-			wantErr: `failed to add state "success" for commit 32e4b4f: 401 Unauthorized
+			wantErr: `failed to add state "success" for commit 751affd: 401 Unauthorized
 Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
 Hint: Either wrong credentials or PAT expired (check your email for expiration notice)
-Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
+Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/751affd155db7a00d936ee6e9f483deee69c5922
 OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
 			name: "non existing repo: Not Found",
 			repo: "non-existing-really",
-			wantErr: `failed to add state "success" for commit 32e4b4f: 404 Not Found
+			wantErr: `failed to add state "success" for commit 751affd: 404 Not Found
 Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: one of the following happened:
     1. The repo https://github.com/pix4d/non-existing-really doesn't exist
     2. The user who issued the token doesn't have write access to the repo
     3. The token doesn't have scope repo:status
-Action: POST https://api.github.com/repos/pix4d/non-existing-really/statuses/32e4b4f91bb8de500f6a7aa2011f93c3f322381c
+Action: POST https://api.github.com/repos/pix4d/non-existing-really/statuses/751affd155db7a00d936ee6e9f483deee69c5922
 OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
 			wantStatus: http.StatusNotFound,
 		},
