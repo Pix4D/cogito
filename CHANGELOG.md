@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.0] - UNRELEASED
+
+### Changed
+
+- Google Chat: cogito can now replace Concourse hangouts resource, the chat functionality is fully independent from sending statuses to GitHub. The new optionals `source.sinks` and `put.params.sinks` fields, permit to specify if cogito should only send to chat.
+
 ## [v0.8.2] - 2022-11-18
 
 ### Minor breaking change
@@ -211,4 +217,6 @@ This release allows to use cogito for all chat notifications where previously on
 [v0.7.1]: https://github.com/Pix4D/cogito/releases/tag/v0.7.1
 [v0.8.0]: https://github.com/Pix4D/cogito/releases/tag/v0.8.0
 [v0.8.1]: https://github.com/Pix4D/cogito/releases/tag/v0.8.1
+[v0.8.2]: https://github.com/Pix4D/cogito/releases/tag/v0.8.2
+[v0.9.0]: https://github.com/Pix4D/cogito/releases/tag/v0.9.0
 
