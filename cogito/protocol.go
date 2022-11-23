@@ -360,11 +360,12 @@ type PutParams struct {
 	//
 	// Optional
 	//
-	Context           string `json:"context"`
-	ChatMessage       string `json:"chat_message"`
-	ChatMessageFile   string `json:"chat_message_file"`
-	ChatAppendSummary bool   `json:"chat_append_summary"`
-	GChatWebHook      string `json:"gchat_webhook"` // SENSITIVE
+	Context           string   `json:"context"`
+	ChatMessage       string   `json:"chat_message"`
+	ChatMessageFile   string   `json:"chat_message_file"`
+	ChatAppendSummary bool     `json:"chat_append_summary"`
+	GChatWebHook      string   `json:"gchat_webhook"` // SENSITIVE
+	Sinks             []string `json:"sinks"`
 }
 
 // String renders PutParams, redacting the sensitive fields.
@@ -376,8 +377,9 @@ func (params PutParams) String() string {
 	fmt.Fprintf(&bld, "chat_message:        %s\n", params.ChatMessage)
 	fmt.Fprintf(&bld, "chat_message_file:   %s\n", params.ChatMessageFile)
 	fmt.Fprintf(&bld, "chat_append_summary: %v\n", params.ChatAppendSummary)
+	fmt.Fprintf(&bld, "gchat_webhook:       %s\n", redact(params.GChatWebHook))
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "gchat_webhook:       %s", redact(params.GChatWebHook))
+	fmt.Fprintf(&bld, "sinks:               %s", params.Sinks)
 
 	return bld.String()
 }

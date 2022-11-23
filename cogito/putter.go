@@ -51,13 +51,29 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
+	// If chat send only is requested, input dir may be empty.
+	// Validate sinks configuration if present, then decide.
+	_, err = putter.Sinks()
+	if err != nil {
+		return fmt.Errorf("put: arguments: %w", err)
+	}
+	sinks := putter.Request.Source.Sinks
+	if len(putter.Request.Params.Sinks) > 0 {
+		sinks = putter.Request.Params.Sinks
+	}
+	sinksSet := sets.From(sinks...)
+
+	// If no configured sinks or magic word 'github' is found, input dir is mandatory.
+	required := len(sinks) == 0 || sinksSet.Contains("github")
+
 	// args[0] contains the path to a directory containing all the "put inputs".
-	if len(args) == 0 {
+	if len(args) == 0 && required {
 		return fmt.Errorf("put: arguments: missing input directory")
 	}
-	putter.InputDir = args[0]
-	putter.log.Debug("", "input-directory", putter.InputDir)
-
+	if len(args) > 0 {
+		putter.InputDir = args[0]
+		putter.log.Debug("", "input-directory", putter.InputDir)
+	}
 	buildState := putter.Request.Params.State
 	putter.log.Debug("", "state", buildState)
 
@@ -65,8 +81,10 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	// putter.InputDir, corresponding to key "put:inputs:", should contain 1 or 2 dirs.
-	// If it contains one, we support autodiscovery by not requiring to name it, we know
+	// putter.InputDir, corresponding to key "put:inputs:", should contain 0, 1 or 2 dirs.
+	// If it contains zero, aka undefined, Cogito will only send to chat.
+	// If it contains one, it could be the git repo or the directory containing the chat message:
+	// in the first case we support autodiscovery by not requiring to name it, we know
 	// that it should be the git repo.
 	// If on the other hand it contains two, one should be the git repo (still nameless)
 	// and the other should be the directory containing the chat_message_file, which is
@@ -81,14 +99,39 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	params := putter.Request.Params
 	source := putter.Request.Source
+
+	sinks := sets.From(source.Sinks...)
+	if len(params.Sinks) > 0 {
+		sinks = sets.From(params.Sinks...)
+	}
+
 	var msgDir string
 
+	if len(putter.InputDir) == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {
+		// Nothing to validate, InputDir is not mandatory if only chat feature is requested.
+		// Later, will repeat the check for collected directories.
+		return nil
+	}
 	collected, err := collectInputDirs(putter.InputDir)
 	if err != nil {
 		return err
 	}
 
 	inputDirs := sets.From(collected...)
+	// If inputDirs.Size() == 0 , it is likely only Cogito chat feature is requested.
+	if inputDirs.Size() == 0 {
+		// If there are no sinks specified or if they are specified and 'github' is found,
+		// the inputs parameter is missing.
+		if sinks.Size() == 0 || sinks.Contains("github") {
+			return fmt.Errorf(
+				"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+				inputDirs, source.Owner, source.Repo)
+		}
+		// If sinks are specified and 'github' is not found, that's ok.
+		if sinks.Size() > 0 && !sinks.Contains("github") {
+			return nil
+		}
+	}
 
 	if params.ChatMessageFile != "" {
 		msgDir, _ = path.Split(params.ChatMessageFile)
@@ -104,11 +147,10 @@ func (putter *ProdPutter) ProcessInputDir() error {
 				collected, params.ChatMessageFile)
 		}
 	}
-
+	// If the size is 0 after removing the directory containing the chat message, this will be a chat only put.
 	if inputDirs.Size() == 0 {
-		return fmt.Errorf(
-			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-			collected, source.Owner, source.Repo)
+		putter.log.Debug("No GitHub repositories in inputs, Cogito will only send to chat")
+		return nil
 	} else if inputDirs.Size() > 1 {
 		return fmt.Errorf(
 			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
