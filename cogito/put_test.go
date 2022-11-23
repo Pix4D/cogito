@@ -148,8 +148,8 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 	err := putter.LoadConfiguration(in, nil)
 	assert.NilError(t, err)
 
-	if len(putter.Request.Params.Sinks) > 1 {
-		err = fmt.Errorf("expected sinks overridden but got %d", len(putter.Request.Params.Sinks))
+	if putter.Request.Params.Sinks[0] != "gchat" || len(putter.Request.Params.Sinks) != 1 {
+		err = fmt.Errorf("expected sinks overridden: want [gchat] got %s", putter.Request.Params.Sinks)
 	}
 	assert.NilError(t, err)
 }
@@ -205,20 +205,6 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
   "params": {"pizza": "margherita"}
 }`)
 	wantErr := `put: parsing request: json: unknown field "pizza"`
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-
-	err := putter.LoadConfiguration(in, nil)
-
-	assert.Error(t, err, wantErr)
-}
-
-func TestPutterLoadConfigurationInvalidSinksFailure(t *testing.T) {
-	in := []byte(`
-	{
-	  "source": {"sinks": ["gchat"], "gchat_webhook": "sensitive-webhook"},
-	  "params": {"sinks": ["margherita"]}
-	}`)
-	wantErr := "put: arguments: unsupported sink: margherita"
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
