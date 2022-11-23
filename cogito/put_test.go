@@ -212,20 +212,79 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
 	assert.Error(t, err, wantErr)
 }
 
+func TestPutterLoadConfigurationInvalidSinksFailure(t *testing.T) {
+	in := []byte(`
+	{
+	  "source": {"sinks": ["gchat"], "gchat_webhook": "sensitive-webhook"},
+	  "params": {"sinks": ["margherita"]}
+	}`)
+	wantErr := "put: arguments: unsupported sink: margherita"
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
+func TestPutterLoadConfigurationMissingGchatwebHook(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["gchat"]},
+  "params": {}
+}`)
+	wantErr := `put: source: missing keys: gchat_webhook`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
+func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["pizza"]},
+  "params": {}
+}`)
+	wantErr := `put: source: invalid sink(s): [pizza]. Supported sinks: [gchat github]`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
+func TestPutterLoadConfigurationUnknownSinkPutParams(t *testing.T) {
+	in := []byte(`
+{
+  "source": {"sinks": ["gchat"], "gchat_webhook": "dummy-webhook"},
+  "params": {"sinks": ["pizza"]}
+}`)
+	wantErr := `put: arguments: unsupported sink: pizza`
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+
+	assert.Error(t, err, wantErr)
+}
+
 func TestPutterProcessInputDirSuccess(t *testing.T) {
 	type testCase struct {
 		name     string
 		inputDir string
 		params   cogito.PutParams
+		sink     string
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
-			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
+		if tc.inputDir != "" {
+			tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
+				"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
+			putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
+		}
 		putter.Request = cogito.PutRequest{
-			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo", Sinks: []string{tc.sink}},
 			Params: tc.params,
 		}
 
@@ -243,6 +302,26 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			name:     "two dirs: repo and msg file",
 			inputDir: "testdata/repo-and-msgdir",
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
+		},
+		{
+			name: "no input dirs, but sink 'gchat' is set",
+			sink: "gchat",
+		},
+		{
+			name:     "only msg dir, but gchat is set",
+			inputDir: "testdata/repo-and-msgdir/msgdir",
+			sink:     "gchat",
+		},
+		{
+			name:     "only msg dir and message file, but gchat is set",
+			inputDir: "testdata/repo-and-msgdir/msgdir",
+			sink:     "gchat",
+			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
+		},
+		{
+			name:   "sinks are correctly overridden by put params",
+			sink:   "github",
+			params: cogito.PutParams{Sinks: []string{"gchat"}},
 		},
 	}
 
@@ -278,6 +357,12 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 		{
 			name:     "no input dirs",
 			inputDir: "testdata/empty-dir",
+			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
+		},
+		{
+			name:     "no input dirs and sink 'github' is set",
+			inputDir: "testdata/empty-dir",
+			params:   cogito.PutParams{Sinks: []string{"github"}},
 			wantErr:  "put:inputs: missing directory for GitHub repo: have: [], GitHub: dummy-owner/dummy-repo",
 		},
 		{
@@ -323,7 +408,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 func TestPutterProcessInputDirNonExisting(t *testing.T) {
 	putter := &cogito.ProdPutter{
 		InputDir: "non-existing",
-		Request:  cogito.PutRequest{Source: baseSource},
+		Request:  cogito.PutRequest{Source: baseGithubSource},
 	}
 
 	err := putter.ProcessInputDir()
@@ -335,8 +420,8 @@ func TestPutterProcessInputDirNonExisting(t *testing.T) {
 func TestPutterSinks(t *testing.T) {
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
-	sinks := putter.Sinks()
-
+	sinks, err := putter.Sinks()
+	assert.NilError(t, err)
 	assert.Assert(t, len(sinks) == 2)
 	_, ok1 := sinks[0].(cogito.GitHubCommitStatusSink)
 	assert.Assert(t, ok1)
