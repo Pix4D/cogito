@@ -2,6 +2,7 @@ package cogito_test
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"testing"
@@ -13,17 +14,19 @@ import (
 )
 
 var (
-	baseSource = cogito.Source{
+	baseGithubSource = cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
 	}
+)
 
+var (
 	// StateError is sent to notification sinks by default.
 	baseParams = cogito.PutParams{State: cogito.StateError}
 
 	basePutRequest = cogito.PutRequest{
-		Source: baseSource,
+		Source: baseGithubSource,
 		Params: baseParams,
 	}
 )
@@ -43,8 +46,8 @@ func (mp MockPutter) ProcessInputDir() error {
 	return mp.processInputDirErr
 }
 
-func (mp MockPutter) Sinks() []cogito.Sinker {
-	return mp.sinkers
+func (mp MockPutter) Sinks() ([]cogito.Sinker, error) {
+	return mp.sinkers, nil
 }
 
 func (mp MockPutter) Output(out io.Writer) error {
@@ -128,6 +131,29 @@ func TestPutterLoadConfigurationSuccess(t *testing.T) {
 	assert.NilError(t, err)
 }
 
+func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
+	in := []byte(`
+	{
+	  "source": {
+		"owner": "the-owner",
+		"repo": "the-repo",
+		"access_token": "the-token",
+		"gchat_webhook": "sensitive-webhook",
+		"sinks": ["gchat", "github"]
+	},
+	  "params": {"sinks": ["gchat"]}
+	}`)
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+
+	err := putter.LoadConfiguration(in, nil)
+	assert.NilError(t, err)
+
+	if len(putter.Request.Params.Sinks) > 1 {
+		err = fmt.Errorf("expected sinks overridden but got %d", len(putter.Request.Params.Sinks))
+	}
+	assert.NilError(t, err)
+}
+
 func TestPutterLoadConfigurationFailure(t *testing.T) {
 	type testCase struct {
 		name     string
@@ -154,7 +180,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 		{
 			name: "params: invalid",
 			putInput: cogito.PutRequest{
-				Source: baseSource,
+				Source: baseGithubSource,
 				Params: cogito.PutParams{State: "burnt-pizza"},
 			},
 			wantErr: "put: parsing request: invalid build state: burnt-pizza",

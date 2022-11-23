@@ -176,15 +176,16 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	return nil
 }
 
-func (putter *ProdPutter) Sinks() []Sinker {
-	return []Sinker{
-		GitHubCommitStatusSink{
+func (putter *ProdPutter) Sinks() ([]Sinker, error) {
+	var err error
+	supportedSinks := map[string]Sinker{
+		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
-		GoogleChatSink{
+		"gchat": GoogleChatSink{
 			Log: putter.log.Named("gChat"),
 			// TODO putter.InputDir itself should be of type fs.FS.
 			InputDir: os.DirFS(putter.InputDir),
@@ -192,6 +193,29 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
+
+	// Sinks configured in Put params get priority.
+	sinksParams := putter.Request.Source.Sinks
+	sinksParamsPut := putter.Request.Params.Sinks
+	if len(sinksParamsPut) > 0 {
+		sinksParams = sinksParamsPut
+	}
+	if len(sinksParams) == 0 {
+		// No sink specified, we default to github and ghcat for backward compatibility.
+		sinksParams = []string{"github", "gchat"}
+	}
+	sinkers := make([]Sinker, 0, len(sinksParams))
+	for _, s := range sinksParams {
+		// Check configured sink is in supported list.
+		sinker, ok := supportedSinks[s]
+		if !ok {
+			err = fmt.Errorf("unsupported sink: %s", s)
+		} else {
+			sinkers = append(sinkers, sinker)
+		}
+	}
+
+	return sinkers, err
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
