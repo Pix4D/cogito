@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Pix4D/cogito/sets"
 )
 
 // DummyVersion is the version always returned by the Cogito resource.
@@ -168,6 +170,7 @@ type Source struct {
 	ContextPrefix      string       `json:"context_prefix"`
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
+	Sinks              []string     `json:"sinks"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -181,8 +184,9 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
+	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "chat_notify_on_states: %s", src.ChatNotifyOnStates)
+	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
 
 	return bld.String()
 }
@@ -212,18 +216,43 @@ func (src *Source) UnmarshalJSON(data []byte) error {
 // Validate verifies the Source configuration and applies defaults.
 func (src *Source) Validate() error {
 	//
-	// Validate mandatory fields.
+	// Evaluate mandatory fields.
 	//
 	var mandatory []string
-	if src.Owner == "" {
-		mandatory = append(mandatory, "owner")
+
+	defaultSinks := []string{"gchat", "github"}
+	defaultSinksSet := sets.From(defaultSinks...)
+	sinksSet := sets.From(src.Sinks...)
+
+	if sinksSet.Size() > 0 {
+		// First validate sinks are known and supported.
+		sinksNotValid := sinksSet.Difference(defaultSinksSet)
+		if sinksNotValid.Size() > 0 {
+			return fmt.Errorf("source: invalid sink(s): %s. Supported sinks: %s", sinksNotValid, defaultSinks)
+		}
 	}
-	if src.Repo == "" {
-		mandatory = append(mandatory, "repo")
+
+	if sinksSet.Size() == 0 || sinksSet.Contains("github") {
+		// No sinks implies backward compatibility mode where github is mandatory and gchat optional.
+		if src.Owner == "" {
+			mandatory = append(mandatory, "owner")
+		}
+		if src.Repo == "" {
+			mandatory = append(mandatory, "repo")
+		}
+		if src.AccessToken == "" {
+			mandatory = append(mandatory, "access_token")
+		}
 	}
-	if src.AccessToken == "" {
-		mandatory = append(mandatory, "access_token")
+
+	if sinksSet.Size() > 0 && sinksSet.Contains("gchat") {
+		// Gchat is explicitly required so makes its setting mandatory
+		if src.GChatWebHook == "" {
+			mandatory = append(mandatory, "gchat_webhook")
+		}
+
 	}
+
 	if len(mandatory) > 0 {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
