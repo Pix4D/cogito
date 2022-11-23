@@ -111,10 +111,6 @@ func gChatBuildSummaryText(gitRef string, state BuildState, src Source, env Envi
 	// https://github.com/Pix4D/cogito/commit/e8c6e2ac0318b5f0baa3f55
 	job := fmt.Sprintf("<%s|%s/%s>",
 		concourseBuildURL(env), env.BuildJobName, env.BuildName)
-	commitUrl := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
-		src.Owner, src.Repo, gitRef)
-	commit := fmt.Sprintf("<%s|%.10s> (repo: %s/%s)",
-		commitUrl, gitRef, src.Owner, src.Repo)
 
 	// Unfortunately the font is proportional and doesn't support tabs,
 	// so we cannot align in columns.
@@ -123,7 +119,14 @@ func gChatBuildSummaryText(gitRef string, state BuildState, src Source, env Envi
 	fmt.Fprintf(&bld, "*pipeline* %s\n", env.BuildPipelineName)
 	fmt.Fprintf(&bld, "*job* %s\n", job)
 	fmt.Fprintf(&bld, "*state* %s\n", decorateState(state))
-	fmt.Fprintf(&bld, "*commit* %s\n", commit)
+	// If it is chat only, don't report not existing GitHub information.
+	if gitRef != "" {
+		commitUrl := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
+			src.Owner, src.Repo, gitRef)
+		commit := fmt.Sprintf("<%s|%.10s> (repo: %s/%s)",
+			commitUrl, gitRef, src.Owner, src.Repo)
+		fmt.Fprintf(&bld, "*commit* %s\n", commit)
+	}
 
 	return bld.String()
 }
