@@ -36,24 +36,12 @@ func TestGetSuccess(t *testing.T) {
 		Repo:        "the-repo",
 		AccessToken: "the-token",
 	}
-	baseGchatSource := cogito.Source{
-		Sinks:        []string{"gchat"},
-		GChatWebHook: "https://dummy-webhook",
-	}
 
 	testCases := []testCase{
 		{
 			name: "returns requested version",
 			request: cogito.GetRequest{
 				Source:  baseGithubSource,
-				Version: cogito.Version{Ref: "banana"},
-			},
-			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
-		},
-		{
-			name: "returns requested version, gchat only",
-			request: cogito.GetRequest{
-				Source:  baseGchatSource,
 				Version: cogito.Version{Ref: "banana"},
 			},
 			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
@@ -126,17 +114,15 @@ func TestGetFailure(t *testing.T) {
 			wantErr: "get: preparing output: test write error",
 		},
 		{
-			name:    "missing gchat webhook",
+			name:    "user missing gchat webhook",
 			source:  cogito.Source{Sinks: []string{"gchat"}},
 			version: cogito.Version{Ref: "dummy"},
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "get: source: missing keys: gchat_webhook",
 		},
 		{
-			name: "validation failure: wrong sink key",
-			source: cogito.Source{
-				Sinks: []string{"ghost", "gchat"},
-			},
+			name:    "user validation failure: wrong sink key",
+			source:  cogito.Source{Sinks: []string{"ghost", "gchat"}},
 			writer:  io.Discard,
 			wantErr: "get: source: invalid sink(s): [ghost]. Supported sinks: [gchat github]",
 		},
