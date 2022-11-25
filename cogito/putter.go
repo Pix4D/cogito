@@ -51,20 +51,22 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
-	// Validate optional sinks configuration.
-	sinks := putter.Request.Source.Sinks
+	var sinks *sets.Set[string]
+	// if put.params.sinks is not empty it overrides source.params.sinks.
 	if len(putter.Request.Params.Sinks) > 0 {
-		sinks = putter.Request.Params.Sinks
+		sinks = sets.From(putter.Request.Params.Sinks...)
+	} else {
+		sinks = sets.From(putter.Request.Source.Sinks...)
 	}
 
+	// Validate optional sinks configuration.
 	err = validateSinks(sinks)
 	if err != nil {
 		return fmt.Errorf("put: arguments: unsupported sink(s): %w", err)
 	}
-	sinksSet := sets.From(sinks...)
 
 	// If no configured sinks or magic word 'github' is found, input dir is mandatory.
-	required := len(sinks) == 0 || sinksSet.Contains("github")
+	required := sinks.Size() == 0 || sinks.Contains("github")
 
 	// args[0] contains the path to a directory containing all the "put inputs".
 	if len(args) == 0 && required {
@@ -248,12 +250,11 @@ func collectInputDirs(dir string) ([]string, error) {
 }
 
 // validateSinks return an error if the user set an unsupported sink in source or put.params.
-func validateSinks(sinks []string) error {
+func validateSinks(sinks *sets.Set[string]) error {
 	supportedSinks := sets.From("gchat", "github")
-	for _, s := range sinks {
-		if !supportedSinks.Contains(s) {
-			return fmt.Errorf("%s", s)
-		}
+	difference := sinks.Difference(supportedSinks)
+	if difference.Size() > 0 {
+		return fmt.Errorf("%s", difference)
 	}
 	return nil
 }
