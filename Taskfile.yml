@@ -158,7 +158,7 @@ tasks:
       - task: test:acceptance:chat-message-file-default
       - task: test:acceptance:chat-message-only-sinks-override
       - task: test:acceptance:chat-message-only-simplest-possible
-      - task: test:acceptance:chat-message-only-file-default
+      - task: test:acceptance:chat-message-only-file
       - task: test:acceptance:default-log
 
   test:acceptance:chat-only-summary:
@@ -185,23 +185,23 @@ tasks:
       - task: trigger-job
         vars: {JOB: chat-message-file-default}
 
-  test:acceptance:chat-message-only-sinks-override:
-    desc: Run a pipeline job to test chat only message
-    cmds:
-      - task: trigger-job
-        vars: {JOB: chat-message-only-sinks-override}
-  
   test:acceptance:chat-message-only-simplest-possible:
     desc: Run a pipeline job to test chat only message
     cmds:
       - task: trigger-job
         vars: {JOB: chat-message-only-simplest-possible}
 
-  test:acceptance:chat-message-only-file-default:
+  test:acceptance:chat-message-only-sinks-override:
+    desc: Run a pipeline job to test chat only message
+    cmds:
+      - task: trigger-job
+        vars: {JOB: chat-message-only-sinks-override}
+
+  test:acceptance:chat-message-only-file:
     desc: Run a pipeline job to test chat only chat_message_file
     cmds:
       - task: trigger-job
-        vars: {JOB: chat-message-only-file-default}
+        vars: {JOB: chat-message-only-file}
 
   test:acceptance:default-log:
     desc: Run a pipeline job to test default logging

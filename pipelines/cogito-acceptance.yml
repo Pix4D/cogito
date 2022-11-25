@@ -47,7 +47,7 @@ resources:
       gchat_webhook: ((gchat_webhook))
       chat_notify_on_states: [abort, error, failure, pending, success]
 
-  - name: cogito-notify-only
+  - name: cogito-chat-only
     type: cogito
     check_every: never
     source:
@@ -112,6 +112,13 @@ jobs:
           state: success
           chat_message_file: "messagedir/message.txt"
 
+  - name: chat-message-only-simplest-possible
+    plan:
+      - put: cogito-chat-only
+        inputs: []
+        params:
+          chat_message: "This is the custom chat message."
+
   - name: chat-message-only-sinks-override
     plan:
       - put: cogito
@@ -121,19 +128,12 @@ jobs:
             - gchat
           chat_message: "This is the custom chat message."
 
-  - name: chat-message-only-simplest-possible
-    plan:
-      - put: cogito-notify-only
-        inputs: []
-        params:
-          chat_message: "This is the custom chat message."
-
-  - name: chat-message-only-file-default
+  - name: chat-message-only-file
     plan:
       - get: cogito-repo.git
       - task: generate-message-file
         file: cogito-repo.git/pipelines/tasks/generate-message-file.yml
-      - put: cogito-notify-only
+      - put: cogito-chat-only
         inputs: [messagedir]
         params:
           chat_message_file: "messagedir/message.txt"
