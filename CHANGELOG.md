@@ -7,9 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.9.0] - UNRELEASED
 
+This release allows to use cogito purely to send chat notifications, completely independently from GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
+
+### Added
+
+- Notion of sink, representing an API destination (`github` and `gchat`). The optional keys `source.sinks` and `put.params.sinks` allow further control on the destination of a put.
+
 ### Changed
 
-- Google Chat: cogito can now replace Concourse hangouts resource, the chat functionality is fully independent from sending statuses to GitHub. The new optionals `source.sinks` and `put.params.sinks` fields, permit to specify if cogito should only send to chat.
+- Configuring a GitHub repository is not mandatory any more, to allow cogito to be used purely for chat notification.
+- Documentation addresses explicitly how to configure cogito based on the three possible use cases: GitHub only, GitHub + Chat, Chat only.
 
 ## [v0.8.2] - 2022-11-18
 
@@ -20,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.8.1] - 2022-09-07
 
-This release allows to use cogito for all chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
+This release allows to use cogito for the vast majority of chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
 
 ### Added
 
