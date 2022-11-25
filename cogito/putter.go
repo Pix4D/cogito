@@ -109,9 +109,8 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	var msgDir string
 
-	if len(putter.InputDir) == 0 && (sinks.Size() > 0 && !sinks.Contains("github")) {
+	if len(putter.InputDir) == 0 && !sinks.Contains("github") {
 		// Nothing to validate, InputDir is not mandatory if only chat feature is requested.
-		// Later, will repeat the check for collected directories.
 		return nil
 	}
 	collected, err := collectInputDirs(putter.InputDir)
