@@ -83,8 +83,8 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	// putter.InputDir, corresponding to key "put:inputs:", should contain 0, 1 or 2 dirs.
-	// If it contains zero, aka undefined, Cogito will only send to chat.
+	// putter.InputDir, corresponding to key "put:inputs:", may contain 0, 1 or 2 dirs.
+	// If it contains zero, Cogito addresses only a supported chat system (custom sinks configured).
 	// If it contains one, it could be the git repo or the directory containing the chat message:
 	// in the first case we support autodiscovery by not requiring to name it, we know
 	// that it should be the git repo.
