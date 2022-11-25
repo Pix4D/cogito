@@ -36,10 +36,6 @@ func TestCheckSuccess(t *testing.T) {
 		Repo:        "the-repo",
 		AccessToken: "the-token",
 	}
-	baseGchatSource := cogito.Source{
-		Sinks:        []string{"gchat"},
-		GChatWebHook: "https://dummy-webhook",
-	}
 
 	testCases := []testCase{
 		{
@@ -54,13 +50,6 @@ func TestCheckSuccess(t *testing.T) {
 			request: cogito.CheckRequest{
 				Source:  baseGithubSource,
 				Version: cogito.Version{Ref: "dummy"},
-			},
-			wantOut: []cogito.Version{{Ref: "dummy"}},
-		},
-		{
-			name: "first request (Concourse omits the version field) gchat only",
-			request: cogito.CheckRequest{
-				Source: baseGchatSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
