@@ -51,15 +51,15 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
-	// If chat send only is requested, input dir may be empty.
-	// Validate sinks configuration if present, then decide.
-	_, err = putter.Sinks()
-	if err != nil {
-		return fmt.Errorf("put: arguments: %w", err)
-	}
+	// Validate optional sinks configuration.
 	sinks := putter.Request.Source.Sinks
 	if len(putter.Request.Params.Sinks) > 0 {
 		sinks = putter.Request.Params.Sinks
+	}
+
+	err = validateSinks(sinks)
+	if err != nil {
+		return fmt.Errorf("put: arguments: unsupported sink(s): %w", err)
 	}
 	sinksSet := sets.From(sinks...)
 
@@ -176,8 +176,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	return nil
 }
 
-func (putter *ProdPutter) Sinks() ([]Sinker, error) {
-	var err error
+func (putter *ProdPutter) Sinks() []Sinker {
 	supportedSinks := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
@@ -201,21 +200,18 @@ func (putter *ProdPutter) Sinks() ([]Sinker, error) {
 		sinksParams = sinksParamsPut
 	}
 	if len(sinksParams) == 0 {
-		// No sink specified, we default to github and ghcat for backward compatibility.
+		// Default to all supported sinks.
 		sinksParams = []string{"github", "gchat"}
 	}
 	sinkers := make([]Sinker, 0, len(sinksParams))
 	for _, s := range sinksParams {
-		// Check configured sink is in supported list.
 		sinker, ok := supportedSinks[s]
-		if !ok {
-			err = fmt.Errorf("unsupported sink: %s", s)
-		} else {
+		if ok {
 			sinkers = append(sinkers, sinker)
 		}
 	}
 
-	return sinkers, err
+	return sinkers
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
@@ -249,6 +245,17 @@ func collectInputDirs(dir string) ([]string, error) {
 		}
 	}
 	return dirs, nil
+}
+
+// validateSinks return an error if the user set an unsupported sink in source or put.params.
+func validateSinks(sinks []string) error {
+	supportedSinks := sets.From("gchat", "github")
+	for _, s := range sinks {
+		if !supportedSinks.Contains(s) {
+			return fmt.Errorf("%s", s)
+		}
+	}
+	return nil
 }
 
 // checkGitRepoDir validates whether DIR, assumed to be received as input of a put step,

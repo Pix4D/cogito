@@ -15,8 +15,8 @@ type Putter interface {
 	LoadConfiguration(input []byte, args []string) error
 	// ProcessInputDir validates and extract the needed information from the "put input".
 	ProcessInputDir() error
-	// Sinks return the list of configured sinks. It also validates that they are supported.
-	Sinks() ([]Sinker, error)
+	// Sinks return the list of configured sinks.
+	Sinks() []Sinker
 	// Output emits the version and metadata required by the Concourse protocol.
 	Output(out io.Writer) error
 }
@@ -50,8 +50,7 @@ func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Pu
 	}
 
 	var sinkErrors []error
-	// Possible sinks errors, are already intercepted by `LoadConfiguration()`
-	sinks, _ := putter.Sinks()
+	sinks := putter.Sinks()
 
 	// We invoke all the sinks and keep going also if some of them return an error.
 	for _, sink := range sinks {

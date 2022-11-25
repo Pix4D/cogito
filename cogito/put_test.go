@@ -19,9 +19,7 @@ var (
 		Repo:        "the-repo",
 		AccessToken: "the-token",
 	}
-)
 
-var (
 	// StateError is sent to notification sinks by default.
 	baseParams = cogito.PutParams{State: cogito.StateError}
 
@@ -46,8 +44,8 @@ func (mp MockPutter) ProcessInputDir() error {
 	return mp.processInputDirErr
 }
 
-func (mp MockPutter) Sinks() ([]cogito.Sinker, error) {
-	return mp.sinkers, nil
+func (mp MockPutter) Sinks() []cogito.Sinker {
+	return mp.sinkers
 }
 
 func (mp MockPutter) Output(out io.Writer) error {
@@ -246,7 +244,7 @@ func TestPutterLoadConfigurationUnknownSinkPutParams(t *testing.T) {
   "source": {"sinks": ["gchat"], "gchat_webhook": "dummy-webhook"},
   "params": {"sinks": ["pizza"]}
 }`)
-	wantErr := `put: arguments: unsupported sink: pizza`
+	wantErr := `put: arguments: unsupported sink(s): pizza`
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
@@ -406,13 +404,23 @@ func TestPutterProcessInputDirNonExisting(t *testing.T) {
 func TestPutterSinks(t *testing.T) {
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
 
-	sinks, err := putter.Sinks()
-	assert.NilError(t, err)
+	sinks := putter.Sinks()
 	assert.Assert(t, len(sinks) == 2)
 	_, ok1 := sinks[0].(cogito.GitHubCommitStatusSink)
 	assert.Assert(t, ok1)
 	_, ok2 := sinks[1].(cogito.GoogleChatSink)
 	assert.Assert(t, ok2)
+}
+
+func TestPutterCustomSinks(t *testing.T) {
+	putter := cogito.NewPutter("dummy-api", hclog.NewNullLogger())
+	putter.Request = cogito.PutRequest{
+		Params: cogito.PutParams{Sinks: []string{"gchat"}},
+	}
+	sinks := putter.Sinks()
+	assert.Assert(t, len(sinks) == 1)
+	_, ok1 := sinks[0].(cogito.GoogleChatSink)
+	assert.Assert(t, ok1)
 }
 
 func TestPutterOutputSuccess(t *testing.T) {
