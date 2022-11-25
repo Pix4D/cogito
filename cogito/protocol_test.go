@@ -76,27 +76,22 @@ func TestSourceValidationFailure(t *testing.T) {
 			wantErr: "source: missing keys: owner, repo, access_token",
 		},
 		{
-			name:    "missing mandatory gchat source keys",
+			name:    "missing mandatory gchat source key",
 			source:  cogito.Source{Sinks: []string{"gchat"}},
 			wantErr: "source: missing keys: gchat_webhook",
 		},
 		{
-			name: "invalid sink source keys",
-			source: cogito.Source{
-				Sinks:        []string{"gchat", "ghost"},
-				GChatWebHook: "sensitive-gchat-webhook",
-			},
+			name:    "invalid sink source key",
+			source:  cogito.Source{Sinks: []string{"gchat", "ghost"}},
 			wantErr: "source: invalid sink(s): [ghost]. Supported sinks: [gchat github]",
 		},
 		{
-			name: "multiple invalid sink source keys",
-			source: cogito.Source{
-				Sinks: []string{"coffee", "shop"},
-			},
+			name:    "multiple invalid sink source key",
+			source:  cogito.Source{Sinks: []string{"coffee", "shop"}},
 			wantErr: "source: invalid sink(s): [coffee shop]. Supported sinks: [gchat github]",
 		},
 		{
-			name: "multiple mixed invalid/valid sink source keys",
+			name: "multiple mixed invalid/valid sink source key",
 			source: cogito.Source{
 				Sinks:        []string{"coffee", "shop", "closed", "gchat", "github"},
 				GChatWebHook: "sensitive-gchat-webhook",
