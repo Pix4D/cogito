@@ -119,7 +119,7 @@ func gChatBuildSummaryText(gitRef string, state BuildState, src Source, env Envi
 	fmt.Fprintf(&bld, "*pipeline* %s\n", env.BuildPipelineName)
 	fmt.Fprintf(&bld, "*job* %s\n", job)
 	fmt.Fprintf(&bld, "*state* %s\n", decorateState(state))
-	// If it is chat only, don't report not existing GitHub information.
+	// An empty gitRef means that cogito has been configured as chat only.
 	if gitRef != "" {
 		commitUrl := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
 			src.Owner, src.Repo, gitRef)
