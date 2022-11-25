@@ -216,24 +216,22 @@ func (src *Source) UnmarshalJSON(data []byte) error {
 // Validate verifies the Source configuration and applies defaults.
 func (src *Source) Validate() error {
 	//
-	// Evaluate mandatory fields.
+	// Validate optional fields.
 	//
 	var mandatory []string
 
-	defaultSinks := []string{"gchat", "github"}
-	defaultSinksSet := sets.From(defaultSinks...)
-	sinksSet := sets.From(src.Sinks...)
+	supportedSinks := sets.From("gchat", "github")
+	sinks := sets.From(src.Sinks...)
 
-	if sinksSet.Size() > 0 {
-		// First validate sinks are known and supported.
-		sinksNotValid := sinksSet.Difference(defaultSinksSet)
+	if sinks.Size() > 0 {
+		sinksNotValid := sinks.Difference(supportedSinks)
 		if sinksNotValid.Size() > 0 {
-			return fmt.Errorf("source: invalid sink(s): %s. Supported sinks: %s", sinksNotValid, defaultSinks)
+			return fmt.Errorf("source: invalid sink(s): %s. Supported sinks: %s", sinksNotValid, supportedSinks)
 		}
 	}
 
-	if sinksSet.Size() == 0 || sinksSet.Contains("github") {
-		// No sinks implies backward compatibility mode where github is mandatory and gchat optional.
+	if sinks.Size() == 0 || sinks.Contains("github") {
+		// Cogito commit Github status mandatory fields.
 		if src.Owner == "" {
 			mandatory = append(mandatory, "owner")
 		}
@@ -245,8 +243,8 @@ func (src *Source) Validate() error {
 		}
 	}
 
-	if sinksSet.Size() > 0 && sinksSet.Contains("gchat") {
-		// Gchat is explicitly required so makes its setting mandatory
+	if sinks.Contains("gchat") {
+		// Gchat is explicitly required so makes its setting mandatory.
 		if src.GChatWebHook == "" {
 			mandatory = append(mandatory, "gchat_webhook")
 		}
