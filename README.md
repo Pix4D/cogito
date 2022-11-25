@@ -269,7 +269,6 @@ No-op.
 Sets the GitHub commit status for a given commit, following the [GitHub Commit status API].
 The same commit can have multiple statuses, differentiated by parameter `context`.
 
-Depending....... 
 If the `source` block has the optional key `gchat_webhook`, then it will also send a message to the configured chat space, based on the `state` parameter.
 
 ## Required params
