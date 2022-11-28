@@ -137,13 +137,13 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 		"repo": "the-repo",
 		"access_token": "the-token",
 		"gchat_webhook": "sensitive-webhook",
-		"sinks": ["gchat", "github"]
+		"sinks": ["github"]
 	},
 	  "params": {"sinks": ["gchat"]}
 	}`)
 	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
-
-	err := putter.LoadConfiguration(in, nil)
+	inputDir := []string{""}
+	err := putter.LoadConfiguration(in, inputDir)
 	assert.NilError(t, err)
 
 	if putter.Request.Params.Sinks[0] != "gchat" || len(putter.Request.Params.Sinks) != 1 {
@@ -187,7 +187,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 			name:     "arguments: missing input directory",
 			putInput: basePutRequest,
 			args:     []string{},
-			wantErr:  "put: arguments: missing input directory",
+			wantErr:  "put: concourse resource protocol violation: missing input directory",
 		},
 	}
 

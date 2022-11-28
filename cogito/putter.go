@@ -65,17 +65,12 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		return fmt.Errorf("put: arguments: unsupported sink(s): %w", err)
 	}
 
-	// If no configured sinks or magic word 'github' is found, input dir is mandatory.
-	required := sinks.Size() == 0 || sinks.Contains("github")
-
 	// args[0] contains the path to a directory containing all the "put inputs".
-	if len(args) == 0 && required {
-		return fmt.Errorf("put: arguments: missing input directory")
+	if len(args) == 0 {
+		return fmt.Errorf("put: concourse resource protocol violation: missing input directory")
 	}
-	if len(args) > 0 {
-		putter.InputDir = args[0]
-		putter.log.Debug("", "input-directory", putter.InputDir)
-	}
+	putter.InputDir = args[0]
+	putter.log.Debug("", "input-directory", putter.InputDir)
 	buildState := putter.Request.Params.State
 	putter.log.Debug("", "state", buildState)
 
