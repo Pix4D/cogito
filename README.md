@@ -209,7 +209,6 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 - `gchat_webhook`\
   URL of a [Google Chat webhook]. A notification about the build status will be sent to the associated chat space, using a thread key composed by the pipeline name and commit hash.\
-  Default: empty.\
   See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
 
 ### Optional keys
@@ -237,7 +236,6 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 - `gchat_webhook`\
   URL of a [Google Chat webhook]. A notification will be sent to the associated chat space.\
-  Default: empty.\
   See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
 
 ### Optional keys
