@@ -104,10 +104,6 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	var msgDir string
 
-	if len(putter.InputDir) == 0 && !sinks.Contains("github") {
-		// Nothing to validate, InputDir is not mandatory if only chat feature is requested.
-		return nil
-	}
 	collected, err := collectInputDirs(putter.InputDir)
 	if err != nil {
 		return err
