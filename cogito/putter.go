@@ -97,9 +97,13 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	params := putter.Request.Params
 	source := putter.Request.Source
 
-	sinks := sets.From(source.Sinks...)
+	sinks := sets.From(supportedSinks()...)
+	// if put.params.sinks is not empty it overrides source.params.sinks.
 	if len(params.Sinks) > 0 {
 		sinks = sets.From(params.Sinks...)
+	}
+	if len(source.Sinks) > 0 {
+		sinks = sets.From(source.Sinks...)
 	}
 
 	var msgDir string
@@ -110,20 +114,6 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	}
 
 	inputDirs := sets.From(collected...)
-	// If inputDirs.Size() == 0 , it is likely only Cogito chat feature is requested.
-	if inputDirs.Size() == 0 {
-		// If there are no sinks specified or if they are specified and 'github' is found,
-		// the inputs parameter is missing.
-		if sinks.Size() == 0 || sinks.Contains("github") {
-			return fmt.Errorf(
-				"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-				inputDirs, source.Owner, source.Repo)
-		}
-		// If sinks are specified and 'github' is not found, that's ok.
-		if sinks.Size() > 0 && !sinks.Contains("github") {
-			return nil
-		}
-	}
 
 	if params.ChatMessageFile != "" {
 		msgDir, _ = path.Split(params.ChatMessageFile)
@@ -139,32 +129,36 @@ func (putter *ProdPutter) ProcessInputDir() error {
 				collected, params.ChatMessageFile)
 		}
 	}
-	// If the size is 0 after removing the directory containing the chat message, this will be a chat only put.
-	if inputDirs.Size() == 0 {
-		putter.log.Debug("No GitHub repositories in inputs, Cogito will only send to chat")
-		return nil
-	} else if inputDirs.Size() > 1 {
+
+	switch inputDirs.Size() {
+	case 0:
+		// If the size is 0 after removing the directory containing the chat message,
+		// return an error if GitHub sink is requested.
+		if sinks.Contains("github") {
+			return fmt.Errorf(
+				"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+				inputDirs, source.Owner, source.Repo)
+		} else {
+			putter.log.Debug("", "inputDirs", inputDirs, "msgDir", msgDir)
+		}
+	case 1:
+		repoDir := filepath.Join(putter.InputDir, inputDirs.OrderedList()[0])
+		putter.log.Debug("", "repoDir", repoDir, "msgDir", msgDir)
+
+		if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
+			return err
+		}
+
+		putter.gitRef, err = getGitCommit(repoDir)
+		if err != nil {
+			return err
+		}
+		putter.log.Debug("", "git-ref", putter.gitRef)
+	default:
 		return fmt.Errorf(
 			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
 			inputDirs, source.Owner, source.Repo)
 	}
-
-	// The set has one or two elements. if it exists, remove from the set the message
-	// directory. The remaining one is the git repo.
-	putter.log.Debug("", "inputDirs", inputDirs, "msgDir", msgDir)
-	remaining := inputDirs.Difference(sets.From(msgDir))
-	repoDir := filepath.Join(putter.InputDir, remaining.OrderedList()[0])
-
-	if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
-		return err
-	}
-
-	putter.gitRef, err = getGitCommit(repoDir)
-	if err != nil {
-		return err
-	}
-	putter.log.Debug("", "git-ref", putter.gitRef)
-
 	return nil
 }
 
@@ -193,9 +187,8 @@ func (putter *ProdPutter) Sinks() []Sinker {
 	}
 	if len(sinksParams) == 0 {
 		// Default to all supported sinks.
-		for key := range supportedSinkers {
-			sinksParams = append(sinksParams, key)
-		}
+
+		sinksParams = append(sinksParams, supportedSinks()...)
 	}
 
 	sinkers := make([]Sinker, 0, len(sinksParams))
@@ -229,12 +222,16 @@ func (putter *ProdPutter) Output(out io.Writer) error {
 
 // ValidateSinks return an error if the user set an unsupported sink in source or put.params.
 func ValidateSinks(sinks *sets.Set[string]) error {
-	supportedSinks := sets.From("gchat", "github")
+	supportedSinks := sets.From(supportedSinks()...)
 	difference := sinks.Difference(supportedSinks)
 	if difference.Size() > 0 {
 		return fmt.Errorf("%s", difference)
 	}
 	return nil
+}
+
+func supportedSinks() []string {
+	return []string{"gchat", "github"}
 }
 
 // collectInputDirs returns a list of all directories below dir (non-recursive).

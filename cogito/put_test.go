@@ -286,13 +286,8 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
 		},
 		{
-			name:     "only msg dir, but gchat is set",
-			inputDir: "testdata/repo-and-msgdir/msgdir",
-			sink:     "gchat",
-		},
-		{
 			name:     "only msg dir and message file, but gchat is set",
-			inputDir: "testdata/repo-and-msgdir/msgdir",
+			inputDir: "testdata/only-msgdir",
 			sink:     "gchat",
 			params:   cogito.PutParams{ChatMessageFile: "msgdir/msg.txt"},
 		},
@@ -395,9 +390,9 @@ func TestPutterSinks(t *testing.T) {
 
 	sinks := putter.Sinks()
 	assert.Assert(t, len(sinks) == 2)
-	_, ok1 := sinks[0].(cogito.GitHubCommitStatusSink)
+	_, ok1 := sinks[0].(cogito.GoogleChatSink)
 	assert.Assert(t, ok1)
-	_, ok2 := sinks[1].(cogito.GoogleChatSink)
+	_, ok2 := sinks[1].(cogito.GitHubCommitStatusSink)
 	assert.Assert(t, ok2)
 }
 
