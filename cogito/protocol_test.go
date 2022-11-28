@@ -83,12 +83,12 @@ func TestSourceValidationFailure(t *testing.T) {
 		{
 			name:    "invalid sink source key",
 			source:  cogito.Source{Sinks: []string{"gchat", "ghost"}},
-			wantErr: "source: invalid sink(s): [ghost]. Supported sinks: [gchat github]",
+			wantErr: "source: invalid sink(s): [ghost]",
 		},
 		{
 			name:    "multiple invalid sink source key",
 			source:  cogito.Source{Sinks: []string{"coffee", "shop"}},
-			wantErr: "source: invalid sink(s): [coffee shop]. Supported sinks: [gchat github]",
+			wantErr: "source: invalid sink(s): [coffee shop]",
 		},
 		{
 			name: "multiple mixed invalid/valid sink source key",
@@ -99,7 +99,7 @@ func TestSourceValidationFailure(t *testing.T) {
 				Repo:         "the-repo",
 				AccessToken:  "the-token",
 			},
-			wantErr: "source: invalid sink(s): [closed coffee shop]. Supported sinks: [gchat github]",
+			wantErr: "source: invalid sink(s): [closed coffee shop]",
 		},
 	}
 

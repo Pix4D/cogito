@@ -124,7 +124,7 @@ func TestGetFailure(t *testing.T) {
 			name:    "user validation failure: wrong sink key",
 			source:  cogito.Source{Sinks: []string{"ghost", "gchat"}},
 			writer:  io.Discard,
-			wantErr: "get: source: invalid sink(s): [ghost]. Supported sinks: [gchat github]",
+			wantErr: "get: source: invalid sink(s): [ghost]",
 		},
 	}
 

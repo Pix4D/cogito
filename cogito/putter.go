@@ -60,7 +60,7 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 	}
 
 	// Validate optional sinks configuration.
-	err = validateSinks(sinks)
+	err = ValidateSinks(sinks)
 	if err != nil {
 		return fmt.Errorf("put: arguments: unsupported sink(s): %w", err)
 	}
@@ -178,7 +178,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 }
 
 func (putter *ProdPutter) Sinks() []Sinker {
-	supportedSinks := map[string]Sinker{
+	supportedSinkers := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
@@ -202,11 +202,14 @@ func (putter *ProdPutter) Sinks() []Sinker {
 	}
 	if len(sinksParams) == 0 {
 		// Default to all supported sinks.
-		sinksParams = []string{"github", "gchat"}
+		for key := range supportedSinkers {
+			sinksParams = append(sinksParams, key)
+		}
 	}
+
 	sinkers := make([]Sinker, 0, len(sinksParams))
 	for _, s := range sinksParams {
-		sinker, ok := supportedSinks[s]
+		sinker, ok := supportedSinkers[s]
 		if ok {
 			sinkers = append(sinkers, sinker)
 		}
@@ -233,6 +236,16 @@ func (putter *ProdPutter) Output(out io.Writer) error {
 	return nil
 }
 
+// ValidateSinks return an error if the user set an unsupported sink in source or put.params.
+func ValidateSinks(sinks *sets.Set[string]) error {
+	supportedSinks := sets.From("gchat", "github")
+	difference := sinks.Difference(supportedSinks)
+	if difference.Size() > 0 {
+		return fmt.Errorf("%s", difference)
+	}
+	return nil
+}
+
 // collectInputDirs returns a list of all directories below dir (non-recursive).
 func collectInputDirs(dir string) ([]string, error) {
 	entries, err := os.ReadDir(dir)
@@ -246,16 +259,6 @@ func collectInputDirs(dir string) ([]string, error) {
 		}
 	}
 	return dirs, nil
-}
-
-// validateSinks return an error if the user set an unsupported sink in source or put.params.
-func validateSinks(sinks *sets.Set[string]) error {
-	supportedSinks := sets.From("gchat", "github")
-	difference := sinks.Difference(supportedSinks)
-	if difference.Size() > 0 {
-		return fmt.Errorf("%s", difference)
-	}
-	return nil
 }
 
 // checkGitRepoDir validates whether DIR, assumed to be received as input of a put step,

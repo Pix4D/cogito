@@ -107,7 +107,7 @@ func TestCheckFailure(t *testing.T) {
 				Sinks: []string{"ghost", "gchat"},
 			},
 			writer:  io.Discard,
-			wantErr: "check: source: invalid sink(s): [ghost]. Supported sinks: [gchat github]",
+			wantErr: "check: source: invalid sink(s): [ghost]",
 		},
 		{
 			name:    "write error",

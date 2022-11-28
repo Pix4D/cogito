@@ -220,14 +220,10 @@ func (src *Source) Validate() error {
 	//
 	var mandatory []string
 
-	supportedSinks := sets.From("gchat", "github")
 	sinks := sets.From(src.Sinks...)
-
-	if sinks.Size() > 0 {
-		sinksNotValid := sinks.Difference(supportedSinks)
-		if sinksNotValid.Size() > 0 {
-			return fmt.Errorf("source: invalid sink(s): %s. Supported sinks: %s", sinksNotValid, supportedSinks)
-		}
+	err := ValidateSinks(sinks)
+	if err != nil {
+		return fmt.Errorf("source: invalid sink(s): %w", err)
 	}
 
 	if sinks.Size() == 0 || sinks.Contains("github") {
