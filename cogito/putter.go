@@ -51,13 +51,21 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 		"environment", putter.Request.Env,
 		"args", args)
 
+	sourceSinks := putter.Request.Source.Sinks
+	putParamsSinks := putter.Request.Params.Sinks
+
+	// Validate optional sinks configuration.
+	_, err = MergeAndValidateSinks(sourceSinks, putParamsSinks)
+	if err != nil {
+		return fmt.Errorf("put: arguments: unsupported sink(s): %w", err)
+	}
+
 	// args[0] contains the path to a directory containing all the "put inputs".
 	if len(args) == 0 {
-		return fmt.Errorf("put: arguments: missing input directory")
+		return fmt.Errorf("put: concourse resource protocol violation: missing input directory")
 	}
 	putter.InputDir = args[0]
 	putter.log.Debug("", "input-directory", putter.InputDir)
-
 	buildState := putter.Request.Params.State
 	putter.log.Debug("", "state", buildState)
 
@@ -65,8 +73,10 @@ func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
 }
 
 func (putter *ProdPutter) ProcessInputDir() error {
-	// putter.InputDir, corresponding to key "put:inputs:", should contain 1 or 2 dirs.
-	// If it contains one, we support autodiscovery by not requiring to name it, we know
+	// putter.InputDir, corresponding to key "put:inputs:", may contain 0, 1 or 2 dirs.
+	// If it contains zero, Cogito addresses only a supported chat system (custom sinks configured).
+	// If it contains one, it could be the git repo or the directory containing the chat message:
+	// in the first case we support autodiscovery by not requiring to name it, we know
 	// that it should be the git repo.
 	// If on the other hand it contains two, one should be the git repo (still nameless)
 	// and the other should be the directory containing the chat_message_file, which is
@@ -81,6 +91,10 @@ func (putter *ProdPutter) ProcessInputDir() error {
 
 	params := putter.Request.Params
 	source := putter.Request.Source
+
+	// Get wanted sinks (already validated in LoadConfiguration()).
+	sinks, _ := MergeAndValidateSinks(source.Sinks, params.Sinks)
+
 	var msgDir string
 
 	collected, err := collectInputDirs(putter.InputDir)
@@ -105,44 +119,46 @@ func (putter *ProdPutter) ProcessInputDir() error {
 		}
 	}
 
-	if inputDirs.Size() == 0 {
-		return fmt.Errorf(
-			"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
-			collected, source.Owner, source.Repo)
-	} else if inputDirs.Size() > 1 {
+	switch inputDirs.Size() {
+	case 0:
+		// If the size is 0 after removing the directory containing the chat message
+		// and Cogito should update the commit status, return an error.
+		if sinks.Contains("github") {
+			return fmt.Errorf(
+				"put:inputs: missing directory for GitHub repo: have: %v, GitHub: %s/%s",
+				inputDirs, source.Owner, source.Repo)
+		}
+		putter.log.Debug("", "inputDirs", inputDirs, "msgDir", msgDir)
+	case 1:
+		repoDir := filepath.Join(putter.InputDir, inputDirs.OrderedList()[0])
+		putter.log.Debug("", "inputDirs", inputDirs, "repoDir", repoDir, "msgDir", msgDir)
+		if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
+			return err
+		}
+		putter.gitRef, err = getGitCommit(repoDir)
+		if err != nil {
+			return err
+		}
+		putter.log.Debug("", "git-ref", putter.gitRef)
+	default:
+		// If the size exceeds 1, too many directories are passed to Cogito.
 		return fmt.Errorf(
 			"put:inputs: want only directory for GitHub repo: have: %v, GitHub: %s/%s",
 			inputDirs, source.Owner, source.Repo)
 	}
 
-	// The set has one or two elements. if it exists, remove from the set the message
-	// directory. The remaining one is the git repo.
-	putter.log.Debug("", "inputDirs", inputDirs, "msgDir", msgDir)
-	remaining := inputDirs.Difference(sets.From(msgDir))
-	repoDir := filepath.Join(putter.InputDir, remaining.OrderedList()[0])
-
-	if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
-		return err
-	}
-
-	putter.gitRef, err = getGitCommit(repoDir)
-	if err != nil {
-		return err
-	}
-	putter.log.Debug("", "git-ref", putter.gitRef)
-
 	return nil
 }
 
 func (putter *ProdPutter) Sinks() []Sinker {
-	return []Sinker{
-		GitHubCommitStatusSink{
+	supportedSinkers := map[string]Sinker{
+		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
 			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
-		GoogleChatSink{
+		"gchat": GoogleChatSink{
 			Log: putter.log.Named("gChat"),
 			// TODO putter.InputDir itself should be of type fs.FS.
 			InputDir: os.DirFS(putter.InputDir),
@@ -150,6 +166,16 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
+	source := putter.Request.Source.Sinks
+	params := putter.Request.Params.Sinks
+	sinks, _ := MergeAndValidateSinks(source, params)
+
+	sinkers := make([]Sinker, 0, sinks.Size())
+	for _, s := range sinks.OrderedList() {
+		sinkers = append(sinkers, supportedSinkers[s])
+	}
+
+	return sinkers
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
@@ -168,6 +194,28 @@ func (putter *ProdPutter) Output(out io.Writer) error {
 		"output.metadata", output.Metadata)
 
 	return nil
+}
+
+// MergeAndValidateSinks returns an error if the user set an unsupported sink in source or put.params.
+// If validation passes, it return the list of sinks to address:
+// - return sinks in put.params if found.
+// - return sinks in source if found.
+// - return all supported sinks.
+func MergeAndValidateSinks(sourceSinks []string, paramsSinks []string) (*sets.Set[string], error) {
+	sinks := sets.From([]string{"github", "gchat"}...)
+	supportedSinks := sinks
+	if len(sourceSinks) > 0 {
+		sinks = sets.From(sourceSinks...)
+	}
+	if len(paramsSinks) > 0 {
+		sinks = sets.From(paramsSinks...)
+	}
+
+	difference := sinks.Difference(supportedSinks)
+	if difference.Size() > 0 {
+		return nil, fmt.Errorf("%s", difference)
+	}
+	return sinks, nil
 }
 
 // collectInputDirs returns a list of all directories below dir (non-recursive).
