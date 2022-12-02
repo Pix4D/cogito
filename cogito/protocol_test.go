@@ -26,7 +26,7 @@ func TestSourceValidationSuccess(t *testing.T) {
 		assert.NilError(t, err)
 	}
 
-	baseSource := cogito.Source{
+	baseGithubSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
@@ -35,12 +35,12 @@ func TestSourceValidationSuccess(t *testing.T) {
 	testCases := []testCase{
 		{
 			name:     "only mandatory keys",
-			mkSource: func() cogito.Source { return baseSource },
+			mkSource: func() cogito.Source { return baseGithubSource },
 		},
 		{
 			name: "explicit log_level",
 			mkSource: func() cogito.Source {
-				source := baseSource
+				source := baseGithubSource
 				source.LogLevel = "debug"
 				return source
 			},
@@ -71,9 +71,35 @@ func TestSourceValidationFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "missing mandatory source keys",
+			name:    "missing mandatory git source keys",
 			source:  cogito.Source{},
 			wantErr: "source: missing keys: owner, repo, access_token",
+		},
+		{
+			name:    "missing mandatory gchat source key",
+			source:  cogito.Source{Sinks: []string{"gchat"}},
+			wantErr: "source: missing keys: gchat_webhook",
+		},
+		{
+			name:    "invalid sink source key",
+			source:  cogito.Source{Sinks: []string{"gchat", "ghost"}},
+			wantErr: "source: invalid sink(s): [ghost]",
+		},
+		{
+			name:    "multiple invalid sink source key",
+			source:  cogito.Source{Sinks: []string{"coffee", "shop"}},
+			wantErr: "source: invalid sink(s): [coffee shop]",
+		},
+		{
+			name: "multiple mixed invalid/valid sink source key",
+			source: cogito.Source{
+				Sinks:        []string{"coffee", "shop", "closed", "gchat", "github"},
+				GChatWebHook: "sensitive-gchat-webhook",
+				Owner:        "the-owner",
+				Repo:         "the-repo",
+				AccessToken:  "the-token",
+			},
+			wantErr: "source: invalid sink(s): [closed coffee shop]",
 		},
 	}
 
@@ -164,7 +190,8 @@ gchat_webhook:         ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
 chat_append_summary:   true
-chat_notify_on_states: [success failure]`
+chat_notify_on_states: [success failure]
+sinks: []`
 
 		have := fmt.Sprint(source)
 
@@ -182,7 +209,8 @@ gchat_webhook:
 log_level:             
 context_prefix:        
 chat_append_summary:   false
-chat_notify_on_states: []`
+chat_notify_on_states: []
+sinks: []`
 
 		have := fmt.Sprint(input)
 
@@ -209,6 +237,7 @@ func TestPutParamsPrintLogRedaction(t *testing.T) {
 		ChatMessage:     "stecchino",
 		ChatMessageFile: "dir/msg.txt",
 		GChatWebHook:    "sensitive-gchat-webhook",
+		Sinks:           []string{"gchat", "github"},
 	}
 
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
@@ -217,7 +246,8 @@ context:             johnny
 chat_message:        stecchino
 chat_message_file:   dir/msg.txt
 chat_append_summary: false
-gchat_webhook:       ***REDACTED***`
+gchat_webhook:       ***REDACTED***
+sinks:               [gchat github]`
 
 		have := fmt.Sprint(params)
 
@@ -234,7 +264,8 @@ context:
 chat_message:        
 chat_message_file:   
 chat_append_summary: false
-gchat_webhook:       `
+gchat_webhook:       
+sinks:               []`
 
 		have := fmt.Sprint(input)
 

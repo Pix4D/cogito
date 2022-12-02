@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Pix4D/cogito/sets"
 )
 
 // DummyVersion is the version always returned by the Cogito resource.
@@ -168,6 +170,7 @@ type Source struct {
 	ContextPrefix      string       `json:"context_prefix"`
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
+	Sinks              []string     `json:"sinks"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -181,8 +184,9 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
+	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "chat_notify_on_states: %s", src.ChatNotifyOnStates)
+	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
 
 	return bld.String()
 }
@@ -215,15 +219,37 @@ func (src *Source) Validate() error {
 	// Validate mandatory fields.
 	//
 	var mandatory []string
-	if src.Owner == "" {
-		mandatory = append(mandatory, "owner")
+
+	// This is the Source validation about custom sinks,
+	// the second argument represents the put params that is nil
+	// at this stage.
+	_, err := MergeAndValidateSinks(src.Sinks, nil)
+	if err != nil {
+		return fmt.Errorf("source: invalid sink(s): %w", err)
 	}
-	if src.Repo == "" {
-		mandatory = append(mandatory, "repo")
+
+	sinks := sets.From(src.Sinks...)
+	if sinks.Size() == 0 || sinks.Contains("github") {
+		// Cogito commit Github status mandatory fields.
+		if src.Owner == "" {
+			mandatory = append(mandatory, "owner")
+		}
+		if src.Repo == "" {
+			mandatory = append(mandatory, "repo")
+		}
+		if src.AccessToken == "" {
+			mandatory = append(mandatory, "access_token")
+		}
 	}
-	if src.AccessToken == "" {
-		mandatory = append(mandatory, "access_token")
+
+	if sinks.Contains("gchat") {
+		// Gchat is explicitly required so makes its setting mandatory.
+		if src.GChatWebHook == "" {
+			mandatory = append(mandatory, "gchat_webhook")
+		}
+
 	}
+
 	if len(mandatory) > 0 {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
@@ -331,11 +357,12 @@ type PutParams struct {
 	//
 	// Optional
 	//
-	Context           string `json:"context"`
-	ChatMessage       string `json:"chat_message"`
-	ChatMessageFile   string `json:"chat_message_file"`
-	ChatAppendSummary bool   `json:"chat_append_summary"`
-	GChatWebHook      string `json:"gchat_webhook"` // SENSITIVE
+	Context           string   `json:"context"`
+	ChatMessage       string   `json:"chat_message"`
+	ChatMessageFile   string   `json:"chat_message_file"`
+	ChatAppendSummary bool     `json:"chat_append_summary"`
+	GChatWebHook      string   `json:"gchat_webhook"` // SENSITIVE
+	Sinks             []string `json:"sinks"`
 }
 
 // String renders PutParams, redacting the sensitive fields.
@@ -347,8 +374,9 @@ func (params PutParams) String() string {
 	fmt.Fprintf(&bld, "chat_message:        %s\n", params.ChatMessage)
 	fmt.Fprintf(&bld, "chat_message_file:   %s\n", params.ChatMessageFile)
 	fmt.Fprintf(&bld, "chat_append_summary: %v\n", params.ChatAppendSummary)
+	fmt.Fprintf(&bld, "gchat_webhook:       %s\n", redact(params.GChatWebHook))
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "gchat_webhook:       %s", redact(params.GChatWebHook))
+	fmt.Fprintf(&bld, "sinks:               %s", params.Sinks)
 
 	return bld.String()
 }

@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.9.0] - UNRELEASED
+
+This release allows to use cogito purely to send chat notifications, completely independently from GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
+
+### Added
+
+- Notion of sink, representing an API destination (`github` and `gchat`). The optional keys `source.sinks` and `put.params.sinks` allow further control on the destination of a put.
+
+### Changed
+
+- Configuring a GitHub repository is not mandatory any more, to allow cogito to be used purely for chat notification.
+- Documentation addresses explicitly how to configure cogito based on the three possible use cases: GitHub only, GitHub + Chat, Chat only.
+
 ## [v0.8.2] - 2022-11-18
 
 ### Minor breaking change
@@ -14,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.8.1] - 2022-09-07
 
-This release allows to use cogito for all chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
+This release allows to use cogito for the vast majority of chat notifications where previously one would have needed a mix of cogito and concourse-hangouts-resource.
 
 ### Added
 
@@ -211,4 +224,6 @@ This release allows to use cogito for all chat notifications where previously on
 [v0.7.1]: https://github.com/Pix4D/cogito/releases/tag/v0.7.1
 [v0.8.0]: https://github.com/Pix4D/cogito/releases/tag/v0.8.0
 [v0.8.1]: https://github.com/Pix4D/cogito/releases/tag/v0.8.1
+[v0.8.2]: https://github.com/Pix4D/cogito/releases/tag/v0.8.2
+[v0.9.0]: https://github.com/Pix4D/cogito/releases/tag/v0.9.0
 

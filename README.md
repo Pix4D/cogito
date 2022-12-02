@@ -2,7 +2,7 @@
 
 Cogito (**CO**ncourse **GIT** status res**O**urce) is a [Concourse resource] to update the GitHub commit status during a build. The name is a humble homage to [René Descartes].
 
-Optionally, it also sends a message to a chat system (currently supported: Google Chat). This allows to reduce the verbosity of a Concourse pipeline and especially to reduce the number of resource containers in a Concourse deployment, thus reducing load.
+It can also send a message to a chat system (currently supported: Google Chat). This allows to reduce the verbosity of a Concourse pipeline and especially to reduce the number of resource containers in a Concourse deployment, thus reducing load. Chat and GitHub commit status update can be used independently (see [examples](#examples) below).
 
 Written in Go, it has the following characteristics:
 
@@ -10,7 +10,7 @@ Written in Go, it has the following characteristics:
 - Extensive test suite.
 - Autodiscovery of configuration parameters.
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
-- Supports Concourse 7.4 [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
+- Supports Concourse [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
 - Helpful error messages when something goes wrong with the GitHub API.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
 
@@ -124,6 +124,20 @@ The absolute minimum is adding key `gchat_webhook` to the `source` configuration
     gchat_webhook: ((gchat_webhook))
 ```
 
+## Chat notification only
+
+The absolute minimum is setting keys `gchat_webhook` and `sinks` in the `source` configuration:
+
+```yaml
+- name: chat-notify
+  type: cogito
+  check_every: never
+  source:
+    sinks:
+      - gchat
+    gchat_webhook: ((gchat_webhook))
+```
+
 # Effects
 
 ## Build states mapping
@@ -158,7 +172,9 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 # Source Configuration
 
-## Required keys
+## GitHub commit status only
+
+### Required keys
 
 - `owner`\
   The GitHub user or organization.
@@ -170,17 +186,34 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   The OAuth access token.\
   See also: section [GitHub OAuth token](#github-oauth-token).
 
-## Optional keys
+### Optional keys
 
 - `context_prefix`\
   The prefix for the GitHub Commit status API "context" (see section [Effects on GitHub](#effects-on-github)). If present, the context will be set as `context_prefix/job_name`.\
   Default: empty.\
   See also: the optional `context` in the [put step](#the-put-step).
 
+- `log_level`:\
+  The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
+  Default: `info`.
+
+- `log_url`. **DEPRECATED, no-op, will be removed**\
+  A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < v7.x
+
+
+## GitHub commit status plus chat notifications
+
+### Required keys
+
+- The keys required for [Only GitHub commit status](##github-commit-status-only)
+
 - `gchat_webhook`\
   URL of a [Google Chat webhook]. A notification about the build status will be sent to the associated chat space, using a thread key composed by the pipeline name and commit hash.\
-  Default: empty.\
   See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
+
+### Optional keys
+
+- The optional keys for [Only GitHub commit status](##github-commit-status-only)
 
 - `chat_notify_on_states`\
   The build states that will cause a chat notification. One or more of `abort`, `error`, `failure`, `pending`, `success`.\
@@ -192,12 +225,29 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   Default: `true`.\
   See also: the default build summary in [Effects on Google Chat](#effects-on-google-chat).
 
-- `log_level`:\
-  The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
-  Default: `info`.
+## Chat notification only
 
-- `log_url`. **DEPRECATED, no-op, will be removed**\
-  A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < v7.x
+### Required keys
+
+- `sinks`\
+  The sinks list for chat notification.
+  Acceptable values: `[gchat]`.
+
+- `gchat_webhook`\
+  URL of a [Google Chat webhook]. A notification will be sent to the associated chat space.\
+  See also: `chat_notify_on_states` and section [Effects on Google Chat](#effects-on-google-chat).
+
+### Optional keys
+
+- `chat_notify_on_states`\
+  The build states that will cause a chat notification. One or more of `abort`, `error`, `failure`, `pending`, `success`.\
+  Default: `[abort, error, failure]`.\
+  See also: section [Build states mapping](#build-states-mapping).
+
+- `chat_append_summary`\
+  One of: `true`, `false`. If `true`, append the default build summary to the custom `put.params.chat_message` and/or `put.params.chat_message_file`.\
+  Default: `true`.\
+  See also: the default build summary in [Effects on Google Chat](#effects-on-google-chat).
 
 ## Suggestions
 
@@ -232,6 +282,10 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
   See also: [Effects on GitHub](#effects-on-github), `source.context_prefix`.
 
 ## Optional params for chat
+
+- `sinks`\
+  If present, overrides `source.sinks`. This allows to run step `put` for example to send to chat only.
+  Default: `source.sinks`.
 
 - `gchat_webhook`\
   If present, overrides `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces.\
@@ -270,6 +324,29 @@ on_success:
   params:
     state: success
     chat_message_file: the-message-dir/msg.txt
+```
+
+If using send to chat only and the `chat_message_file` parameter, the put step requires only one ["put inputs"]. For example:
+
+```yaml
+on_success:
+  put: chat-only
+  # the-message-dir: "output" of a previous task
+  inputs: [the-message-dir]
+  params:
+    state: success
+    chat_message_file: the-message-dir/msg.txt
+```
+
+If using send to chat only without `chat_message_file` parameter, `inputs` may be left empty.
+
+```yaml
+on_success:
+  put: gh-status
+  inputs: []
+  params:
+    state: success
+    chat_message: "This is the custom chat message."
 ```
 
 The reasons of this strictness is to help you have an efficient pipeline, since if the "put inputs" list is not set explicitly, then Concourse will stream all inputs used by the job to this resource, which can have a big performance impact. From the ["put inputs"] documentation:
