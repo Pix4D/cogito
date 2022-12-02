@@ -49,9 +49,11 @@ func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Pu
 		return fmt.Errorf("put: %s", err)
 	}
 
-	// We invoke all the sinks and keep going also if some of them return an error.
 	var sinkErrors []error
-	for _, sink := range putter.Sinks() {
+	sinks := putter.Sinks()
+
+	// We invoke all the sinks and keep going also if some of them return an error.
+	for _, sink := range sinks {
 		if err := sink.Send(); err != nil {
 			sinkErrors = append(sinkErrors, err)
 		}
