@@ -63,6 +63,13 @@ func TestShouldSendToChatCustomConfig(t *testing.T) {
 	}
 }
 
+func TestPrepareChatMessageOnlyChatSuccess(t *testing.T) {
+	have, err := prepareChatMessage(nil, PutRequest{}, "")
+
+	assert.NilError(t, err)
+	assert.Check(t, !strings.Contains(have, "commit"), "not wanted: commit")
+}
+
 func TestPrepareChatMessageSuccess(t *testing.T) {
 	type testCase struct {
 		name        string
