@@ -31,7 +31,7 @@ func TestGetSuccess(t *testing.T) {
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
-	baseSource := cogito.Source{
+	baseGithubSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
@@ -41,7 +41,7 @@ func TestGetSuccess(t *testing.T) {
 		{
 			name: "returns requested version",
 			request: cogito.GetRequest{
-				Source:  baseSource,
+				Source:  baseGithubSource,
 				Version: cogito.Version{Ref: "banana"},
 			},
 			wantOut: cogito.Output{Version: cogito.Version{Ref: "banana"}},
@@ -79,7 +79,7 @@ func TestGetFailure(t *testing.T) {
 		assert.Error(t, err, tc.wantErr)
 	}
 
-	baseSource := cogito.Source{
+	baseGithubSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
@@ -94,13 +94,13 @@ func TestGetFailure(t *testing.T) {
 		},
 		{
 			name:    "concourse validation failure: empty version field",
-			source:  baseSource,
+			source:  baseGithubSource,
 			writer:  io.Discard,
 			wantErr: "get: empty 'version' field",
 		},
 		{
 			name:    "concourse validation failure: missing output directory",
-			source:  baseSource,
+			source:  baseGithubSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  io.Discard,
 			wantErr: "get: arguments: missing output directory",
@@ -108,10 +108,23 @@ func TestGetFailure(t *testing.T) {
 		{
 			name:    "system write error",
 			args:    []string{"dummy-dir"},
-			source:  baseSource,
+			source:  baseGithubSource,
 			version: cogito.Version{Ref: "dummy"},
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "get: preparing output: test write error",
+		},
+		{
+			name:    "user missing gchat webhook",
+			source:  cogito.Source{Sinks: []string{"gchat"}},
+			version: cogito.Version{Ref: "dummy"},
+			writer:  &testhelp.FailingWriter{},
+			wantErr: "get: source: missing keys: gchat_webhook",
+		},
+		{
+			name:    "user validation failure: wrong sink key",
+			source:  cogito.Source{Sinks: []string{"ghost", "gchat"}},
+			writer:  io.Discard,
+			wantErr: "get: source: invalid sink(s): [ghost]",
 		},
 	}
 

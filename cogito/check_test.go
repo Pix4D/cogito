@@ -31,7 +31,7 @@ func TestCheckSuccess(t *testing.T) {
 		assert.DeepEqual(t, have, tc.wantOut)
 	}
 
-	baseSource := cogito.Source{
+	baseGithubSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
@@ -41,14 +41,14 @@ func TestCheckSuccess(t *testing.T) {
 		{
 			name: "first request (Concourse omits the version field)",
 			request: cogito.CheckRequest{
-				Source: baseSource,
+				Source: baseGithubSource,
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
 		},
 		{
 			name: "subsequent requests (Concourse adds the version field)",
 			request: cogito.CheckRequest{
-				Source:  baseSource,
+				Source:  baseGithubSource,
 				Version: cogito.Version{Ref: "dummy"},
 			},
 			wantOut: []cogito.Version{{Ref: "dummy"}},
@@ -80,7 +80,7 @@ func TestCheckFailure(t *testing.T) {
 		assert.Error(t, err, tc.wantErr)
 	}
 
-	baseSource := cogito.Source{
+	baseGithubSource := cogito.Source{
 		Owner:       "the-owner",
 		Repo:        "the-repo",
 		AccessToken: "the-token",
@@ -88,14 +88,30 @@ func TestCheckFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "validation failure: missing keys",
+			name:    "validation failure: missing repo keys",
 			source:  cogito.Source{},
 			writer:  io.Discard,
 			wantErr: "check: source: missing keys: owner, repo, access_token",
 		},
 		{
+			name: "validation failure: missing gchat keys",
+			source: cogito.Source{
+				Sinks: []string{"gchat"},
+			},
+			writer:  io.Discard,
+			wantErr: "check: source: missing keys: gchat_webhook",
+		},
+		{
+			name: "validation failure: wrong sink key",
+			source: cogito.Source{
+				Sinks: []string{"ghost", "gchat"},
+			},
+			writer:  io.Discard,
+			wantErr: "check: source: invalid sink(s): [ghost]",
+		},
+		{
 			name:    "write error",
-			source:  baseSource,
+			source:  baseGithubSource,
 			writer:  &testhelp.FailingWriter{},
 			wantErr: "check: preparing output: test write error",
 		},
