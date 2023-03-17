@@ -45,6 +45,44 @@ func TestSourceValidationSuccess(t *testing.T) {
 				return source
 			},
 		},
+		{
+			name: "mandatory keys + gchat_webhook",
+			mkSource: func() cogito.Source {
+				source := baseGithubSource
+				source.LogLevel = "debug"
+				source.GChatWebHook = "sensitive-gchat-webhook"
+				return source
+			},
+		},
+		{
+			name: "mandatory keys + empty gchat_webhook",
+			mkSource: func() cogito.Source {
+				source := baseGithubSource
+				source.LogLevel = "debug"
+				source.GChatWebHook = ""
+				return source
+			},
+		},
+		{
+			name:	 "gchat sink with webhook",
+			mkSource: func() cogito.Source {
+				source := cogito.Source{
+					Sinks: []string{"gchat"},
+					GChatWebHook: "sensitive-gchat-webhook",
+				}
+				return source
+			},
+		},
+		{
+			name:	 "gchat sink with empty webhook",
+			mkSource: func() cogito.Source {
+				source := cogito.Source{
+					Sinks: []string{"gchat"},
+					GChatWebHook: "",
+				}
+				return source
+			},
+		},
 	}
 
 	for _, tc := range testCases {
