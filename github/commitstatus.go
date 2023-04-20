@@ -13,6 +13,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/hashicorp/go-hclog"
 )
 
 // StatusError is one of the possible errors returned by the github package.
@@ -35,6 +37,8 @@ type CommitStatus struct {
 	owner   string
 	repo    string
 	context string
+
+	log hclog.Logger
 }
 
 // NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner and repo.
@@ -46,8 +50,8 @@ type CommitStatus struct {
 //
 // See also:
 // https://docs.github.com/en/rest/commits/statuses#about-the-commit-statuses-api
-func NewCommitStatus(server, token, owner, repo, context string) CommitStatus {
-	return CommitStatus{server, token, owner, repo, context}
+func NewCommitStatus(server, token, owner, repo, context string, log hclog.Logger) CommitStatus {
+	return CommitStatus{server, token, owner, repo, context, log}
 }
 
 // AddRequest is the JSON object sent to the API.
@@ -83,6 +87,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		return fmt.Errorf("JSON encode: %w", err)
 	}
 
+	s.log.Info("making a Github REST API http request")
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
@@ -121,11 +126,8 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	//
 	// Since we cannot use this information to detect configuration errors, for the time being
 	// we report it in the error message.
-
-	XAcceptedOauthScope := resp.Header["X-Accepted-Oauth-Scopes"]
-	XOauthScopes := resp.Header["X-Oauth-Scopes"]
 	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
-		XAcceptedOauthScope, XOauthScopes)
+		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var hint string

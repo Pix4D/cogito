@@ -23,7 +23,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	context := ghMakeContext(sink.Request)
 
 	commitStatus := github.NewCommitStatus(sink.GhAPI, sink.Request.Source.AccessToken,
-		sink.Request.Source.Owner, sink.Request.Source.Repo, context)
+		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)
 	description := "Build " + sink.Request.Env.BuildName
 
 	sink.Log.Debug("posting to GitHub Commit Status API",
