@@ -32,6 +32,12 @@ func (e *StatusError) Error() string {
 // API is the GitHub API endpoint.
 const API = "https://api.github.com"
 
+// Maximum number of retries for the retryable http request
+const maxRetries = 3
+
+// Maximum time to wait before next attempt
+var MaxSleepTime = 15 * time.Minute
+
 type CommitStatus struct {
 	server  string
 	token   string
@@ -88,7 +94,6 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		return fmt.Errorf("JSON encode: %w", err)
 	}
 
-	s.log.Info("making a Github REST API http request")
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
@@ -97,12 +102,20 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	resp, err := httpRequestDo(req)
-	if err != nil {
-		return err
-	}
+	for attempt := 0; attempt < maxRetries; attempt++ {
+		s.log.Info(fmt.Sprintf("Http request attempt: %d out of %d", attempt+1, maxRetries))
+		resp, err := httpRequestDo(req)
+		if err != nil {
+			return err
+		}
 
-	return s.checkStatus(resp, state, sha, url)
+		retry, timeToSleep := checkForRetry(resp, attempt)
+		if !retry {
+			return s.checkStatus(resp, state, sha, url)
+		}
+		time.Sleep(timeToSleep)
+	}
+	return nil
 }
 
 type httpResponse struct {
@@ -200,4 +213,23 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// checkForRetry determines if we should retry the http request and caluclates wait time between retries
+func checkForRetry(res httpResponse, attempt int) (bool, time.Duration) {
+	switch {
+	case attempt == maxRetries-1:
+		return false, 0
+	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
+	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
+	case res.statusCode == 403 && res.rateLimitRemaining == 0:
+		sleepTime := time.Until(res.rateLimitReset)
+		if sleepTime > MaxSleepTime {
+			return false, 0
+		} else {
+			return true, time.Until(res.rateLimitReset)
+		}
+	default:
+		return false, 0
+	}
 }
