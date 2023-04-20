@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,13 +97,35 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
+	resp, err := httpRequestDo(req)
+	if err != nil {
+		return err
+	}
+
+	return s.checkStatus(resp, state, sha, url)
+}
+
+type httpResponse struct {
+	statusCode         int
+	body               string
+	oauthInfo          string
+	rateLimitRemaining int
+	rateLimitReset     time.Time
+}
+
+func httpRequestDo(req *http.Request) (httpResponse, error) {
+	var response httpResponse
 	// By default, there is no timeout, so the call could hang forever.
 	client := &http.Client{Timeout: time.Second * 30}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("http client Do: %w", err)
+		return httpResponse{}, fmt.Errorf("http client Do: %w", err)
 	}
 	defer resp.Body.Close()
+
+	response.statusCode = resp.StatusCode
+	respBody, _ := io.ReadAll(resp.Body)
+	response.body = strings.TrimSpace(string(respBody))
 
 	// GH API BUG
 	// According to
@@ -126,13 +149,19 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	//
 	// Since we cannot use this information to detect configuration errors, for the time being
 	// we report it in the error message.
-	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
+	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	respBody, _ := io.ReadAll(resp.Body)
+	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("x-ratelimit-remaining"))
+	rateLimitReset, _ := strconv.Atoi(resp.Header.Get("x-ratelimit-reset"))
+	response.rateLimitReset = time.Unix(int64(rateLimitReset), 0)
+	return response, nil
+}
+
+func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) error {
 	var hint string
 
-	switch resp.StatusCode {
+	switch resp.statusCode {
 	case http.StatusCreated:
 		// Happy path
 		return nil
@@ -152,17 +181,17 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	}
 	return &StatusError{
 		What: fmt.Sprintf("failed to add state %q for commit %s: %d %s",
-			state, sha[0:min(len(sha), 7)], resp.StatusCode, http.StatusText(resp.StatusCode)),
-		StatusCode: resp.StatusCode,
+			state, sha[0:min(len(sha), 7)], resp.statusCode, http.StatusText(resp.statusCode)),
+		StatusCode: resp.statusCode,
 		Details: fmt.Sprintf(`Body: %s
 Hint: %s
 Action: %s %s
 OAuth: %s`,
-			strings.TrimSpace(string(respBody)),
+			resp.body,
 			hint,
-			req.Method,
+			http.MethodPost,
 			url,
-			OAuthInfo),
+			resp.oauthInfo),
 	}
 }
 
