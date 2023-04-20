@@ -27,8 +27,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.48.0
-  TPARSE_VERSION: v0.11.1
+  GOLANGCI_VERSION: v1.52.2
+  TPARSE_VERSION: v0.12.1
 
 tasks:
 
