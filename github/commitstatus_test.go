@@ -11,6 +11,7 @@ import (
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 	"github.com/google/go-cmp/cmp"
+	"github.com/hashicorp/go-hclog"
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
@@ -41,7 +42,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		defer ts.Close()
 
 		t.Run(tc.name, func(t *testing.T) {
-			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -108,7 +109,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 
 		t.Run(tc.name, func(t *testing.T) {
 			wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context)
+			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 			if err == nil {
@@ -140,7 +141,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	ghStatus := github.NewCommitStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context)
+	ghStatus := github.NewCommitStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -217,7 +218,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
 			}
 
 			ghStatus := github.NewCommitStatus(github.API, tc.token, tc.owner, tc.repo,
-				"dummy-context")
+				"dummy-context", hclog.NewNullLogger())
 			err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 			if err == nil {
