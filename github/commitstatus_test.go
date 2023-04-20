@@ -74,7 +74,7 @@ Hint: one of the following happened:
     2. The user who issued the token doesn't have write access to the repo
     3. The token doesn't have scope repo:status
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			wantStatus: http.StatusNotFound,
 		},
 		{
@@ -84,7 +84,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 Body: fake body
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			wantStatus: http.StatusInternalServerError,
 		},
 		{
@@ -94,7 +94,7 @@ OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
 Body: fake body
 Hint: none
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			wantStatus: http.StatusTeapot,
 		},
 	}
@@ -173,7 +173,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
 Hint: Either wrong credentials or PAT expired (check your email for expiration notice)
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/751affd155db7a00d936ee6e9f483deee69c5922
-OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: []`,
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			wantStatus: http.StatusUnauthorized,
 		},
 		{
@@ -186,7 +186,7 @@ Hint: one of the following happened:
     2. The user who issued the token doesn't have write access to the repo
     3. The token doesn't have scope repo:status
 Action: POST https://api.github.com/repos/pix4d/non-existing-really/statuses/751affd155db7a00d936ee6e9f483deee69c5922
-OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
+OAuth: X-Accepted-Oauth-Scopes: repo, X-Oauth-Scopes: repo:status`,
 			wantStatus: http.StatusNotFound,
 		},
 		{
@@ -196,7 +196,7 @@ OAuth: X-Accepted-Oauth-Scopes: [repo], X-Oauth-Scopes: [repo:status]`,
 Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
 Hint: none
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822
-OAuth: X-Accepted-Oauth-Scopes: [], X-Oauth-Scopes: [repo:status]`,
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: repo:status`,
 			wantStatus: http.StatusUnprocessableEntity,
 		},
 	}

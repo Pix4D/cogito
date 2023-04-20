@@ -126,11 +126,8 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	//
 	// Since we cannot use this information to detect configuration errors, for the time being
 	// we report it in the error message.
-
-	XAcceptedOauthScope := resp.Header["X-Accepted-Oauth-Scopes"]
-	XOauthScopes := resp.Header["X-Oauth-Scopes"]
 	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
-		XAcceptedOauthScope, XOauthScopes)
+		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
 	respBody, _ := io.ReadAll(resp.Body)
 	var hint string
