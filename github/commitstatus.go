@@ -192,6 +192,12 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
 		hint = "Github API is down"
 	case http.StatusUnauthorized:
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
+	case http.StatusForbidden:
+		if resp.rateLimitRemaining == 0 {
+			hint = "Rate limited but the wait time to reset would be longer than 15 minutes (MaxSleepTime)"
+		} else {
+			hint = "none"
+		}
 	default:
 		// Any other error
 		hint = "none"
@@ -224,7 +230,7 @@ func checkForRetry(res httpResponse) (bool, time.Duration) {
 	switch {
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
-	case res.statusCode == 403 && res.rateLimitRemaining == 0:
+	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
 		sleepTime := time.Until(res.rateLimitReset)
 		if sleepTime > maxSleepTime {
 			return false, 0
