@@ -35,7 +35,7 @@ const API = "https://api.github.com"
 // Maximum number of retries for the retryable http request
 const maxRetries = 3
 
-// Maximum time to wait before next attempt
+// Maximum sleep time allowed
 var MaxSleepTime = 15 * time.Minute
 
 type CommitStatus struct {
@@ -102,8 +102,8 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	for attempt := 0; attempt < maxRetries; attempt++ {
-		s.log.Info(fmt.Sprintf("Http request attempt: %d out of %d", attempt+1, maxRetries))
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		s.log.Info(fmt.Sprintf("Http request attempt: %d out of %d", attempt, maxRetries))
 		resp, err := httpRequestDo(req)
 		if err != nil {
 			return err
@@ -218,7 +218,7 @@ func min(a, b int) int {
 // checkForRetry determines if we should retry the http request and caluclates wait time between retries
 func checkForRetry(res httpResponse, attempt int) (bool, time.Duration) {
 	switch {
-	case attempt == maxRetries-1:
+	case attempt == maxRetries:
 		return false, 0
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
@@ -227,7 +227,7 @@ func checkForRetry(res httpResponse, attempt int) (bool, time.Duration) {
 		if sleepTime > MaxSleepTime {
 			return false, 0
 		} else {
-			return true, time.Until(res.rateLimitReset)
+			return true, sleepTime
 		}
 	default:
 		return false, 0
