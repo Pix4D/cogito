@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 
@@ -14,31 +15,59 @@ import (
 	"github.com/hashicorp/go-hclog"
 )
 
+type mockedResponse struct {
+	body               string
+	statuses           []int
+	rateLimitRemaining []string
+	rateLimitReset     []int
+}
+
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-
+	now := int(time.Now().Unix())
 	testCases := []struct {
-		name   string
-		body   string
-		status int
+		name     string
+		response mockedResponse
 	}{
 		{
-			name:   "No errors",
-			body:   "Anything goes...",
-			status: http.StatusCreated,
+			name: "No errors",
+			response: mockedResponse{
+				body:               "Anything goes...",
+				statuses:           []int{http.StatusCreated},
+				rateLimitRemaining: []string{"5000"},
+				rateLimitReset:     []int{now},
+			},
+		},
+		{
+			name: "Rate limited in the first attempt, success in second attempt",
+			response: mockedResponse{
+				body:     "Anything goes...",
+				statuses: []int{http.StatusForbidden, http.StatusCreated},
+				// In the first request there is remaining rate is 0, for the second request
+				// it resets to 5000 (default Github rate limit for authenticated users)
+				rateLimitRemaining: []string{"0", "5000"},
+				// In first request, rate limit will reset 1s after the attempt.
+				// Keep this value low to prevent tests to sleep for too long
+				// note that 'now' is already a UNIX time in seconds (integer)
+				rateLimitReset: []int{now + 1, now + 3600},
+			},
 		},
 	}
 
 	for _, tc := range testCases {
-		ts := httptest.NewServer(
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(tc.status)
-				fmt.Fprintln(w, tc.body)
-			}))
+		attempt := 0
+		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
+			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
+			w.WriteHeader(tc.response.statuses[attempt])
+			fmt.Fprintln(w, tc.response.body)
+			attempt++
+		}
+		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
 		defer ts.Close()
 
 		t.Run(tc.name, func(t *testing.T) {
@@ -57,16 +86,21 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
+	now := int(time.Now().Unix())
 
 	testCases := []struct {
-		name       string
-		body       string
-		wantErr    string
-		wantStatus int
+		name     string
+		response mockedResponse
+		wantErr  string
 	}{
 		{
 			name: "404 Not Found (multiple causes)",
-			body: "fake body",
+			response: mockedResponse{
+				body:               "fake body",
+				statuses:           []int{http.StatusNotFound},
+				rateLimitRemaining: []string{"5000"},
+				rateLimitReset:     []int{now},
+			},
 			wantErr: `failed to add state "success" for commit 0123456: 404 Not Found
 Body: fake body
 Hint: one of the following happened:
@@ -75,36 +109,61 @@ Hint: one of the following happened:
     3. The token doesn't have scope repo:status
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
-			wantStatus: http.StatusNotFound,
 		},
 		{
 			name: "500 Internal Server Error",
-			body: "fake body",
+			response: mockedResponse{
+				body:               "fake body",
+				statuses:           []int{http.StatusInternalServerError},
+				rateLimitRemaining: []string{"5000"},
+				rateLimitReset:     []int{now},
+			},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
 Body: fake body
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
-			wantStatus: http.StatusInternalServerError,
 		},
 		{
 			name: "Any other error",
-			body: "fake body",
+			response: mockedResponse{
+				body:               "fake body",
+				statuses:           []int{http.StatusTeapot},
+				rateLimitRemaining: []string{"5000"},
+				rateLimitReset:     []int{now},
+			},
 			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
 Body: fake body
 Hint: none
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
-			wantStatus: http.StatusTeapot,
+		},
+		{
+			name: "Rate limited: wait time too long (> MaxSleepTime)",
+			response: mockedResponse{
+				body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
+				statuses:           []int{http.StatusForbidden},
+				rateLimitRemaining: []string{"0"},
+				rateLimitReset:     []int{now + int(github.MaxSleepTime.Seconds()) + 1},
+			},
+			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
+Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
+Hint: Rate limited but the wait time to reset would be longer than 15m0s (MaxSleepTime)
+Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
+OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 	}
 
 	for _, tc := range testCases {
-		ts := httptest.NewServer(
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(tc.wantStatus)
-				fmt.Fprintln(w, tc.body)
-			}))
+		attempt := 0
+		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
+			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
+			w.WriteHeader(tc.response.statuses[attempt])
+			fmt.Fprintln(w, tc.response.body)
+			attempt++
+		}
+		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
 		defer ts.Close()
 
 		t.Run(tc.name, func(t *testing.T) {
@@ -119,7 +178,8 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			if !errors.As(err, &ghError) {
 				t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
 			}
-			if have, want := ghError.StatusCode, tc.wantStatus; have != want {
+			wantStatus := tc.response.statuses[len(tc.response.statuses)-1]
+			if have, want := ghError.StatusCode, wantStatus; have != want {
 				t.Fatalf("status code: have: %d; want: %d", have, want)
 			}
 

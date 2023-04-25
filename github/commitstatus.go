@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"strconv"
 	"strings"
 	"time"
 
@@ -30,6 +31,12 @@ func (e *StatusError) Error() string {
 
 // API is the GitHub API endpoint.
 const API = "https://api.github.com"
+
+// Maximum number of retries for the retryable http request
+const maxRetries = 3
+
+// Maximum sleep time allowed
+var MaxSleepTime = 15 * time.Minute
 
 type CommitStatus struct {
 	server  string
@@ -87,7 +94,6 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		return fmt.Errorf("JSON encode: %w", err)
 	}
 
-	s.log.Info("making a Github REST API http request")
 	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
@@ -96,13 +102,46 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
+	var response httpResponse
+	timeToSleep := 0 * time.Second // 0 seconds
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		time.Sleep(timeToSleep)
+		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", maxRetries)
+		response, err = httpRequestDo(req)
+		if err != nil {
+			return err
+		}
+		timeToSleep = checkForRetry(response)
+		if timeToSleep == 0 {
+			break
+		}
+	}
+
+	return s.checkStatus(response, state, sha, url)
+}
+
+type httpResponse struct {
+	statusCode         int
+	body               string
+	oauthInfo          string
+	rateLimitRemaining int
+	rateLimitReset     time.Time
+}
+
+func httpRequestDo(req *http.Request) (httpResponse, error) {
+	var response httpResponse
 	// By default, there is no timeout, so the call could hang forever.
 	client := &http.Client{Timeout: time.Second * 30}
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Errorf("http client Do: %w", err)
+		return httpResponse{}, fmt.Errorf("http client Do: %w", err)
 	}
 	defer resp.Body.Close()
+
+	response.statusCode = resp.StatusCode
+	respBody, _ := io.ReadAll(resp.Body)
+	response.body = strings.TrimSpace(string(respBody))
 
 	// GH API BUG
 	// According to
@@ -126,13 +165,19 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	//
 	// Since we cannot use this information to detect configuration errors, for the time being
 	// we report it in the error message.
-	OAuthInfo := fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
+	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	respBody, _ := io.ReadAll(resp.Body)
+	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("x-ratelimit-remaining"))
+	rateLimitReset, _ := strconv.Atoi(resp.Header.Get("x-ratelimit-reset"))
+	response.rateLimitReset = time.Unix(int64(rateLimitReset), 0)
+	return response, nil
+}
+
+func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) error {
 	var hint string
 
-	switch resp.StatusCode {
+	switch resp.statusCode {
 	case http.StatusCreated:
 		// Happy path
 		return nil
@@ -146,23 +191,29 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		hint = "Github API is down"
 	case http.StatusUnauthorized:
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
+	case http.StatusForbidden:
+		if resp.rateLimitRemaining == 0 {
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", MaxSleepTime)
+		} else {
+			hint = "none"
+		}
 	default:
 		// Any other error
 		hint = "none"
 	}
 	return &StatusError{
 		What: fmt.Sprintf("failed to add state %q for commit %s: %d %s",
-			state, sha[0:min(len(sha), 7)], resp.StatusCode, http.StatusText(resp.StatusCode)),
-		StatusCode: resp.StatusCode,
+			state, sha[0:min(len(sha), 7)], resp.statusCode, http.StatusText(resp.statusCode)),
+		StatusCode: resp.statusCode,
 		Details: fmt.Sprintf(`Body: %s
 Hint: %s
 Action: %s %s
 OAuth: %s`,
-			strings.TrimSpace(string(respBody)),
+			resp.body,
 			hint,
-			req.Method,
+			http.MethodPost,
 			url,
-			OAuthInfo),
+			resp.oauthInfo),
 	}
 }
 
@@ -171,4 +222,21 @@ func min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+// checkForRetry determines if we should retry the http request and calculates wait time between retries
+func checkForRetry(res httpResponse) time.Duration {
+	switch {
+	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
+	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
+	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
+		sleepTime := time.Until(res.rateLimitReset)
+		if sleepTime > MaxSleepTime {
+			return 0
+		} else {
+			return sleepTime
+		}
+	default:
+		return 0
+	}
 }
