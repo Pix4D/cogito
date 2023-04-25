@@ -141,15 +141,14 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		{
 			name: "Rate limited: wait time too long (> MaxSleepTime)",
 			response: mockedResponse{
-				body:               "API rate limit exceeded for user ID 123456789. [rate reset in 15m01s]",
+				body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
 				statuses:           []int{http.StatusForbidden},
 				rateLimitRemaining: []string{"0"},
-				// MaxSleepTime = 15 minutes (900s)
-				rateLimitReset: []int{now + 901},
+				rateLimitReset:     []int{now + int(github.MaxSleepTime.Seconds()) + 1},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
-Body: API rate limit exceeded for user ID 123456789. [rate reset in 15m01s]
-Hint: Rate limited but the wait time to reset would be longer than 15 minutes (MaxSleepTime)
+Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
+Hint: Rate limited but the wait time to reset would be longer than 15m0s (MaxSleepTime)
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},

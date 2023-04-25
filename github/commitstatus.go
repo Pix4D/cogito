@@ -36,7 +36,7 @@ const API = "https://api.github.com"
 const maxRetries = 3
 
 // Maximum sleep time allowed
-var maxSleepTime = 15 * time.Minute
+var MaxSleepTime = 15 * time.Minute
 
 type CommitStatus struct {
 	server  string
@@ -103,18 +103,17 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	var response httpResponse
-	var retry bool
-	timeToSleep := time.Second * 0
+	timeToSleep := 0 * time.Second // 0 seconds
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
 		time.Sleep(timeToSleep)
-		s.log.Info(fmt.Sprintf("Http request attempt: %d out of %d", attempt, maxRetries))
+		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", maxRetries)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
 		}
-		retry, timeToSleep = checkForRetry(response)
-		if !retry {
+		timeToSleep = checkForRetry(response)
+		if timeToSleep == 0 {
 			break
 		}
 	}
@@ -194,7 +193,7 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = "Rate limited but the wait time to reset would be longer than 15 minutes (MaxSleepTime)"
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", MaxSleepTime)
 		} else {
 			hint = "none"
 		}
@@ -225,19 +224,19 @@ func min(a, b int) int {
 	return b
 }
 
-// checkForRetry determines if we should retry the http request and caluclates wait time between retries
-func checkForRetry(res httpResponse) (bool, time.Duration) {
+// checkForRetry determines if we should retry the http request and calculates wait time between retries
+func checkForRetry(res httpResponse) time.Duration {
 	switch {
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
 	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
 		sleepTime := time.Until(res.rateLimitReset)
-		if sleepTime > maxSleepTime {
-			return false, 0
+		if sleepTime > MaxSleepTime {
+			return 0
 		} else {
-			return true, sleepTime
+			return sleepTime
 		}
 	default:
-		return false, 0
+		return 0
 	}
 }
