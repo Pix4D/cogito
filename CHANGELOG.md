@@ -5,9 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.0] - 2023-XX-XX
+
+- Implements retry logic for Github API Http requests. Cogito retries the http request up to 3 times in case Github user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, all http requests with status code `>=500` (i.e `500 Internal Server Error`, `503 Service Unavailable`, `504 Gateway Timeout`) are retried. For status codes `>=500` the wait time between retries is set to 5 seconds.
+
 ## [v0.9.0] - 2023-03-16
 
-This release allows to use cogito purely to send chat notifications, completely independently from GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
+- This release allows to use cogito purely to send chat notifications, completely independently from GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
 
 ### Added
 
@@ -226,4 +230,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.8.1]: https://github.com/Pix4D/cogito/releases/tag/v0.8.1
 [v0.8.2]: https://github.com/Pix4D/cogito/releases/tag/v0.8.2
 [v0.9.0]: https://github.com/Pix4D/cogito/releases/tag/v0.9.0
-
+[v0.10.0]: https://github.com/Pix4D/cogito/releases/tag/v0.10.0

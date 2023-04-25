@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+	"golang.org/x/exp/slices"
 )
 
 // StatusError is one of the possible errors returned by the github package.
@@ -32,14 +33,19 @@ func (e *StatusError) Error() string {
 // API is the GitHub API endpoint.
 const API = "https://api.github.com"
 
-// Maximum number of retries for the retryable http request
-const maxRetries = 3
+type Target struct {
+	Server string
 
-// Maximum sleep time allowed
-var MaxSleepTime = 15 * time.Minute
+	// Maximum number of retries for the retryable http request
+	MaxRetries int
+	// Default wait time between two http requests
+	WaitTime time.Duration
+	// Maximum sleep time allowed
+	MaxSleepTime time.Duration
+}
 
 type CommitStatus struct {
-	server  string
+	target  Target
 	token   string
 	owner   string
 	repo    string
@@ -57,8 +63,8 @@ type CommitStatus struct {
 //
 // See also:
 // https://docs.github.com/en/rest/commits/statuses#about-the-commit-statuses-api
-func NewCommitStatus(server, token, owner, repo, context string, log hclog.Logger) CommitStatus {
-	return CommitStatus{server, token, owner, repo, context, log}
+func NewCommitStatus(target Target, token, owner, repo, context string, log hclog.Logger) CommitStatus {
+	return CommitStatus{target, token, owner, repo, context, log}
 }
 
 // AddRequest is the JSON object sent to the API.
@@ -80,7 +86,7 @@ type AddRequest struct {
 // See also: https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
 func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
-	url := s.server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
+	url := s.target.Server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
 
 	reqBody := AddRequest{
 		State:       state,
@@ -105,17 +111,18 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	var response httpResponse
 	timeToSleep := 0 * time.Second // 0 seconds
 
-	for attempt := 1; attempt <= maxRetries; attempt++ {
+	for attempt := 1; attempt <= s.target.MaxRetries; attempt++ {
 		time.Sleep(timeToSleep)
-		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", maxRetries)
+		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxRetries)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
 		}
-		timeToSleep = checkForRetry(response)
+		timeToSleep = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime)
 		if timeToSleep == 0 {
 			break
 		}
+		s.log.Info("Sleeping for", "time", timeToSleep)
 	}
 
 	return s.checkStatus(response, state, sha, url)
@@ -193,7 +200,7 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", MaxSleepTime)
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", s.target.MaxSleepTime)
 		} else {
 			hint = "none"
 		}
@@ -225,17 +232,26 @@ func min(a, b int) int {
 }
 
 // checkForRetry determines if we should retry the http request and calculates wait time between retries
-func checkForRetry(res httpResponse) time.Duration {
+func checkForRetry(res httpResponse, waitTime, maxSleepTime time.Duration) time.Duration {
+	retrayalbeStatusCodes := []int{
+		http.StatusInternalServerError, // 500
+		http.StatusBadGateway,          // 502
+		http.StatusServiceUnavailable,  // 503
+		http.StatusGatewayTimeout,      // 504
+	}
+
 	switch {
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
 	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
 		sleepTime := time.Until(res.rateLimitReset)
-		if sleepTime > MaxSleepTime {
+		if sleepTime > maxSleepTime {
 			return 0
 		} else {
 			return sleepTime
 		}
+	case slices.Contains(retrayalbeStatusCodes, res.statusCode):
+		return waitTime
 	default:
 		return 0
 	}
