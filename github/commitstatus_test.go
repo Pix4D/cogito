@@ -56,6 +56,15 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				rateLimitReset: []int{now + 1, now + 3600},
 			},
 		},
+		{
+			name: "Github is flaky (Gateway timeout) in the first attempt, success in second attempt",
+			response: mockedResponse{
+				body:               "Anything goes...",
+				statuses:           []int{http.StatusGatewayTimeout, http.StatusCreated},
+				rateLimitRemaining: []string{"5000", "5000"},
+				rateLimitReset:     []int{now + 1, now + 1},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -70,8 +79,14 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
 		defer ts.Close()
 
+		target := github.Target{
+			Server:       ts.URL,
+			MaxRetries:   2,
+			WaitTime:     time.Second,
+			MaxSleepTime: 5 * time.Second,
+		}
 		t.Run(tc.name, func(t *testing.T) {
-			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+			ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 			if err != nil {
 				t.Fatalf("\nhave: %s\nwant: <no error>", err)
@@ -111,12 +126,12 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "500 Internal Server Error",
+			name: "500 Internal Server Error after 2 attempts",
 			response: mockedResponse{
 				body:               "fake body",
-				statuses:           []int{http.StatusInternalServerError},
-				rateLimitRemaining: []string{"5000"},
-				rateLimitReset:     []int{now},
+				statuses:           []int{http.StatusServiceUnavailable, http.StatusInternalServerError},
+				rateLimitRemaining: []string{"5000", "5000"},
+				rateLimitReset:     []int{now, now},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
 Body: fake body
@@ -144,11 +159,12 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 				body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
 				statuses:           []int{http.StatusForbidden},
 				rateLimitRemaining: []string{"0"},
-				rateLimitReset:     []int{now + int(github.MaxSleepTime.Seconds()) + 1},
+				// the value must be higher than what is configured target.MaxSleepTime
+				rateLimitReset: []int{now + 5*int(time.Minute.Seconds())},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
-Hint: Rate limited but the wait time to reset would be longer than 15m0s (MaxSleepTime)
+Hint: Rate limited but the wait time to reset would be longer than 1m0s (MaxSleepTime)
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
@@ -168,7 +184,13 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 
 		t.Run(tc.name, func(t *testing.T) {
 			wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-			ghStatus := github.NewCommitStatus(ts.URL, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+			target := github.Target{
+				Server:       ts.URL,
+				MaxRetries:   2,
+				WaitTime:     time.Second,
+				MaxSleepTime: time.Minute,
+			}
+			ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 			if err == nil {
@@ -201,7 +223,13 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	ghStatus := github.NewCommitStatus(github.API, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+	target := github.Target{
+		Server:       github.API,
+		MaxRetries:   2,
+		WaitTime:     time.Second,
+		MaxSleepTime: 5 * time.Second,
+	}
+	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
 	if err != nil {
@@ -277,8 +305,13 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: repo:status`,
 				tc.sha = cfg.SHA
 			}
 
-			ghStatus := github.NewCommitStatus(github.API, tc.token, tc.owner, tc.repo,
-				"dummy-context", hclog.NewNullLogger())
+			target := github.Target{
+				Server:       github.API,
+				MaxRetries:   2,
+				WaitTime:     time.Second,
+				MaxSleepTime: 5 * time.Second,
+			}
+			ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
 			err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 			if err == nil {

@@ -1,9 +1,20 @@
 package cogito
 
 import (
+	"time"
+
 	"github.com/Pix4D/cogito/github"
 	"github.com/hashicorp/go-hclog"
 )
+
+// Maximum number of retries for the retryable http request
+const maxRetries = 3
+
+// Maximum sleep time allowed
+const maxSleepTime = 15 * time.Minute
+
+// Default wait time between two http requests
+const waitTime = 5 * time.Second
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
 type GitHubCommitStatusSink struct {
@@ -22,7 +33,13 @@ func (sink GitHubCommitStatusSink) Send() error {
 	buildURL := concourseBuildURL(sink.Request.Env)
 	context := ghMakeContext(sink.Request)
 
-	commitStatus := github.NewCommitStatus(sink.GhAPI, sink.Request.Source.AccessToken,
+	target := github.Target{
+		Server:       sink.GhAPI,
+		MaxRetries:   maxRetries,
+		WaitTime:     waitTime,
+		MaxSleepTime: maxSleepTime,
+	}
+	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)
 	description := "Build " + sink.Request.Env.BuildName
 

@@ -12,6 +12,7 @@ Written in Go, it has the following characteristics:
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
 - Supports Concourse [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
 - Helpful error messages when something goes wrong with the GitHub API.
+- Retryable Github API http requests when user is rate limited or due to transient server errors
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
 
 [Concourse resource]: https://concourse-ci.org/resources.html
