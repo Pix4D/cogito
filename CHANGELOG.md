@@ -5,9 +5,9 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.10.0] - 2023-XX-XX
+## [v0.10.0] - 2023-04-28
 
-- Implements retry logic for Github API Http requests. Cogito retries the http request up to 3 times in case Github user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, all http requests with status code `>=500` (i.e `500 Internal Server Error`, `503 Service Unavailable`, `504 Gateway Timeout`) are retried. For status codes `>=500` the wait time between retries is set to 5 seconds.
+- Implements retry logic for Github API HTTP requests. Cogito retries the HTTP request up to 3 times in case the Github user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, http requests with status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout are retried. For these 5xx status codes the wait time between retries is set to 5 seconds.
 
 ## [v0.9.0] - 2023-03-16
 
