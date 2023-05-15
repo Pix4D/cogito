@@ -5,7 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.10.1] - 2023-05-17
+
+### Added
+
+- Adds a jitter time to calculated sleep time to prevent creating a Thundering Herd.
+
+### Fixed
+
+- Fixes a bug with negative times that could occur due to the small difference between local (client) time and Github server time. Sleep time is now calculated using the date header (time as seen by the Github server). Additionally, negative sleep times are prevented by setting a minimum sleep time equal to the jitter time.
+
 ## [v0.10.0] - 2023-04-28
+
+### Added
 
 - Implements retry logic for Github API HTTP requests. Cogito retries the HTTP request up to 3 times in case the Github user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, http requests with status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout are retried. For these 5xx status codes the wait time between retries is set to 5 seconds.
 

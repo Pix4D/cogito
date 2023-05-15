@@ -42,6 +42,8 @@ type Target struct {
 	WaitTime time.Duration
 	// Maximum sleep time allowed
 	MaxSleepTime time.Duration
+	// adds some randomness to sleep time to prevent creating a Thundering Herd
+	Jitter time.Duration
 }
 
 type CommitStatus struct {
@@ -107,6 +109,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Authorization", "token "+s.token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 
 	var response httpResponse
 	timeToSleep := 0 * time.Second // 0 seconds
@@ -118,7 +121,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime)
+		timeToSleep = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime, s.target.Jitter)
 		if timeToSleep == 0 {
 			break
 		}
@@ -134,6 +137,7 @@ type httpResponse struct {
 	oauthInfo          string
 	rateLimitRemaining int
 	rateLimitReset     time.Time
+	date               time.Time
 }
 
 func httpRequestDo(req *http.Request) (httpResponse, error) {
@@ -178,6 +182,12 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("x-ratelimit-remaining"))
 	rateLimitReset, _ := strconv.Atoi(resp.Header.Get("x-ratelimit-reset"))
 	response.rateLimitReset = time.Unix(int64(rateLimitReset), 0)
+
+	// time.RFC1123 is the format of the Github date header
+	// example: Date:[ Mon, 02 Jan 2006 15:04:05 MST ]
+	date, _ := time.Parse(time.RFC1123, resp.Header.Get("date"))
+	response.date = date
+
 	return response, nil
 }
 
@@ -232,7 +242,7 @@ func min(a, b int) int {
 }
 
 // checkForRetry determines if we should retry the http request and calculates wait time between retries
-func checkForRetry(res httpResponse, waitTime, maxSleepTime time.Duration) time.Duration {
+func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration) time.Duration {
 	retrayalbeStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
@@ -244,15 +254,23 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime time.Duration) time.
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
 	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
-		sleepTime := time.Until(res.rateLimitReset)
+		sleepTime := res.rateLimitReset.Sub(res.date) + jitter
 		if sleepTime > maxSleepTime {
 			return 0
 		} else {
-			return sleepTime
+			// Don't allow negative sleep times. Minimum sleep time should be equal to jitter time.
+			return max(sleepTime, jitter)
 		}
 	case slices.Contains(retrayalbeStatusCodes, res.statusCode):
 		return waitTime
 	default:
 		return 0
 	}
+}
+
+func max(x, y time.Duration) time.Duration {
+	if x < y {
+		return y
+	}
+	return x
 }
