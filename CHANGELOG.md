@@ -5,15 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.10.1] - 2023-05-17
+## [v0.10.1] - 2023-05-31
 
 ### Added
 
-- Adds a jitter time to calculated sleep time to prevent creating a Thundering Herd.
+- Prevent being rate limited by GitHub: add a jitter time to calculated sleep time to prevent creating a Thundering Herd.
 
 ### Fixed
 
-- Fixes a bug with negative times that could occur due to the small difference between local (client) time and Github server time. Sleep time is now calculated using the date header (time as seen by the Github server). Additionally, negative sleep times are prevented by setting a minimum sleep time equal to the jitter time.
+- Prevent being rate limited by GitHub: fix a bug that caused a negative sleep time due to the clock difference between GitHub and the host running Cogito.
 
 ## [v0.10.0] - 2023-04-28
 
