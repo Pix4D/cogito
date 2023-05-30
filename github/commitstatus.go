@@ -181,20 +181,13 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	if limit := resp.Header.Get("X-RateLimit-Remaining"); limit != "" {
-		v, err := strconv.Atoi(limit)
-		if err != nil {
-			return httpResponse{}, fmt.Errorf("failed to convert X-RateLimit-Remaining header: %s", err)
-		}
-		response.rateLimitRemaining = v
-	}
-	if reset := resp.Header.Get("X-RateLimit-Reset"); reset != "" {
-		v, err := strconv.Atoi(reset)
-		if err != nil {
-			return httpResponse{}, fmt.Errorf("failed to convert X-RateLimit-Reset header: %s", err)
-		}
-		response.rateLimitReset = time.Unix(int64(v), 0)
-	}
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining"))
+
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	limit, _ := strconv.Atoi(resp.Header.Get("X-RateLimit-Reset"))
+	response.rateLimitReset = time.Unix(int64(limit), 0)
+
 	// time.RFC1123 is the format of the HTTP Date header
 	// example: Date:[ Mon, 02 Jan 2006 15:04:05 MST ]
 	// https://datatracker.ietf.org/doc/html/rfc2616#section-14.18
