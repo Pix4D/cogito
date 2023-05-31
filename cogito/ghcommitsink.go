@@ -1,6 +1,7 @@
 package cogito
 
 import (
+	"math/rand"
 	"time"
 
 	"github.com/Pix4D/cogito/github"
@@ -38,6 +39,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 		MaxRetries:   maxRetries,
 		WaitTime:     waitTime,
 		MaxSleepTime: maxSleepTime,
+		Jitter:       time.Duration(rand.Intn(30)) * time.Second,
 	}
 	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)

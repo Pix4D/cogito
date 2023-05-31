@@ -42,6 +42,8 @@ type Target struct {
 	WaitTime time.Duration
 	// Maximum sleep time allowed
 	MaxSleepTime time.Duration
+	// adds some randomness to sleep time to prevent creating a Thundering Herd
+	Jitter time.Duration
 }
 
 type CommitStatus struct {
@@ -118,7 +120,10 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime)
+		timeToSleep, err = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime, s.target.Jitter)
+		if err != nil {
+			return fmt.Errorf("internal error: %s", err)
+		}
 		if timeToSleep == 0 {
 			break
 		}
@@ -134,6 +139,7 @@ type httpResponse struct {
 	oauthInfo          string
 	rateLimitRemaining int
 	rateLimitReset     time.Time
+	date               time.Time
 }
 
 func httpRequestDo(req *http.Request) (httpResponse, error) {
@@ -175,9 +181,22 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("x-ratelimit-remaining"))
-	rateLimitReset, _ := strconv.Atoi(resp.Header.Get("x-ratelimit-reset"))
-	response.rateLimitReset = time.Unix(int64(rateLimitReset), 0)
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining"))
+
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	limit, _ := strconv.Atoi(resp.Header.Get("X-RateLimit-Reset"))
+	response.rateLimitReset = time.Unix(int64(limit), 0)
+
+	// time.RFC1123 is the format of the HTTP Date header
+	// example: Date:[ Mon, 02 Jan 2006 15:04:05 MST ]
+	// https://datatracker.ietf.org/doc/html/rfc2616#section-14.18
+	date, err := time.Parse(time.RFC1123, resp.Header.Get("Date"))
+	if err != nil {
+		return httpResponse{}, fmt.Errorf("failed to parse the date header: %s", err)
+	}
+	response.date = date
+
 	return response, nil
 }
 
@@ -232,7 +251,7 @@ func min(a, b int) int {
 }
 
 // checkForRetry determines if we should retry the http request and calculates wait time between retries
-func checkForRetry(res httpResponse, waitTime, maxSleepTime time.Duration) time.Duration {
+func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration) (time.Duration, error) {
 	retrayalbeStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
@@ -244,15 +263,22 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime time.Duration) time.
 	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
 	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
-		sleepTime := time.Until(res.rateLimitReset)
-		if sleepTime > maxSleepTime {
-			return 0
-		} else {
-			return sleepTime
+		// Calculate sleeptime based solely on the server clock. This is unaffected
+		// by the inevitable clock drift between server and client.
+		sleepTime := res.rateLimitReset.Sub(res.date)
+		// Be a good netizen by adding some jitter to the time we sleep.
+		sleepTime += jitter
+		switch {
+		case sleepTime > maxSleepTime:
+			return 0, nil
+		case sleepTime > 0 && sleepTime < maxSleepTime:
+			return sleepTime, nil
+		default:
+			return 0, fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
 		}
 	case slices.Contains(retrayalbeStatusCodes, res.statusCode):
-		return waitTime
+		return waitTime, nil
 	default:
-		return 0
+		return 0, nil
 	}
 }
