@@ -9,10 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/testhelp"
 	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-hclog"
+
+	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 type mockedResponse struct {
