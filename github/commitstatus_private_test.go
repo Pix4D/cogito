@@ -27,6 +27,9 @@ func TestCheckForRetrySuccess(t *testing.T) {
 		assert.Equal(t, reason, tc.wantReason)
 	}
 
+	serverDate := time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC)
+	const maxSleepTime = 15 * time.Minute
+
 	testCases := []testCase{
 		{
 			name:      "status OK: sleep==0",
@@ -48,25 +51,23 @@ func TestCheckForRetrySuccess(t *testing.T) {
 		{
 			name: "rate limited, would sleep too long: sleep==0",
 			res: httpResponse{
-				statusCode: http.StatusForbidden,
-				date:       time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC),
-				// 1h after
-				rateLimitReset: time.Date(2001, time.April, 30, 14, 0, 0, 0, time.UTC),
+				statusCode:     http.StatusForbidden,
+				date:           serverDate,
+				rateLimitReset: serverDate.Add(30 * time.Minute),
 			},
-			maxSleepTime: 10 * time.Second,
+			maxSleepTime: maxSleepTime,
 			wantSleep:    0 * time.Second,
 		},
 		{
 			name: "rate limited, would sleep a bit, adding also the jitter",
 			res: httpResponse{
-				statusCode: http.StatusForbidden,
-				date:       time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC),
-				// 1h after
-				rateLimitReset: time.Date(2001, time.April, 30, 14, 0, 0, 0, time.UTC),
+				statusCode:     http.StatusForbidden,
+				date:           serverDate,
+				rateLimitReset: serverDate.Add(5 * time.Minute),
 			},
-			maxSleepTime: 2 * time.Hour,
+			maxSleepTime: maxSleepTime,
 			jitter:       8 * time.Second,
-			wantSleep:    1*time.Hour + 8*time.Second,
+			wantSleep:    5*time.Minute + 8*time.Second,
 			wantReason:   "rate limited",
 		},
 	}
