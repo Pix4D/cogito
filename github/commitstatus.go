@@ -278,14 +278,19 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		// Calculate the sleep time based solely on the server clock. This is unaffected
 		// by the inevitable clock drift between server and client.
 		sleepTime := res.rateLimitReset.Sub(res.date)
+		// Be robust to possible races in the GitHub backend. This avoids failing too early.
+		if sleepTime < 0 {
+			sleepTime = 0
+		}
 		// Be a good netizen by adding some jitter to the time we sleep.
 		sleepTime += jitter
+
 		switch {
 		case sleepTime == 0:
 			return 0, "", nil
 		case sleepTime > maxSleepTime:
 			return 0, "", nil
-		case sleepTime > 0 && sleepTime < maxSleepTime:
+		case sleepTime < maxSleepTime:
 			return sleepTime, "rate limited", nil
 		default:
 			return 0, "", fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
