@@ -8,27 +8,27 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+const maxSleepTime = 15 * time.Minute
+
+var serverDate = time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC)
+
 func TestCheckForRetrySuccess(t *testing.T) {
 	type testCase struct {
-		name         string
-		res          httpResponse
-		waitTime     time.Duration
-		maxSleepTime time.Duration
-		jitter       time.Duration
-		wantSleep    time.Duration
-		wantReason   string
+		name       string
+		res        httpResponse
+		waitTime   time.Duration
+		jitter     time.Duration
+		wantSleep  time.Duration
+		wantReason string
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		sleep, reason, err := checkForRetry(tc.res, tc.waitTime, tc.maxSleepTime, tc.jitter)
+		sleep, reason, err := checkForRetry(tc.res, tc.waitTime, maxSleepTime, tc.jitter)
 
 		assert.NilError(t, err)
 		assert.Equal(t, sleep, tc.wantSleep)
 		assert.Equal(t, reason, tc.wantReason)
 	}
-
-	serverDate := time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC)
-	const maxSleepTime = 15 * time.Minute
 
 	testCases := []testCase{
 		{
@@ -55,8 +55,7 @@ func TestCheckForRetrySuccess(t *testing.T) {
 				date:           serverDate,
 				rateLimitReset: serverDate.Add(30 * time.Minute),
 			},
-			maxSleepTime: maxSleepTime,
-			wantSleep:    0 * time.Second,
+			wantSleep: 0 * time.Second,
 		},
 		{
 			name: "rate limited, would sleep a bit, adding also the jitter",
@@ -65,10 +64,9 @@ func TestCheckForRetrySuccess(t *testing.T) {
 				date:           serverDate,
 				rateLimitReset: serverDate.Add(5 * time.Minute),
 			},
-			maxSleepTime: maxSleepTime,
-			jitter:       8 * time.Second,
-			wantSleep:    5*time.Minute + 8*time.Second,
-			wantReason:   "rate limited",
+			jitter:     8 * time.Second,
+			wantSleep:  5*time.Minute + 8*time.Second,
+			wantReason: "rate limited",
 		},
 	}
 
