@@ -27,8 +27,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.52.2
-  TPARSE_VERSION: v0.12.1
+  GOLANGCI_VERSION: v1.53.3
+  TPARSE_VERSION: v0.12.2
 
 tasks:
 
@@ -297,4 +297,3 @@ tasks:
     cmds:
       # Remove credentials from the file system, added by "docker login" :-(
       - cmd: docker logout
-
