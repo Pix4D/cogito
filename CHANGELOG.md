@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## UNRELEASED [v0.10.2] - 2023-XX-XX
 
+### Fixed
+
+- GitHub: fix: internal error: unexpected: negative sleep time: 0s
+
 ### Changed
 
 - GitHub: log the reason for retrying [#123](https://github.com/Pix4D/cogito/issues/123).
@@ -25,11 +29,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Implements retry logic for Github API HTTP requests. Cogito retries the HTTP request up to 3 times in case the Github user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, http requests with status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout are retried. For these 5xx status codes the wait time between retries is set to 5 seconds.
+- Implements retry logic for GitHub API HTTP requests. Cogito retries the HTTP request up to 3 times in case the GitHub user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, http requests with status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout are retried. For these 5xx status codes the wait time between retries is set to 5 seconds.
 
 ## [v0.9.0] - 2023-03-16
 
-- This release allows to use cogito purely to send chat notifications, completely independently from GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
+- This release allows to use cogito purely to send chat notifications, completely independently of GitHub. This allows to use cogito in place of concourse-hangouts-resource in any situation.
 
 ### Added
 
@@ -37,7 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Configuring a GitHub repository is not mandatory any more, to allow cogito to be used purely for chat notification.
+- Configuring a GitHub repository is not mandatory anymore, to allow cogito to be used purely for chat notification.
 - Documentation addresses explicitly how to configure cogito based on the three possible use cases: GitHub only, GitHub + Chat, Chat only.
 
 ## [v0.8.2] - 2022-11-18
