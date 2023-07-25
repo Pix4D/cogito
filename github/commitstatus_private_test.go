@@ -68,6 +68,19 @@ func TestCheckForRetrySuccess(t *testing.T) {
 			wantSleep:  5*time.Minute + 8*time.Second,
 			wantReason: "rate limited",
 		},
+		{
+			// Fix https://github.com/Pix4D/cogito/issues/124
+			name: "same server date and rateLimitReset, zero jitter, repro of Pix4D/cogito#124",
+			// Same server date and rateLimitReset.
+			// This can be explained by a benign race in the backend.
+			res: httpResponse{
+				statusCode:     http.StatusForbidden,
+				date:           serverDate,
+				rateLimitReset: serverDate,
+			},
+			// Since we set jitter from rand.Intn, which can return 0, jitter can be 0.
+			jitter: 0 * time.Second,
+		},
 	}
 
 	for _, tc := range testCases {
@@ -98,25 +111,6 @@ func TestCheckForRetryNegativeSleepTime(t *testing.T) {
 	}
 
 	testCases := []testCase{
-		{
-			// BUG
-			// This actually shows a bug in the code, since in this case the sleep time
-			// is 0, not negative, and everything would have worked as expected if we
-			// did not return an error.
-			// Of the two test cases, this is probably what we encountered, because
-			// the error was "negative sleep time: 0s", while 0 is not negative.
-			name: "same server date and rateLimitReset, zero jitter",
-			// Same server date and rateLimitReset.
-			// This can be explained by a benign race in the backend.
-			res: httpResponse{
-				statusCode:     http.StatusForbidden,
-				date:           serverDate,
-				rateLimitReset: serverDate,
-			},
-			// Since we set jitter from rand.Intn, which can return 0, jitter can be 0.
-			jitter:  0 * time.Second,
-			wantErr: "unexpected: negative sleep time: 0s",
-		},
 		{
 			name: "server date slightly after rateLimitReset, too small jitter",
 			// Server date slightly after rateLimitReset.

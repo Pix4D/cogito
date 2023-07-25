@@ -281,6 +281,8 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		// Be a good netizen by adding some jitter to the time we sleep.
 		sleepTime += jitter
 		switch {
+		case sleepTime == 0:
+			return 0, "", nil
 		case sleepTime > maxSleepTime:
 			return 0, "", nil
 		case sleepTime > 0 && sleepTime < maxSleepTime:
