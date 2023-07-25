@@ -22,9 +22,8 @@ func TestCheckForRetrySuccess(t *testing.T) {
 	var serverDate = time.Date(2001, time.April, 30, 13, 0, 0, 0, time.UTC)
 
 	run := func(t *testing.T, tc testCase) {
-		sleep, reason, err := checkForRetry(tc.res, tc.waitTime, maxSleepTime, tc.jitter)
+		sleep, reason := checkForRetry(tc.res, tc.waitTime, maxSleepTime, tc.jitter)
 
-		assert.NilError(t, err)
 		assert.Equal(t, sleep, tc.wantSleep)
 		assert.Equal(t, reason, tc.wantReason)
 	}

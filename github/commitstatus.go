@@ -121,11 +121,8 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep, reason, err := checkForRetry(response, s.target.WaitTime,
+		timeToSleep, reason := checkForRetry(response, s.target.WaitTime,
 			s.target.MaxSleepTime, s.target.Jitter)
-		if err != nil {
-			return fmt.Errorf("internal error: %s", err)
-		}
 		if timeToSleep == 0 {
 			break
 		}
@@ -262,7 +259,7 @@ func min(a, b int) int {
 //  2. The HTTP status code is in a retryable subset of the 5xx status codes.
 //     In this case, it returns the same as the input parameter waitTime.
 func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration,
-) (time.Duration, string, error) {
+) (time.Duration, string) {
 	retryableStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
@@ -287,23 +284,21 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 
 		switch {
 		case sleepTime == 0:
-			return 0, "", nil
+			return 0, ""
 		case sleepTime > maxSleepTime:
-			return 0, "", nil
+			return 0, ""
 		case sleepTime < maxSleepTime:
-			return sleepTime, "rate limited", nil
-		default:
-			return 0, "", fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
+			return sleepTime, "rate limited"
 		}
 	}
 
 	// Do we have a retryable HTTP status code ?
 	if slices.Contains(retryableStatusCodes, res.statusCode) {
-		return waitTime, http.StatusText(res.statusCode), nil
+		return waitTime, http.StatusText(res.statusCode)
 	}
 
 	// The status code could be 200 OK or any other error we did not process before.
 	// In any case, there is nothing to sleep, return 0 and let the caller take a
 	// decision.
-	return 0, "", nil
+	return 0, ""
 }
