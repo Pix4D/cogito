@@ -121,7 +121,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep, err = checkForRetry(response, s.target.WaitTime,
+		timeToSleep, reason, err := checkForRetry(response, s.target.WaitTime,
 			s.target.MaxSleepTime, s.target.Jitter)
 		if err != nil {
 			return fmt.Errorf("internal error: %s", err)
@@ -129,7 +129,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if timeToSleep == 0 {
 			break
 		}
-		s.log.Info("Sleeping for", "time", timeToSleep)
+		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
 	}
 
 	return s.checkStatus(response, state, sha, url)
@@ -262,7 +262,7 @@ func min(a, b int) int {
 //  2. The HTTP status code is in a retryable subset of the 5xx status codes.
 //     In this case, it returns the same as the input parameter waitTime.
 func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration,
-) (time.Duration, error) {
+) (time.Duration, string, error) {
 	retryableStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
@@ -282,15 +282,15 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		sleepTime += jitter
 		switch {
 		case sleepTime > maxSleepTime:
-			return 0, nil
+			return 0, "", nil
 		case sleepTime > 0 && sleepTime < maxSleepTime:
-			return sleepTime, nil
+			return sleepTime, "rate limited", nil
 		default:
-			return 0, fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
+			return 0, "", fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
 		}
 	case slices.Contains(retryableStatusCodes, res.statusCode):
-		return waitTime, nil
+		return waitTime, http.StatusText(res.statusCode), nil
 	default:
-		return 0, nil
+		return 0, "", nil
 	}
 }

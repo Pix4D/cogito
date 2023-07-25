@@ -16,13 +16,15 @@ func TestCheckForRetrySuccess(t *testing.T) {
 		maxSleepTime time.Duration
 		jitter       time.Duration
 		wantSleep    time.Duration
+		wantReason   string
 	}
 
 	run := func(t *testing.T, tc testCase) {
-		sleep, err := checkForRetry(tc.res, tc.waitTime, tc.maxSleepTime, tc.jitter)
+		sleep, reason, err := checkForRetry(tc.res, tc.waitTime, tc.maxSleepTime, tc.jitter)
 
 		assert.NilError(t, err)
 		assert.Equal(t, sleep, tc.wantSleep)
+		assert.Equal(t, reason, tc.wantReason)
 	}
 
 	testCases := []testCase{
@@ -37,10 +39,11 @@ func TestCheckForRetrySuccess(t *testing.T) {
 			wantSleep: 0 * time.Second,
 		},
 		{
-			name:      "retryable status code: sleep==waitTime",
-			res:       httpResponse{statusCode: http.StatusInternalServerError},
-			waitTime:  42 * time.Second,
-			wantSleep: 42 * time.Second,
+			name:       "retryable status code: sleep==waitTime",
+			res:        httpResponse{statusCode: http.StatusInternalServerError},
+			waitTime:   42 * time.Second,
+			wantSleep:  42 * time.Second,
+			wantReason: "Internal Server Error",
 		},
 		{
 			name: "rate limited, would sleep too long: sleep==0",
@@ -64,6 +67,7 @@ func TestCheckForRetrySuccess(t *testing.T) {
 			maxSleepTime: 2 * time.Hour,
 			jitter:       8 * time.Second,
 			wantSleep:    1*time.Hour + 8*time.Second,
+			wantReason:   "rate limited",
 		},
 	}
 
