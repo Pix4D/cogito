@@ -270,11 +270,11 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		http.StatusGatewayTimeout,      // 504
 	}
 
-	switch {
+	// Are we rate limited ?
 	// If the request exceeds the rate limit, the response will have status 403 Forbidden
 	// and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
-	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
+	if res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0 {
 		// Calculate the sleep time based solely on the server clock. This is unaffected
 		// by the inevitable clock drift between server and client.
 		sleepTime := res.rateLimitReset.Sub(res.date)
@@ -288,9 +288,15 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		default:
 			return 0, "", fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
 		}
-	case slices.Contains(retryableStatusCodes, res.statusCode):
-		return waitTime, http.StatusText(res.statusCode), nil
-	default:
-		return 0, "", nil
 	}
+
+	// Do we have a retryable HTTP status code ?
+	if slices.Contains(retryableStatusCodes, res.statusCode) {
+		return waitTime, http.StatusText(res.statusCode), nil
+	}
+
+	// The status code could be 200 OK or any other error we did not process before.
+	// In any case, there is nothing to sleep, return 0 and let the caller take a
+	// decision.
+	return 0, "", nil
 }
