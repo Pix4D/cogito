@@ -27,8 +27,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.52.2
-  TPARSE_VERSION: v0.12.1
+  GOLANGCI_VERSION: v1.53.3
+  GOTESTSUM_VERSION: v1.10.1
 
 tasks:
 
@@ -36,7 +36,7 @@ tasks:
     desc: Install tool dependencies.
     cmds:
       - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - go install github.com/mfridman/tparse@{{.TPARSE_VERSION}}
+      - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
 
   lint:
     desc: Lint the code.
@@ -60,12 +60,12 @@ tasks:
     desc: Run the unit tests.
     cmds:
       # One day I will understand how to use -coverpkg=./... :-(
-      - go test -count=1 -short -coverprofile=coverage.out -json ./... | tparse -skip
+      - gotestsum -- -short -coverprofile=coverage.out ./...
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      - go test -count=1 -coverprofile=coverage.out -json ./... | tparse -skip
+      - gotestsum -- -coverprofile=coverage.out ./...
     env: *test-env
 
   test:smoke:
@@ -297,4 +297,3 @@ tasks:
     cmds:
       # Remove credentials from the file system, added by "docker login" :-(
       - cmd: docker logout
-
