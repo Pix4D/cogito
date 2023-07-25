@@ -77,7 +77,8 @@ type AddRequest struct {
 	Context     string `json:"context"`
 }
 
-// Add adds a commit state to the given sha, decorating it with targetURL and optional description.
+// Add adds a commit state to the given sha, decorating it with targetURL and optional
+// description.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
@@ -111,7 +112,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	var response httpResponse
-	timeToSleep := 0 * time.Second // 0 seconds
+	timeToSleep := 0 * time.Second
 
 	for attempt := 1; attempt <= s.target.MaxRetries; attempt++ {
 		time.Sleep(timeToSleep)
@@ -120,14 +121,15 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep, err = checkForRetry(response, s.target.WaitTime, s.target.MaxSleepTime, s.target.Jitter)
+		timeToSleep, reason, err := checkForRetry(response, s.target.WaitTime,
+			s.target.MaxSleepTime, s.target.Jitter)
 		if err != nil {
 			return fmt.Errorf("internal error: %s", err)
 		}
 		if timeToSleep == 0 {
 			break
 		}
-		s.log.Info("Sleeping for", "time", timeToSleep)
+		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
 	}
 
 	return s.checkStatus(response, state, sha, url)
@@ -250,9 +252,18 @@ func min(a, b int) int {
 	return b
 }
 
-// checkForRetry determines if we should retry the http request and calculates wait time between retries
-func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration) (time.Duration, error) {
-	retrayalbeStatusCodes := []int{
+// checkForRetry determines if the HTTP request should be retried.
+// If yes, checkForRetry returns a positive duration.
+// If no, checkForRetry returns a 0 duration.
+//
+// It considers two different reasons for a retry:
+//  1. The request encountered a GitHub-specific rate limit.
+//     In this case, it considers parameters maxSleepTime and jitter.
+//  2. The HTTP status code is in a retryable subset of the 5xx status codes.
+//     In this case, it returns the same as the input parameter waitTime.
+func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration,
+) (time.Duration, string, error) {
+	retryableStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
 		http.StatusServiceUnavailable,  // 503
@@ -260,25 +271,26 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 	}
 
 	switch {
-	// If you exceed the rate limit, the response will have a 403 status and the x-ratelimit-remaining header will be 0
+	// If the request exceeds the rate limit, the response will have status 403 Forbidden
+	// and the x-ratelimit-remaining header will be 0
 	// https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
 	case res.statusCode == http.StatusForbidden && res.rateLimitRemaining == 0:
-		// Calculate sleeptime based solely on the server clock. This is unaffected
+		// Calculate the sleep time based solely on the server clock. This is unaffected
 		// by the inevitable clock drift between server and client.
 		sleepTime := res.rateLimitReset.Sub(res.date)
 		// Be a good netizen by adding some jitter to the time we sleep.
 		sleepTime += jitter
 		switch {
 		case sleepTime > maxSleepTime:
-			return 0, nil
+			return 0, "", nil
 		case sleepTime > 0 && sleepTime < maxSleepTime:
-			return sleepTime, nil
+			return sleepTime, "rate limited", nil
 		default:
-			return 0, fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
+			return 0, "", fmt.Errorf("unexpected: negative sleep time: %s", sleepTime)
 		}
-	case slices.Contains(retrayalbeStatusCodes, res.statusCode):
-		return waitTime, nil
+	case slices.Contains(retryableStatusCodes, res.statusCode):
+		return waitTime, http.StatusText(res.statusCode), nil
 	default:
-		return 0, nil
+		return 0, "", nil
 	}
 }

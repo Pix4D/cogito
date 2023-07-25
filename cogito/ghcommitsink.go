@@ -4,8 +4,9 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Pix4D/cogito/github"
 	"github.com/hashicorp/go-hclog"
+
+	"github.com/Pix4D/cogito/github"
 )
 
 // Maximum number of retries for the retryable http request
