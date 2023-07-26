@@ -96,6 +96,25 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 			},
 		},
 		{
+			name: "retry also on server-side inconsistency (zero or negative sleep time), repro of Pix4D/cogito#124",
+			response: []mockedResponse{
+				{
+					status:             http.StatusForbidden,
+					rateLimitRemaining: emptyRateRemaining,
+					// This causes sleep time to be 0: it would be silly to fail,
+					// we should instead attempt once more. Depending on the problem
+					// server-side, the next request might also fail, but at least we
+					// did everything we could.
+					rateLimitReset: now.Unix(),
+				},
+				{
+					status:             http.StatusCreated,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
+				},
+			},
+		},
+		{
 			name: "Github is flaky (Gateway timeout) at the first attempt, success at second attempt",
 			response: []mockedResponse{
 				{
