@@ -18,15 +18,20 @@ import (
 
 type mockedResponse struct {
 	body               string
-	statuses           []int
-	rateLimitRemaining []string
-	rateLimitReset     []int
+	status             int
+	rateLimitRemaining string
+	rateLimitReset     int64
 }
+
+const (
+	emptyRateRemaining = "0"
+	fullRateRemaining  = "5000"
+)
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
-		response mockedResponse
+		response []mockedResponse
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -34,18 +39,22 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-	now := int(time.Now().Unix())
+	now := time.Now()
 
 	run := func(t *testing.T, tc testCase) {
 		attempt := 0
-		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
-			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
-			w.WriteHeader(tc.response.statuses[attempt])
-			fmt.Fprintln(w, tc.response.body)
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			response := tc.response[attempt]
+			if response.body == "" { // default
+				response.body = "Anything goes..."
+			}
+			w.Header().Set("x-ratelimit-remaining", response.rateLimitRemaining)
+			w.Header().Set("x-ratelimit-reset", strconv.Itoa(int(response.rateLimitReset)))
+			w.WriteHeader(response.status)
+			fmt.Fprintln(w, response.body)
 			attempt++
 		}
-		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
+		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 
 		target := github.Target{
@@ -62,35 +71,44 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "No errors",
-			response: mockedResponse{
-				body:               "Anything goes...",
-				statuses:           []int{http.StatusCreated},
-				rateLimitRemaining: []string{"5000"},
-				rateLimitReset:     []int{now},
+			name: "Success at first attempt",
+			response: []mockedResponse{
+				{
+					status:             http.StatusCreated,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
 			},
 		},
 		{
-			name: "Rate limited in the first attempt, success in second attempt",
-			response: mockedResponse{
-				body:     "Anything goes...",
-				statuses: []int{http.StatusForbidden, http.StatusCreated},
-				// In the first request there is remaining rate is 0, for the second request
-				// it resets to 5000 (default GitHub rate limit for authenticated users)
-				rateLimitRemaining: []string{"0", "5000"},
-				// In first request, rate limit will reset 1s after the attempt.
-				// Keep this value low to prevent tests to sleep for too long
-				// note that 'now' is already a UNIX time in seconds (integer)
-				rateLimitReset: []int{now + 1, now + 3600},
+			name: "Rate limited at the first attempt, success at the second attempt",
+			response: []mockedResponse{
+				{
+					status:             http.StatusForbidden,
+					rateLimitRemaining: emptyRateRemaining,
+					// Keep this value low to prevent tests to sleep for too long.
+					rateLimitReset: now.Add(1 * time.Second).Unix(),
+				},
+				{
+					status:             http.StatusCreated,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
+				},
 			},
 		},
 		{
-			name: "Github is flaky (Gateway timeout) in the first attempt, success in second attempt",
-			response: mockedResponse{
-				body:               "Anything goes...",
-				statuses:           []int{http.StatusGatewayTimeout, http.StatusCreated},
-				rateLimitRemaining: []string{"5000", "5000"},
-				rateLimitReset:     []int{now + 1, now + 1},
+			name: "Github is flaky (Gateway timeout) at the first attempt, success at second attempt",
+			response: []mockedResponse{
+				{
+					status:             http.StatusGatewayTimeout,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Add(1 * time.Second).Unix(),
+				},
+				{
+					status:             http.StatusCreated,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Add(1 * time.Second).Unix(),
+				},
 			},
 		},
 	}
@@ -103,7 +121,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
-		response mockedResponse
+		response []mockedResponse
 		wantErr  string
 	}
 
@@ -112,18 +130,20 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-	now := int(time.Now().Unix())
+	now := time.Now()
+	maxSleepTime := 1 * time.Minute
 
 	run := func(t *testing.T, tc testCase) {
 		attempt := 0
-		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
-			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
-			w.WriteHeader(tc.response.statuses[attempt])
-			fmt.Fprintln(w, tc.response.body)
+		handler := func(w http.ResponseWriter, r *http.Request) {
+			response := tc.response[attempt]
+			w.Header().Set("x-ratelimit-remaining", response.rateLimitRemaining)
+			w.Header().Set("x-ratelimit-reset", strconv.Itoa(int(response.rateLimitReset)))
+			w.WriteHeader(response.status)
+			fmt.Fprintln(w, response.body)
 			attempt++
 		}
-		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
+		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
@@ -131,7 +151,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 			Server:       ts.URL,
 			MaxRetries:   2,
 			WaitTime:     time.Second,
-			MaxSleepTime: time.Minute,
+			MaxSleepTime: maxSleepTime,
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -142,18 +162,20 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		if !errors.As(err, &ghError) {
 			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
 		}
-		wantStatus := tc.response.statuses[len(tc.response.statuses)-1]
+		wantStatus := tc.response[len(tc.response)-1].status
 		assert.Equal(t, ghError.StatusCode, wantStatus)
 	}
 
 	testCases := []testCase{
 		{
 			name: "404 Not Found (multiple causes)",
-			response: mockedResponse{
-				body:               "fake body",
-				statuses:           []int{http.StatusNotFound},
-				rateLimitRemaining: []string{"5000"},
-				rateLimitReset:     []int{now},
+			response: []mockedResponse{
+				{
+					body:               "fake body",
+					status:             http.StatusNotFound,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 404 Not Found
 Body: fake body
@@ -166,11 +188,19 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
 			name: "500 Internal Server Error after 2 attempts",
-			response: mockedResponse{
-				body:               "fake body",
-				statuses:           []int{http.StatusServiceUnavailable, http.StatusInternalServerError},
-				rateLimitRemaining: []string{"5000", "5000"},
-				rateLimitReset:     []int{now, now},
+			response: []mockedResponse{
+				{
+					body:               "fake body",
+					status:             http.StatusServiceUnavailable,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
+				{
+					body:               "fake body",
+					status:             http.StatusInternalServerError,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
 Body: fake body
@@ -180,11 +210,13 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
 			name: "Any other error",
-			response: mockedResponse{
-				body:               "fake body",
-				statuses:           []int{http.StatusTeapot},
-				rateLimitRemaining: []string{"5000"},
-				rateLimitReset:     []int{now},
+			response: []mockedResponse{
+				{
+					body:               "fake body",
+					status:             http.StatusTeapot,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
 Body: fake body
@@ -194,12 +226,13 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
 			name: "Rate limited: wait time too long (> MaxSleepTime)",
-			response: mockedResponse{
-				body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
-				statuses:           []int{http.StatusForbidden},
-				rateLimitRemaining: []string{"0"},
-				// the value must be higher than what is configured target.MaxSleepTime
-				rateLimitReset: []int{now + 5*int(time.Minute.Seconds())},
+			response: []mockedResponse{
+				{
+					body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
+					status:             http.StatusForbidden,
+					rateLimitRemaining: emptyRateRemaining,
+					rateLimitReset:     now.Add(5 * maxSleepTime).Unix(),
+				},
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
