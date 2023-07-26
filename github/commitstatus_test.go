@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/hashicorp/go-hclog"
+	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
@@ -24,16 +24,43 @@ type mockedResponse struct {
 }
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
+	type testCase struct {
+		name     string
+		response mockedResponse
+	}
+
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 	now := int(time.Now().Unix())
-	testCases := []struct {
-		name     string
-		response mockedResponse
-	}{
+
+	run := func(t *testing.T, tc testCase) {
+		attempt := 0
+		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
+			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
+			w.WriteHeader(tc.response.statuses[attempt])
+			fmt.Fprintln(w, tc.response.body)
+			attempt++
+		}
+		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
+		defer ts.Close()
+
+		target := github.Target{
+			Server:       ts.URL,
+			MaxRetries:   2,
+			WaitTime:     time.Second,
+			MaxSleepTime: 5 * time.Second,
+		}
+
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+		err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+		assert.NilError(t, err)
+	}
+
+	testCases := []testCase{
 		{
 			name: "No errors",
 			response: mockedResponse{
@@ -49,7 +76,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				body:     "Anything goes...",
 				statuses: []int{http.StatusForbidden, http.StatusCreated},
 				// In the first request there is remaining rate is 0, for the second request
-				// it resets to 5000 (default Github rate limit for authenticated users)
+				// it resets to 5000 (default GitHub rate limit for authenticated users)
 				rateLimitRemaining: []string{"0", "5000"},
 				// In first request, rate limit will reset 1s after the attempt.
 				// Keep this value low to prevent tests to sleep for too long
@@ -69,6 +96,25 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
+}
+
+func TestGitHubStatusFailureMockAPI(t *testing.T) {
+	type testCase struct {
+		name     string
+		response mockedResponse
+		wantErr  string
+	}
+
+	cfg := testhelp.FakeTestCfg
+	context := "cogito/test"
+	targetURL := "https://cogito.invalid/builds/job/42"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
+	now := int(time.Now().Unix())
+
+	run := func(t *testing.T, tc testCase) {
 		attempt := 0
 		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
@@ -80,35 +126,27 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
 		defer ts.Close()
 
+		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
 		target := github.Target{
 			Server:       ts.URL,
 			MaxRetries:   2,
 			WaitTime:     time.Second,
-			MaxSleepTime: 5 * time.Second,
+			MaxSleepTime: time.Minute,
 		}
-		t.Run(tc.name, func(t *testing.T) {
-			ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
-			if err != nil {
-				t.Fatalf("\nhave: %s\nwant: <no error>", err)
-			}
-		})
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+
+		err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+
+		assert.Error(t, err, wantErr)
+		var ghError *github.StatusError
+		if !errors.As(err, &ghError) {
+			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
+		}
+		wantStatus := tc.response.statuses[len(tc.response.statuses)-1]
+		assert.Equal(t, ghError.StatusCode, wantStatus)
 	}
-}
 
-func TestGitHubStatusFailureMockAPI(t *testing.T) {
-	cfg := testhelp.FakeTestCfg
-	context := "cogito/test"
-	targetURL := "https://cogito.invalid/builds/job/42"
-	desc := time.Now().Format("15:04:05")
-	state := "success"
-	now := int(time.Now().Unix())
-
-	testCases := []struct {
-		name     string
-		response mockedResponse
-		wantErr  string
-	}{
+	testCases := []testCase{
 		{
 			name: "404 Not Found (multiple causes)",
 			response: mockedResponse{
@@ -172,44 +210,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 	}
 
 	for _, tc := range testCases {
-		attempt := 0
-		mockedResponse := func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("x-ratelimit-remaining", tc.response.rateLimitRemaining[attempt])
-			w.Header().Set("x-ratelimit-reset", strconv.Itoa(tc.response.rateLimitReset[attempt]))
-			w.WriteHeader(tc.response.statuses[attempt])
-			fmt.Fprintln(w, tc.response.body)
-			attempt++
-		}
-		ts := httptest.NewServer(http.HandlerFunc(mockedResponse))
-		defer ts.Close()
-
-		t.Run(tc.name, func(t *testing.T) {
-			wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-			target := github.Target{
-				Server:       ts.URL,
-				MaxRetries:   2,
-				WaitTime:     time.Second,
-				MaxSleepTime: time.Minute,
-			}
-			ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-			err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
-
-			if err == nil {
-				t.Fatalf("\nhave: <no error>\nwant: %s", wantErr)
-			}
-			var ghError *github.StatusError
-			if !errors.As(err, &ghError) {
-				t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
-			}
-			wantStatus := tc.response.statuses[len(tc.response.statuses)-1]
-			if have, want := ghError.StatusCode, wantStatus; have != want {
-				t.Fatalf("status code: have: %d; want: %d", have, want)
-			}
-
-			if diff := cmp.Diff(wantErr, err.Error()); diff != "" {
-				t.Fatalf("error: (+have -want):\n%s", diff)
-			}
-		})
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
 	}
 }
 
@@ -231,11 +232,10 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 		MaxSleepTime: 5 * time.Second,
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
-	if err != nil {
-		t.Fatalf("\nhave: %s\nwant: <no error>", err)
-	}
+	assert.NilError(t, err)
 }
 
 func TestGitHubStatusFailureIntegration(t *testing.T) {
@@ -243,10 +243,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		t.Skip("Skipping integration test (reason: -short)")
 	}
 
-	cfg := testhelp.GitHubSecretsOrFail(t)
-	state := "success"
-
-	testCases := []struct {
+	type testCase struct {
 		name       string
 		token      string // default: cfg.Token
 		owner      string // default: cfg.Owner
@@ -254,7 +251,44 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		sha        string // default: cfg.SHA
 		wantErr    string
 		wantStatus int
-	}{
+	}
+
+	cfg := testhelp.GitHubSecretsOrFail(t)
+	state := "success"
+
+	run := func(t *testing.T, tc testCase) {
+		// zero values are defaults
+		if tc.token == "" {
+			tc.token = cfg.Token
+		}
+		if tc.owner == "" {
+			tc.owner = cfg.Owner
+		}
+		if tc.repo == "" {
+			tc.repo = cfg.Repo
+		}
+		if tc.sha == "" {
+			tc.sha = cfg.SHA
+		}
+
+		target := github.Target{
+			Server:       github.API,
+			MaxRetries:   2,
+			WaitTime:     time.Second,
+			MaxSleepTime: 5 * time.Second,
+		}
+		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
+		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
+
+		assert.Error(t, err, tc.wantErr)
+		var ghError *github.StatusError
+		if !errors.As(err, &ghError) {
+			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
+		}
+		assert.Equal(t, ghError.StatusCode, tc.wantStatus)
+	}
+
+	testCases := []testCase{
 		{
 			name:  "bad token: Unauthorized",
 			token: "bad-token",
@@ -291,44 +325,6 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: repo:status`,
 	}
 
 	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			// zero values are defaults
-			if tc.token == "" {
-				tc.token = cfg.Token
-			}
-			if tc.owner == "" {
-				tc.owner = cfg.Owner
-			}
-			if tc.repo == "" {
-				tc.repo = cfg.Repo
-			}
-			if tc.sha == "" {
-				tc.sha = cfg.SHA
-			}
-
-			target := github.Target{
-				Server:       github.API,
-				MaxRetries:   2,
-				WaitTime:     time.Second,
-				MaxSleepTime: 5 * time.Second,
-			}
-			ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
-			err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
-
-			if err == nil {
-				t.Fatal("\nhave: <no error>\nwant: <some error>")
-			}
-			var ghError *github.StatusError
-			if !errors.As(err, &ghError) {
-				t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
-			}
-			if have, want := ghError.StatusCode, tc.wantStatus; have != want {
-				t.Fatalf("status code: have: %d; want: %d", have, want)
-			}
-
-			if diff := cmp.Diff(tc.wantErr, err.Error()); diff != "" {
-				t.Fatalf("error: (+have -want):\n%s", diff)
-			}
-		})
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
 	}
 }
