@@ -37,9 +37,8 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
-	desc := time.Now().Format("15:04:05")
-	state := "success"
 	now := time.Now()
+	desc := now.Format("15:04:05")
 
 	run := func(t *testing.T, tc testCase) {
 		attempt := 0
@@ -65,7 +64,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-		err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 		assert.NilError(t, err)
 	}
 
@@ -128,9 +127,8 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
-	desc := time.Now().Format("15:04:05")
-	state := "success"
 	now := time.Now()
+	desc := now.Format("15:04:05")
 	maxSleepTime := 1 * time.Minute
 
 	run := func(t *testing.T, tc testCase) {
@@ -155,7 +153,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
-		err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
 		assert.Error(t, err, wantErr)
 		var ghError *github.StatusError
