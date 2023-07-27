@@ -121,9 +121,9 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 		if err != nil {
 			return err
 		}
-		timeToSleep, reason := checkForRetry(response, s.target.WaitTime,
+		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTime,
 			s.target.MaxSleepTime, s.target.Jitter)
-		if timeToSleep == 0 {
+		if !retry {
 			break
 		}
 		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
@@ -249,9 +249,11 @@ func min(a, b int) int {
 	return b
 }
 
-// checkForRetry determines if the HTTP request should be retried.
-// If yes, checkForRetry returns a positive duration.
-// If no, checkForRetry returns a 0 duration.
+// checkForRetry determines if the HTTP request should be retried after a sleep.
+// If yes, checkForRetry returns true, the sleep duration and a reason.
+// If no, checkForRetry returns false and a reason.
+//
+// To take a decision, use only the boolean value. Do not use the duration nor the reason.
 //
 // It considers two different reasons for a retry:
 //  1. The request encountered a GitHub-specific rate limit.
@@ -259,7 +261,7 @@ func min(a, b int) int {
 //  2. The HTTP status code is in a retryable subset of the 5xx status codes.
 //     In this case, it returns the same as the input parameter waitTime.
 func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duration,
-) (time.Duration, string) {
+) (bool, time.Duration, string) {
 	retryableStatusCodes := []int{
 		http.StatusInternalServerError, // 500
 		http.StatusBadGateway,          // 502
@@ -284,21 +286,21 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 
 		switch {
 		case sleepTime == 0:
-			return 0, ""
+			return true, 0, "rate limited, server-side inconsistency, should retry"
 		case sleepTime > maxSleepTime:
-			return 0, ""
+			return false, 0, "rate limited, sleepTime > maxSleepTime, should not retry"
 		case sleepTime < maxSleepTime:
-			return sleepTime, "rate limited"
+			return true, sleepTime, "rate limited, should retry"
 		}
 	}
 
 	// Do we have a retryable HTTP status code ?
 	if slices.Contains(retryableStatusCodes, res.statusCode) {
-		return waitTime, http.StatusText(res.statusCode)
+		return true, waitTime, http.StatusText(res.statusCode)
 	}
 
 	// The status code could be 200 OK or any other error we did not process before.
 	// In any case, there is nothing to sleep, return 0 and let the caller take a
 	// decision.
-	return 0, ""
+	return false, 0, "no retryable reasons"
 }
