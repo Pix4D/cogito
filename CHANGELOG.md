@@ -5,31 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED [v0.10.2] - 2023-XX-XX
+## [v0.10.2] - 2023-07-28
 
 ### Fixed
 
-- GitHub: fix: internal error: unexpected: negative sleep time: 0s
+- Retry GitHub HTTP request when rate limited: fix internal error: unexpected: negative sleep time: 0s
 
 ### Changed
 
-- GitHub: log the reason for retrying [#123](https://github.com/Pix4D/cogito/issues/123).
+- Retry GitHub API HTTP request when rate limited or when transient server error: log the reason for retrying [#123](https://github.com/Pix4D/cogito/issues/123).
 
 ## [v0.10.1] - 2023-05-31
 
 ### Added
 
-- Prevent being rate limited by GitHub: add a jitter time to calculated sleep time to prevent creating a Thundering Herd.
+- Retry GitHub HTTP request when rate limited: add a jitter to the calculated sleep time to prevent creating a Thundering Herd.
 
 ### Fixed
 
-- Prevent being rate limited by GitHub: fix a bug that caused a negative sleep time due to the clock difference between GitHub and the host running Cogito.
+- Retry GitHub HTTP request when rate limited: fix a bug that caused a negative sleep time due to the clock difference between GitHub and the host running Cogito.
 
 ## [v0.10.0] - 2023-04-28
 
 ### Added
 
-- Implements retry logic for GitHub API HTTP requests. Cogito retries the HTTP request up to 3 times in case the GitHub user is rate limited. The maximum wait time between request is set to 15 minutes. Additionally, http requests with status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout are retried. For these 5xx status codes the wait time between retries is set to 5 seconds.
+- Retry GitHub HTTP requests when rated limited or when transient server error.
+    - When rate limited: retry up to 3 times for a maximum of 15 minutes.
+    - When transient server errors (status codes 500 Internal Server Error, 502 Bad Gateway, 503 Service Unavailable, 504 Gateway Timeout): retry up to 3 times, with fixed wait time between retries of 5 seconds.
 
 ## [v0.9.0] - 2023-03-16
 

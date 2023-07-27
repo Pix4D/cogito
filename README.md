@@ -12,7 +12,7 @@ Written in Go, it has the following characteristics:
 - No assumptions on the git repository (for example, doesn't assume that the default branch is `main` or that branch `main` even exists).
 - Supports Concourse [instanced pipelines](https://concourse-ci.org/instanced-pipelines.html).
 - Helpful error messages when something goes wrong with the GitHub API.
-- Retryable Github API http requests when user is rate limited or due to transient server errors
+- Retryable GitHub HTTP API requests due to rate limiting or transient server errors.
 - Configurable logging for the three steps (check, in, out) to help troubleshooting.
 
 [Concourse resource]: https://concourse-ci.org/resources.html
@@ -39,7 +39,7 @@ Releases are tagged in the git repository with the semver format `vMAJOR.MINOR.P
 
 ## Which Docker tag to use?
 
-- The `latest` tag always points to the  latest release, not to the tip of master, so it is quite stable.
+- The `latest` tag always points to the latest release, not to the tip of master, so it is quite stable.
 - Alternatively, you can pin the resource to a specific release tag `MAJOR.MINOR.PATCH`.
 
 # Examples
