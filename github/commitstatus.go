@@ -284,12 +284,10 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		// Be a good netizen by adding some jitter to the time we sleep.
 		sleepTime += jitter
 
-		switch {
-		case sleepTime > maxSleepTime:
+		if sleepTime > maxSleepTime {
 			return false, 0, "rate limited, sleepTime > maxSleepTime, should not retry"
-		case sleepTime < maxSleepTime:
-			return true, sleepTime, "rate limited, should retry"
 		}
+		return true, sleepTime, "rate limited, should retry"
 	}
 
 	// Do we have a retryable HTTP status code ?

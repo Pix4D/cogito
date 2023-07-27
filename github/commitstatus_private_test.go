@@ -109,3 +109,7 @@ func TestCheckForRetry(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
 	}
 }
+
+// This is now clearly visible in the SUT. Will make another PR.
+// BUG: sleeptime + jitter might cause a failure; test sleepTime > maxSleepTime should
+// be done before?
