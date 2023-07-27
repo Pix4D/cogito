@@ -285,8 +285,6 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 		sleepTime += jitter
 
 		switch {
-		case sleepTime == 0:
-			return true, 0, "rate limited, should retry"
 		case sleepTime > maxSleepTime:
 			return false, 0, "rate limited, sleepTime > maxSleepTime, should not retry"
 		case sleepTime < maxSleepTime:
