@@ -86,7 +86,7 @@ func TestCheckForRetry(t *testing.T) {
 			},
 			// Since we set jitter from rand.Intn, which can return 0, jitter can be 0.
 			jitter:     0 * time.Second,
-			wantReason: "rate limited, server-side inconsistency, should retry",
+			wantReason: "rate limited, should retry",
 			wantRetry:  true,
 		},
 		{
