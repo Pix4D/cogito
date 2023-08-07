@@ -30,8 +30,9 @@ const (
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	type testCase struct {
-		name     string
-		response []mockedResponse
+		name      string
+		response  []mockedResponse
+		wantSleep time.Duration
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -55,17 +56,28 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-
 		target := github.Target{
 			Server:       ts.URL,
 			MaxRetries:   2,
 			WaitTime:     time.Second,
 			MaxSleepTime: 5 * time.Second,
 		}
-
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+
+		start := time.Now()
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
+		elapsed := time.Since(start)
+
 		assert.NilError(t, err)
+		minWantSleep := tc.wantSleep
+		maxWantSleep := time.Duration(1.5 * float64(tc.wantSleep))
+		if maxWantSleep == 0 {
+			maxWantSleep = 50 * time.Millisecond
+		}
+		assert.Assert(t, elapsed >= minWantSleep,
+			"elapsed=%v minWantSleep=%v", elapsed, minWantSleep)
+		assert.Assert(t, elapsed < maxWantSleep,
+			"elapsed=%v maxWantSleep=%v", elapsed, maxWantSleep)
 	}
 
 	testCases := []testCase{
@@ -94,6 +106,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
+			wantSleep: 1 * time.Second,
 		},
 		{
 			name: "retry also on server-side inconsistency (zero or negative sleep time), repro of Pix4D/cogito#124",
@@ -128,6 +141,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Second).Unix(),
 				},
 			},
+			wantSleep: 1 * time.Second,
 		},
 	}
 
