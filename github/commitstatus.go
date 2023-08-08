@@ -134,14 +134,15 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	var response httpResponse
-	timeToSleep := 0 * time.Second
 
-	for attempt := 1; attempt <= s.target.MaxAttempts; attempt++ {
-		s.sleepFn(timeToSleep)
+	for attempt := 1; ; attempt++ {
 		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxAttempts)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
+		}
+		if attempt == s.target.MaxAttempts {
+			break
 		}
 		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTransient,
 			s.target.MaxSleepRateLimited, s.target.Jitter)
@@ -149,6 +150,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 			break
 		}
 		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
+		s.sleepFn(timeToSleep)
 	}
 
 	return s.checkStatus(response, state, sha, url)
