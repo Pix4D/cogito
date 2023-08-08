@@ -155,7 +155,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Second).Unix(),
 				},
 			},
-			wantSleeps: []time.Duration{1 * time.Second},
+			wantSleeps: []time.Duration{waitTransient},
 		},
 	}
 
@@ -241,24 +241,30 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "500 Internal Server Error after 2 attempts",
+			name: "500 Internal Server Error after 3 attempts",
 			response: []mockedResponse{
 				{
-					body:               "fake body",
+					body:               "fake body 1",
 					status:             http.StatusServiceUnavailable,
 					rateLimitRemaining: fullRateRemaining,
 					rateLimitReset:     now.Unix(),
 				},
 				{
-					body:               "fake body",
+					body:               "fake body 2",
+					status:             http.StatusServiceUnavailable,
+					rateLimitRemaining: fullRateRemaining,
+					rateLimitReset:     now.Unix(),
+				},
+				{
+					body:               "fake body 3",
 					status:             http.StatusInternalServerError,
 					rateLimitRemaining: fullRateRemaining,
 					rateLimitReset:     now.Unix(),
 				},
 			},
-			wantSleeps: []time.Duration{1 * time.Second},
+			wantSleeps: []time.Duration{waitTransient, waitTransient},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
-Body: fake body
+Body: fake body 3
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
