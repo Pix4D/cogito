@@ -35,7 +35,6 @@ const API = "https://api.github.com"
 
 type Target struct {
 	Server string
-
 	// Maximum number of retries for the retryable http request
 	MaxRetries int
 	// Default wait time between two http requests
@@ -46,6 +45,11 @@ type Target struct {
 	Jitter time.Duration
 }
 
+// CommitStatus is a wrapper to the GitHub API to set the commit status for a specific
+// GitHub owner and repo.
+// See also:
+// - NewCommitStatus
+// - https://docs.github.com/en/rest/commits/statuses
 type CommitStatus struct {
 	target  Target
 	token   string
@@ -56,15 +60,17 @@ type CommitStatus struct {
 	log hclog.Logger
 }
 
-// NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner and repo.
-// Parameter token is the personal OAuth token of a user that has write access to the repo. It
-// only needs the repo:status scope.
-// Parameter context is what created the status, for example "JOBNAME", or "PIPELINENAME/JOBNAME".
-// Be careful when using PIPELINENAME: if that name is ephemeral, it will make it impossible to
-// use GitHub repository branch protection rules.
+// NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner
+// and repo.
+// Parameter token is the personal OAuth token of a user that has write access to the
+// repo. It only needs the repo:status scope.
+// Parameter context is what created the status, for example "JOBNAME", or
+// "PIPELINENAME/JOBNAME". The name comes from the GitHub API.
+// Be careful when using PIPELINENAME: if that name is ephemeral, it will make it
+// impossible to use GitHub repository branch protection rules.
 //
 // See also:
-// https://docs.github.com/en/rest/commits/statuses#about-the-commit-statuses-api
+// - https://docs.github.com/en/rest/commits/statuses
 func NewCommitStatus(target Target, token, owner, repo, context string, log hclog.Logger) CommitStatus {
 	return CommitStatus{target, token, owner, repo, context, log}
 }
@@ -77,8 +83,11 @@ type AddRequest struct {
 	Context     string `json:"context"`
 }
 
-// Add adds a commit state to the given sha, decorating it with targetURL and optional
+// Add sets the commit state to the given sha, decorating it with targetURL and optional
 // description.
+// In case of transient errors or rate limiting by the backend, Add performs a certain
+// number of attempts before giving up. The retry logic is configured in the target
+// parameter of NewCommitStatus.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
@@ -168,22 +177,22 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	// returns an empty list for X-Accepted-Oauth-Scopes, while the API documentation
 	// https://developer.github.com/v3/repos/statuses/ says:
 	//
-	//     Note that the repo:status OAuth scope grants targeted access to statuses without
-	//     also granting access to repository code, while the repo scope grants permission
-	//     to code as well as statuses.
+	//     Note that the repo:status OAuth scope grants targeted access to statuses
+	//     without also granting access to repository code, while the repo scope grants
+	//     permission to code as well as statuses.
 	//
-	// So X-Accepted-Oauth-Scopes cannot be empty, because it is a privileged operation, and
-	// should be at least repo:status.
+	// So X-Accepted-Oauth-Scopes cannot be empty, because it is a privileged operation,
+	// and should be at least repo:status.
 	//
-	// Since we cannot use this information to detect configuration errors, for the time being
-	// we report it in the error message.
+	// Since we cannot use this information to detect configuration errors, for the time
+	// being we report it in the error message.
 	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty.
 	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining"))
 
-	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty.
 	limit, _ := strconv.Atoi(resp.Header.Get("X-RateLimit-Reset"))
 	response.rateLimitReset = time.Unix(int64(limit), 0)
 

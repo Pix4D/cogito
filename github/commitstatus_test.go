@@ -24,8 +24,8 @@ type mockedResponse struct {
 }
 
 const (
-	emptyRateRemaining = "0"
-	fullRateRemaining  = "5000"
+	emptyRateRemaining = "0"    // From the GitHub API.
+	fullRateRemaining  = "5000" // From the GitHub API.
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
