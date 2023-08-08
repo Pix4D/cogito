@@ -32,6 +32,10 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
 		response []mockedResponse
+		// wantSleeps:
+		// - contains the durations we expect for the sleeps
+		// - its size is the number of times we expect the sleep function to be called
+		wantSleeps []time.Duration
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -55,17 +59,23 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-
 		target := github.Target{
 			Server:              ts.URL,
 			MaxAttempts:         2,
 			WaitTransient:       time.Second,
 			MaxSleepRateLimited: 5 * time.Second,
 		}
-
+		var haveSleeps []time.Duration
+		sleepSpy := func(d time.Duration) {
+			haveSleeps = append(haveSleeps, d)
+		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+		ghStatus.SetSleepFn(sleepSpy)
+
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
+
 		assert.NilError(t, err)
+		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
 	}
 
 	testCases := []testCase{
@@ -78,6 +88,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Unix(),
 				},
 			},
+			wantSleeps: nil,
 		},
 		{
 			name: "Rate limited at the first attempt, success at the second attempt",
@@ -85,8 +96,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				{
 					status:             http.StatusForbidden,
 					rateLimitRemaining: emptyRateRemaining,
-					// Keep this value low to prevent tests to sleep for too long.
-					rateLimitReset: now.Add(1 * time.Second).Unix(),
+					rateLimitReset:     now.Add(42 * time.Second).Unix(),
 				},
 				{
 					status:             http.StatusCreated,
@@ -94,6 +104,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{42 * time.Second},
 		},
 		{
 			name: "retry also on server-side inconsistency (zero or negative sleep time), repro of Pix4D/cogito#124",
@@ -113,6 +124,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{0 * time.Second},
 		},
 		{
 			name: "Github is flaky (Gateway timeout) at the first attempt, success at second attempt",
@@ -128,6 +140,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Second).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{1 * time.Second},
 		},
 	}
 
