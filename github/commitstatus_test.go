@@ -153,7 +153,11 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
 		response []mockedResponse
-		wantErr  string
+		// wantSleeps:
+		// - contains the durations we expect for the sleeps
+		// - its size is the number of times we expect the sleep function to be called
+		wantSleeps []time.Duration
+		wantErr    string
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -175,7 +179,6 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
 		target := github.Target{
 			Server:              ts.URL,
@@ -183,7 +186,12 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 			WaitTransient:       time.Second,
 			MaxSleepRateLimited: maxSleepTime,
 		}
+		var haveSleeps []time.Duration
+		sleepSpy := func(d time.Duration) {
+			haveSleeps = append(haveSleeps, d)
+		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+		ghStatus.SetSleepFn(sleepSpy)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -192,6 +200,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		if !errors.As(err, &ghError) {
 			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
 		}
+		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
 		wantStatus := tc.response[len(tc.response)-1].status
 		assert.Equal(t, ghError.StatusCode, wantStatus)
 	}
@@ -207,6 +216,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 					rateLimitReset:     now.Unix(),
 				},
 			},
+			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 404 Not Found
 Body: fake body
 Hint: one of the following happened:
@@ -232,6 +242,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 					rateLimitReset:     now.Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{1 * time.Second},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
 Body: fake body
 Hint: Github API is down
@@ -248,6 +259,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 					rateLimitReset:     now.Unix(),
 				},
 			},
+			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
 Body: fake body
 Hint: none
@@ -264,6 +276,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 					rateLimitReset:     now.Add(5 * maxSleepTime).Unix(),
 				},
 			},
+			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
 Hint: Rate limited but the wait time to reset would be longer than 1m0s (MaxSleepRateLimited)
