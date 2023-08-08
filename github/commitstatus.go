@@ -60,6 +60,8 @@ type CommitStatus struct {
 	repo    string
 	context string
 
+	sleepFn func(d time.Duration) // Overridable by tests.
+
 	log hclog.Logger
 }
 
@@ -75,7 +77,15 @@ type CommitStatus struct {
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
 func NewCommitStatus(target Target, token, owner, repo, context string, log hclog.Logger) CommitStatus {
-	return CommitStatus{target, token, owner, repo, context, log}
+	return CommitStatus{
+		target:  target,
+		token:   token,
+		owner:   owner,
+		repo:    repo,
+		context: context,
+		sleepFn: time.Sleep,
+		log:     log,
+	}
 }
 
 // AddRequest is the JSON object sent to the API.
@@ -127,7 +137,7 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	timeToSleep := 0 * time.Second
 
 	for attempt := 1; attempt <= s.target.MaxAttempts; attempt++ {
-		time.Sleep(timeToSleep)
+		s.sleepFn(timeToSleep)
 		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxAttempts)
 		response, err = httpRequestDo(req)
 		if err != nil {
@@ -311,4 +321,10 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 	// In any case, there is nothing to sleep, return 0 and let the caller take a
 	// decision.
 	return false, 0, "no retryable reasons"
+}
+
+// SetSleepFn overrides time.Sleep, used when retrying an HTTP request, with sleepFn.
+// WARNING Use only in tests.
+func (s *CommitStatus) SetSleepFn(sleepFn func(d time.Duration)) {
+	s.sleepFn = sleepFn
 }
