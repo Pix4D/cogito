@@ -35,13 +35,16 @@ const API = "https://api.github.com"
 
 type Target struct {
 	Server string
-	// Maximum number of retries for the retryable http request
-	MaxRetries int
-	// Default wait time between two http requests
-	WaitTime time.Duration
-	// Maximum sleep time allowed
-	MaxSleepTime time.Duration
-	// adds some randomness to sleep time to prevent creating a Thundering Herd
+	// MaxAttempts is the maximum number of attempts when retrying an HTTP request to
+	// GitHub, no matter the reason (rate limited or transient error).
+	MaxAttempts int
+	// WaitTransient is the wait time before the next attempt when encountering a
+	// transient error from GitHub.
+	WaitTransient time.Duration
+	// MaxSleepRateLimited is the maximum sleep time (over all attempts) when rate
+	// limited from GitHub.
+	MaxSleepRateLimited time.Duration
+	// Jitter is added to the sleep duration to prevent creating a Thundering Herd.
 	Jitter time.Duration
 }
 
@@ -123,15 +126,15 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	var response httpResponse
 	timeToSleep := 0 * time.Second
 
-	for attempt := 1; attempt <= s.target.MaxRetries; attempt++ {
+	for attempt := 1; attempt <= s.target.MaxAttempts; attempt++ {
 		time.Sleep(timeToSleep)
-		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxRetries)
+		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxAttempts)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
 		}
-		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTime,
-			s.target.MaxSleepTime, s.target.Jitter)
+		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTransient,
+			s.target.MaxSleepRateLimited, s.target.Jitter)
 		if !retry {
 			break
 		}
@@ -227,7 +230,7 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", s.target.MaxSleepTime)
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepRateLimited)", s.target.MaxSleepRateLimited)
 		} else {
 			hint = "none"
 		}

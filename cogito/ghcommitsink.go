@@ -9,14 +9,19 @@ import (
 	"github.com/Pix4D/cogito/github"
 )
 
-// Maximum number of retries for the retryable http request
-const maxRetries = 3
+const (
+	// maxAttempts is the maximum number of attempts when retrying an HTTP request to
+	// GitHub, no matter the reason (rate limited or transient error).
+	maxAttempts = 3
 
-// Maximum sleep time allowed
-const maxSleepTime = 15 * time.Minute
+	// maxSleepRateLimited is the maximum sleep time (over all attempts) when rate
+	// limited from GitHub.
+	maxSleepRateLimited = 15 * time.Minute
 
-// Default wait time between two http requests
-const waitTime = 5 * time.Second
+	// waitTransient is the wait time before the next attempt when encountering a
+	// transient error from GitHub.
+	waitTransient = 5 * time.Second
+)
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
 type GitHubCommitStatusSink struct {
@@ -36,11 +41,11 @@ func (sink GitHubCommitStatusSink) Send() error {
 	context := ghMakeContext(sink.Request)
 
 	target := github.Target{
-		Server:       sink.GhAPI,
-		MaxRetries:   maxRetries,
-		WaitTime:     waitTime,
-		MaxSleepTime: maxSleepTime,
-		Jitter:       time.Duration(rand.Intn(30)) * time.Second,
+		Server:              sink.GhAPI,
+		MaxAttempts:         maxAttempts,
+		WaitTransient:       waitTransient,
+		MaxSleepRateLimited: maxSleepRateLimited,
+		Jitter:              time.Duration(rand.Intn(30)) * time.Second,
 	}
 	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)

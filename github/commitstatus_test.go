@@ -57,10 +57,10 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		defer ts.Close()
 
 		target := github.Target{
-			Server:       ts.URL,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: 5 * time.Second,
+			Server:              ts.URL,
+			MaxAttempts:         2,
+			WaitTransient:       time.Second,
+			MaxSleepRateLimited: 5 * time.Second,
 		}
 
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
@@ -165,10 +165,10 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
 		target := github.Target{
-			Server:       ts.URL,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: maxSleepTime,
+			Server:              ts.URL,
+			MaxAttempts:         2,
+			WaitTransient:       time.Second,
+			MaxSleepRateLimited: maxSleepTime,
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -242,7 +242,7 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "Rate limited: wait time too long (> MaxSleepTime)",
+			name: "Rate limited: wait time too long (> MaxSleepRateLimited)",
 			response: []mockedResponse{
 				{
 					body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
@@ -253,7 +253,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			},
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
-Hint: Rate limited but the wait time to reset would be longer than 1m0s (MaxSleepTime)
+Hint: Rate limited but the wait time to reset would be longer than 1m0s (MaxSleepRateLimited)
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
@@ -276,10 +276,10 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	state := "success"
 
 	target := github.Target{
-		Server:       github.API,
-		MaxRetries:   2,
-		WaitTime:     time.Second,
-		MaxSleepTime: 5 * time.Second,
+		Server:              github.API,
+		MaxAttempts:         2,
+		WaitTransient:       time.Second,
+		MaxSleepRateLimited: 5 * time.Second,
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -322,10 +322,10 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		}
 
 		target := github.Target{
-			Server:       github.API,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: 5 * time.Second,
+			Server:              github.API,
+			MaxAttempts:         2,
+			WaitTransient:       time.Second,
+			MaxSleepRateLimited: 5 * time.Second,
 		}
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
