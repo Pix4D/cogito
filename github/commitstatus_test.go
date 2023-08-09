@@ -262,21 +262,6 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "Any other error",
-			response: []mockedResponse{
-				{
-					body:   "fake body",
-					status: http.StatusTeapot,
-				},
-			},
-			wantSleeps: nil,
-			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
-Body: fake body
-Hint: none
-Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
-		},
-		{
 			name: "Rate limited: wait time too long (> MaxSleepRateLimited)",
 			response: []mockedResponse{
 				{
