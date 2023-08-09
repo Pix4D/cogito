@@ -221,7 +221,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name: "404 Not Found (multiple causes)",
+			name: "non transient error, stop at first attempt",
 			response: []mockedResponse{
 				{
 					body:               "fake body",
@@ -241,7 +241,7 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "500 Internal Server Error after 3 attempts",
+			name: "transient error, consume all attempts",
 			response: []mockedResponse{
 				{
 					body:               "fake body 1",
