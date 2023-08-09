@@ -24,14 +24,33 @@ type mockedResponse struct {
 }
 
 const (
-	emptyRateRemaining = "0"
-	fullRateRemaining  = "5000"
+	emptyRateRemaining = "0"    // From the GitHub API.
+	fullRateRemaining  = "5000" // From the GitHub API.
+)
+
+// Copied from ghcommitsink.go
+const (
+	// maxAttempts is the maximum number of attempts when retrying an HTTP request to
+	// GitHub, no matter the reason (rate limited or transient error).
+	maxAttempts = 3
+
+	// maxSleepRateLimited is the maximum sleep time (over all attempts) when rate
+	// limited from GitHub.
+	maxSleepRateLimited = 15 * time.Minute
+
+	// waitTransient is the wait time before the next attempt when encountering a
+	// transient error from GitHub.
+	waitTransient = 5 * time.Second
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
 		response []mockedResponse
+		// wantSleeps:
+		// - contains the durations we expect for the sleeps
+		// - its size is the number of times we expect the sleep function to be called
+		wantSleeps []time.Duration
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -55,17 +74,23 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-
 		target := github.Target{
-			Server:       ts.URL,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: 5 * time.Second,
+			Server:              ts.URL,
+			MaxAttempts:         maxAttempts,
+			WaitTransient:       waitTransient,
+			MaxSleepRateLimited: maxSleepRateLimited,
 		}
-
+		var haveSleeps []time.Duration
+		sleepSpy := func(d time.Duration) {
+			haveSleeps = append(haveSleeps, d)
+		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+		ghStatus.SetSleepFn(sleepSpy)
+
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
+
 		assert.NilError(t, err)
+		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
 	}
 
 	testCases := []testCase{
@@ -78,6 +103,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Unix(),
 				},
 			},
+			wantSleeps: nil,
 		},
 		{
 			name: "Rate limited at the first attempt, success at the second attempt",
@@ -85,8 +111,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				{
 					status:             http.StatusForbidden,
 					rateLimitRemaining: emptyRateRemaining,
-					// Keep this value low to prevent tests to sleep for too long.
-					rateLimitReset: now.Add(1 * time.Second).Unix(),
+					rateLimitReset:     now.Add(42 * time.Second).Unix(),
 				},
 				{
 					status:             http.StatusCreated,
@@ -94,6 +119,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{42 * time.Second},
 		},
 		{
 			name: "retry also on server-side inconsistency (zero or negative sleep time), repro of Pix4D/cogito#124",
@@ -113,6 +139,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{0 * time.Second},
 		},
 		{
 			name: "Github is flaky (Gateway timeout) at the first attempt, success at second attempt",
@@ -128,6 +155,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Second).Unix(),
 				},
 			},
+			wantSleeps: []time.Duration{waitTransient},
 		},
 	}
 
@@ -140,7 +168,11 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	type testCase struct {
 		name     string
 		response []mockedResponse
-		wantErr  string
+		// wantSleeps:
+		// - contains the durations we expect for the sleeps
+		// - its size is the number of times we expect the sleep function to be called
+		wantSleeps []time.Duration
+		wantErr    string
 	}
 
 	cfg := testhelp.FakeTestCfg
@@ -148,7 +180,6 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	now := time.Now()
 	desc := now.Format("15:04:05")
-	maxSleepTime := 1 * time.Minute
 
 	run := func(t *testing.T, tc testCase) {
 		attempt := 0
@@ -162,15 +193,19 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
 		target := github.Target{
-			Server:       ts.URL,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: maxSleepTime,
+			Server:              ts.URL,
+			MaxAttempts:         maxAttempts,
+			WaitTransient:       waitTransient,
+			MaxSleepRateLimited: maxSleepRateLimited,
+		}
+		var haveSleeps []time.Duration
+		sleepSpy := func(d time.Duration) {
+			haveSleeps = append(haveSleeps, d)
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+		ghStatus.SetSleepFn(sleepSpy)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -179,21 +214,21 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		if !errors.As(err, &ghError) {
 			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
 		}
+		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
 		wantStatus := tc.response[len(tc.response)-1].status
 		assert.Equal(t, ghError.StatusCode, wantStatus)
 	}
 
 	testCases := []testCase{
 		{
-			name: "404 Not Found (multiple causes)",
+			name: "non transient error, stop at first attempt",
 			response: []mockedResponse{
 				{
-					body:               "fake body",
-					status:             http.StatusNotFound,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Unix(),
+					body:   "fake body",
+					status: http.StatusNotFound,
 				},
 			},
+			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 404 Not Found
 Body: fake body
 Hint: one of the following happened:
@@ -204,56 +239,42 @@ Action: POST %s/repos/fakeOwner/fakeRepo/statuses/012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "500 Internal Server Error after 2 attempts",
+			name: "transient error, consume all attempts",
 			response: []mockedResponse{
 				{
-					body:               "fake body",
-					status:             http.StatusServiceUnavailable,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Unix(),
+					body:   "fake body 1",
+					status: http.StatusServiceUnavailable,
 				},
 				{
-					body:               "fake body",
-					status:             http.StatusInternalServerError,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Unix(),
+					body:   "fake body 2",
+					status: http.StatusServiceUnavailable,
+				},
+				{
+					body:   "fake body 3",
+					status: http.StatusInternalServerError,
 				},
 			},
+			wantSleeps: []time.Duration{waitTransient, waitTransient},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
-Body: fake body
+Body: fake body 3
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "Any other error",
-			response: []mockedResponse{
-				{
-					body:               "fake body",
-					status:             http.StatusTeapot,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Unix(),
-				},
-			},
-			wantErr: `failed to add state "success" for commit 0123456: 418 I'm a teapot
-Body: fake body
-Hint: none
-Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
-OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
-		},
-		{
-			name: "Rate limited: wait time too long (> MaxSleepTime)",
+			name: "Rate limited: wait time too long (> MaxSleepRateLimited)",
 			response: []mockedResponse{
 				{
 					body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
 					status:             http.StatusForbidden,
 					rateLimitRemaining: emptyRateRemaining,
-					rateLimitReset:     now.Add(5 * maxSleepTime).Unix(),
+					rateLimitReset:     now.Add(5 * maxSleepRateLimited).Unix(),
 				},
 			},
+			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
-Hint: Rate limited but the wait time to reset would be longer than 1m0s (MaxSleepTime)
+Hint: Rate limited but the wait time to reset would be longer than 15m0s (MaxSleepRateLimited)
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
@@ -276,10 +297,10 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	state := "success"
 
 	target := github.Target{
-		Server:       github.API,
-		MaxRetries:   2,
-		WaitTime:     time.Second,
-		MaxSleepTime: 5 * time.Second,
+		Server:              github.API,
+		MaxAttempts:         maxAttempts,
+		WaitTransient:       waitTransient,
+		MaxSleepRateLimited: 5 * time.Second,
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -322,10 +343,10 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		}
 
 		target := github.Target{
-			Server:       github.API,
-			MaxRetries:   2,
-			WaitTime:     time.Second,
-			MaxSleepTime: 5 * time.Second,
+			Server:              github.API,
+			MaxAttempts:         maxAttempts,
+			WaitTransient:       waitTransient,
+			MaxSleepRateLimited: 5 * time.Second,
 		}
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")

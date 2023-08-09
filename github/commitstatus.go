@@ -35,17 +35,24 @@ const API = "https://api.github.com"
 
 type Target struct {
 	Server string
-
-	// Maximum number of retries for the retryable http request
-	MaxRetries int
-	// Default wait time between two http requests
-	WaitTime time.Duration
-	// Maximum sleep time allowed
-	MaxSleepTime time.Duration
-	// adds some randomness to sleep time to prevent creating a Thundering Herd
+	// MaxAttempts is the maximum number of attempts when retrying an HTTP request to
+	// GitHub, no matter the reason (rate limited or transient error).
+	MaxAttempts int
+	// WaitTransient is the wait time before the next attempt when encountering a
+	// transient error from GitHub.
+	WaitTransient time.Duration
+	// MaxSleepRateLimited is the maximum sleep time (over all attempts) when rate
+	// limited from GitHub.
+	MaxSleepRateLimited time.Duration
+	// Jitter is added to the sleep duration to prevent creating a Thundering Herd.
 	Jitter time.Duration
 }
 
+// CommitStatus is a wrapper to the GitHub API to set the commit status for a specific
+// GitHub owner and repo.
+// See also:
+// - NewCommitStatus
+// - https://docs.github.com/en/rest/commits/statuses
 type CommitStatus struct {
 	target  Target
 	token   string
@@ -53,20 +60,32 @@ type CommitStatus struct {
 	repo    string
 	context string
 
+	sleepFn func(d time.Duration) // Overridable by tests.
+
 	log hclog.Logger
 }
 
-// NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner and repo.
-// Parameter token is the personal OAuth token of a user that has write access to the repo. It
-// only needs the repo:status scope.
-// Parameter context is what created the status, for example "JOBNAME", or "PIPELINENAME/JOBNAME".
-// Be careful when using PIPELINENAME: if that name is ephemeral, it will make it impossible to
-// use GitHub repository branch protection rules.
+// NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner
+// and repo.
+// Parameter token is the personal OAuth token of a user that has write access to the
+// repo. It only needs the repo:status scope.
+// Parameter context is what created the status, for example "JOBNAME", or
+// "PIPELINENAME/JOBNAME". The name comes from the GitHub API.
+// Be careful when using PIPELINENAME: if that name is ephemeral, it will make it
+// impossible to use GitHub repository branch protection rules.
 //
 // See also:
-// https://docs.github.com/en/rest/commits/statuses#about-the-commit-statuses-api
+// - https://docs.github.com/en/rest/commits/statuses
 func NewCommitStatus(target Target, token, owner, repo, context string, log hclog.Logger) CommitStatus {
-	return CommitStatus{target, token, owner, repo, context, log}
+	return CommitStatus{
+		target:  target,
+		token:   token,
+		owner:   owner,
+		repo:    repo,
+		context: context,
+		sleepFn: time.Sleep,
+		log:     log,
+	}
 }
 
 // AddRequest is the JSON object sent to the API.
@@ -77,8 +96,11 @@ type AddRequest struct {
 	Context     string `json:"context"`
 }
 
-// Add adds a commit state to the given sha, decorating it with targetURL and optional
+// Add sets the commit state to the given sha, decorating it with targetURL and optional
 // description.
+// In case of transient errors or rate limiting by the backend, Add performs a certain
+// number of attempts before giving up. The retry logic is configured in the target
+// parameter of NewCommitStatus.
 // Parameter sha is the 40 hexadecimal digit sha associated to the commit to decorate.
 // Parameter state is one of error, failure, pending, success.
 // Parameter targetURL (optional) points to the specific process (for example, a CI build)
@@ -112,21 +134,23 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Content-Type", "application/json")
 
 	var response httpResponse
-	timeToSleep := 0 * time.Second
 
-	for attempt := 1; attempt <= s.target.MaxRetries; attempt++ {
-		time.Sleep(timeToSleep)
-		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxRetries)
+	for attempt := 1; ; attempt++ {
+		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxAttempts)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
 		}
-		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTime,
-			s.target.MaxSleepTime, s.target.Jitter)
+		if attempt == s.target.MaxAttempts {
+			break
+		}
+		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTransient,
+			s.target.MaxSleepRateLimited, s.target.Jitter)
 		if !retry {
 			break
 		}
 		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
+		s.sleepFn(timeToSleep)
 	}
 
 	return s.checkStatus(response, state, sha, url)
@@ -168,22 +192,22 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	// returns an empty list for X-Accepted-Oauth-Scopes, while the API documentation
 	// https://developer.github.com/v3/repos/statuses/ says:
 	//
-	//     Note that the repo:status OAuth scope grants targeted access to statuses without
-	//     also granting access to repository code, while the repo scope grants permission
-	//     to code as well as statuses.
+	//     Note that the repo:status OAuth scope grants targeted access to statuses
+	//     without also granting access to repository code, while the repo scope grants
+	//     permission to code as well as statuses.
 	//
-	// So X-Accepted-Oauth-Scopes cannot be empty, because it is a privileged operation, and
-	// should be at least repo:status.
+	// So X-Accepted-Oauth-Scopes cannot be empty, because it is a privileged operation,
+	// and should be at least repo:status.
 	//
-	// Since we cannot use this information to detect configuration errors, for the time being
-	// we report it in the error message.
+	// Since we cannot use this information to detect configuration errors, for the time
+	// being we report it in the error message.
 	response.oauthInfo = fmt.Sprintf("X-Accepted-Oauth-Scopes: %v, X-Oauth-Scopes: %v",
 		resp.Header.Get("X-Accepted-Oauth-Scopes"), resp.Header.Get("X-Oauth-Scopes"))
 
-	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty.
 	response.rateLimitRemaining, _ = strconv.Atoi(resp.Header.Get("X-RateLimit-Remaining"))
 
-	// strconv.Atoi returns 0 in case of error, Get returns "" if empty (both are standard behaviors)
+	// strconv.Atoi returns 0 in case of error, Get returns "" if empty.
 	limit, _ := strconv.Atoi(resp.Header.Get("X-RateLimit-Reset"))
 	response.rateLimitReset = time.Unix(int64(limit), 0)
 
@@ -218,7 +242,7 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepTime)", s.target.MaxSleepTime)
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepRateLimited)", s.target.MaxSleepRateLimited)
 		} else {
 			hint = "none"
 		}
@@ -299,4 +323,10 @@ func checkForRetry(res httpResponse, waitTime, maxSleepTime, jitter time.Duratio
 	// In any case, there is nothing to sleep, return 0 and let the caller take a
 	// decision.
 	return false, 0, "no retryable reasons"
+}
+
+// SetSleepFn overrides time.Sleep, used when retrying an HTTP request, with sleepFn.
+// WARNING Use only in tests.
+func (s *CommitStatus) SetSleepFn(sleepFn func(d time.Duration)) {
+	s.sleepFn = sleepFn
 }
