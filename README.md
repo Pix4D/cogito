@@ -382,7 +382,7 @@ From [GitHub REST API]:
 > Unauthenticated requests are associated with the originating IP address, and not the
 > user making requests.
 
-In case of rate limiting, the error message in the output of the `put` step will mention it.
+GitHub resets the limit once per hour (no sliding window). If rate limited, cogito will wait up to 15 minutes for the limit to clear, or fail immediately if it would have to wait more. The error message in the output of the `put` step will mention the cause.
 
 # License
 
