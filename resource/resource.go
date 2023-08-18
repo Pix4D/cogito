@@ -186,7 +186,7 @@ func (r *Resource) Out(
 		context = fmt.Sprintf("%s/%s", prefix, context)
 	}
 
-	apiServer := fmt.Sprintf("https://api.%s", github.HOST)
+	apiServer := fmt.Sprintf("https://api.%s", githubHost)
 
 	status := github.NewStatus(apiServer, token, owner, repo, context)
 
