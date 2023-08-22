@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update to Go 1.21
+- Make retry logic usable for any GitHub API, not only the Commit Statuses API. This has no impact on Cogito, but makes the github package usable by other tools.
 
 ## [v0.10.3] - 2023-08-09
 

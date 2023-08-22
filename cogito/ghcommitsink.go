@@ -40,12 +40,14 @@ func (sink GitHubCommitStatusSink) Send() error {
 	buildURL := concourseBuildURL(sink.Request.Env)
 	context := ghMakeContext(sink.Request)
 
-	target := github.Target{
-		Server:              sink.GhAPI,
-		MaxAttempts:         maxAttempts,
-		WaitTransient:       waitTransient,
-		MaxSleepRateLimited: maxSleepRateLimited,
-		Jitter:              time.Duration(rand.Intn(30)) * time.Second,
+	target := &github.Target{
+		Server: sink.GhAPI,
+		Retry: github.Retry{
+			MaxAttempts:         maxAttempts,
+			WaitTransient:       waitTransient,
+			MaxSleepRateLimited: maxSleepRateLimited,
+			Jitter:              time.Duration(rand.Intn(30)) * time.Second,
+		},
 	}
 	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)

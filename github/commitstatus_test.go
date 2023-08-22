@@ -74,18 +74,20 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-		target := github.Target{
-			Server:              ts.URL,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: maxSleepRateLimited,
+		target := &github.Target{
+			Server: ts.URL,
+			Retry: github.Retry{
+				MaxAttempts:         maxAttempts,
+				WaitTransient:       waitTransient,
+				MaxSleepRateLimited: maxSleepRateLimited,
+			},
 		}
 		var haveSleeps []time.Duration
 		sleepSpy := func(d time.Duration) {
 			haveSleeps = append(haveSleeps, d)
 		}
+		target.Retry.SetSleepFn(sleepSpy)
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-		ghStatus.SetSleepFn(sleepSpy)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -194,18 +196,20 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-		target := github.Target{
-			Server:              ts.URL,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: maxSleepRateLimited,
+		target := &github.Target{
+			Server: ts.URL,
+			Retry: github.Retry{
+				MaxAttempts:         maxAttempts,
+				WaitTransient:       waitTransient,
+				MaxSleepRateLimited: maxSleepRateLimited,
+			},
 		}
 		var haveSleeps []time.Duration
 		sleepSpy := func(d time.Duration) {
 			haveSleeps = append(haveSleeps, d)
 		}
+		target.Retry.SetSleepFn(sleepSpy)
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-		ghStatus.SetSleepFn(sleepSpy)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -296,11 +300,13 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 
-	target := github.Target{
-		Server:              github.API,
-		MaxAttempts:         maxAttempts,
-		WaitTransient:       waitTransient,
-		MaxSleepRateLimited: 5 * time.Second,
+	target := &github.Target{
+		Server: github.API,
+		Retry: github.Retry{
+			MaxAttempts:         maxAttempts,
+			WaitTransient:       waitTransient,
+			MaxSleepRateLimited: 5 * time.Second,
+		},
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -342,11 +348,13 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			tc.sha = cfg.SHA
 		}
 
-		target := github.Target{
-			Server:              github.API,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: 5 * time.Second,
+		target := &github.Target{
+			Server: github.API,
+			Retry: github.Retry{
+				MaxAttempts:         maxAttempts,
+				WaitTransient:       waitTransient,
+				MaxSleepRateLimited: 5 * time.Second,
+			},
 		}
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
