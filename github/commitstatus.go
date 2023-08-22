@@ -109,15 +109,15 @@ type AddRequest struct {
 // The returned error contains some diagnostic information to help troubleshooting.
 //
 // See also: https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
-func (s CommitStatus) Add(sha, state, targetURL, description string) error {
+func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
-	url := s.target.Server + path.Join("/repos", s.owner, s.repo, "statuses", sha)
+	url := cs.target.Server + path.Join("/repos", cs.owner, cs.repo, "statuses", sha)
 
 	reqBody := AddRequest{
 		State:       state,
 		TargetURL:   targetURL,
 		Description: description,
-		Context:     s.context,
+		Context:     cs.context,
 	}
 
 	reqBodyJSON, err := json.Marshal(reqBody)
@@ -129,31 +129,31 @@ func (s CommitStatus) Add(sha, state, targetURL, description string) error {
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
 	}
-	req.Header.Set("Authorization", "token "+s.token)
+	req.Header.Set("Authorization", "token "+cs.token)
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
 	var response httpResponse
 
 	for attempt := 1; ; attempt++ {
-		s.log.Info("GitHub HTTP request", "attempt", attempt, "max", s.target.MaxAttempts)
+		cs.log.Info("GitHub HTTP request", "attempt", attempt, "max", cs.target.MaxAttempts)
 		response, err = httpRequestDo(req)
 		if err != nil {
 			return err
 		}
-		if attempt == s.target.MaxAttempts {
+		if attempt == cs.target.MaxAttempts {
 			break
 		}
-		retry, timeToSleep, reason := checkForRetry(response, s.target.WaitTransient,
-			s.target.MaxSleepRateLimited, s.target.Jitter)
+		retry, timeToSleep, reason := checkForRetry(response, cs.target.WaitTransient,
+			cs.target.MaxSleepRateLimited, cs.target.Jitter)
 		if !retry {
 			break
 		}
-		s.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
-		s.sleepFn(timeToSleep)
+		cs.log.Info("Sleeping for", "duration", timeToSleep, "reason", reason)
+		cs.sleepFn(timeToSleep)
 	}
 
-	return s.checkStatus(response, state, sha, url)
+	return cs.checkStatus(response, state, sha, url)
 }
 
 type httpResponse struct {
@@ -223,7 +223,7 @@ func httpRequestDo(req *http.Request) (httpResponse, error) {
 	return response, nil
 }
 
-func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) error {
+func (cs CommitStatus) checkStatus(resp httpResponse, state, sha, url string) error {
 	var hint string
 
 	switch resp.statusCode {
@@ -235,14 +235,14 @@ func (s CommitStatus) checkStatus(resp httpResponse, state, sha, url string) err
     1. The repo https://github.com/%s doesn't exist
     2. The user who issued the token doesn't have write access to the repo
     3. The token doesn't have scope repo:status`,
-			path.Join(s.owner, s.repo))
+			path.Join(cs.owner, cs.repo))
 	case http.StatusInternalServerError:
 		hint = "Github API is down"
 	case http.StatusUnauthorized:
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepRateLimited)", s.target.MaxSleepRateLimited)
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepRateLimited)", cs.target.MaxSleepRateLimited)
 		} else {
 			hint = "none"
 		}
