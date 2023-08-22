@@ -266,13 +266,6 @@ OAuth: %s`,
 	}
 }
 
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
-
 // checkForRetry determines if the HTTP request should be retried after a sleep.
 // If yes, checkForRetry returns true, the sleep duration and a reason.
 // If no, checkForRetry returns false and a reason.
