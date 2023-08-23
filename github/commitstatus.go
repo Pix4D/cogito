@@ -16,6 +16,8 @@ import (
 	"time"
 
 	"github.com/hashicorp/go-hclog"
+
+	"github.com/Pix4D/cogito/retry"
 )
 
 // StatusError is one of the possible errors returned by the github package.
@@ -36,7 +38,7 @@ type Target struct {
 	// Server is the GitHub API server.
 	// Currently, hardcoded to https://api.github.com
 	Server string
-	Retry  Retry
+	Retry  retry.Retry
 }
 
 // CommitStatus is a wrapper to the GitHub API to set the commit status for a specific
@@ -121,23 +123,30 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
-	response, retryErr := cs.target.Retry.Do(cs.log, func() (HttpResponse, error) {
-		return httpRequestDo(req)
-	})
+	response := &HttpResponse{}
+
+	workFn := func(userCtx any) error {
+		response := userCtx.(*HttpResponse)
+		if err := httpRequestDo(req, response); err != nil {
+			return err
+		}
+		return nil
+	}
+
+	retryErr := cs.target.Retry.Do(ExponentialBackoff, Classifier, workFn, response)
 	if retryErr != nil {
 		return fmt.Errorf("commit status: %s", retryErr)
 	}
 
-	return cs.checkStatus(response, state, sha, url)
+	return cs.checkStatus(*response, state, sha, url)
 }
 
-func httpRequestDo(req *http.Request) (HttpResponse, error) {
-	var response HttpResponse
+func httpRequestDo(req *http.Request, response *HttpResponse) error {
 	// By default, there is no timeout, so the call could hang forever.
 	client := &http.Client{Timeout: time.Second * 30}
 	resp, err := client.Do(req)
 	if err != nil {
-		return HttpResponse{}, fmt.Errorf("http client Do: %w", err)
+		return fmt.Errorf("http client Do: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -177,16 +186,17 @@ func httpRequestDo(req *http.Request) (HttpResponse, error) {
 	limit, _ := strconv.Atoi(resp.Header.Get("X-RateLimit-Reset"))
 	response.rateLimitReset = time.Unix(int64(limit), 0)
 
-	// time.RFC1123 is the format of the HTTP Date header
-	// example: Date:[ Mon, 02 Jan 2006 15:04:05 MST ]
-	// https://datatracker.ietf.org/doc/html/rfc2616#section-14.18
+	// The HTTP Date header is formatted according to RFC1123.
+	// (https://datatracker.ietf.org/doc/html/rfc2616#section-14.18)
+	// Example:
+	//   Date: Mon, 02 Jan 2006 15:04:05 MST
 	date, err := time.Parse(time.RFC1123, resp.Header.Get("Date"))
 	if err != nil {
-		return HttpResponse{}, fmt.Errorf("failed to parse the date header: %s", err)
+		return fmt.Errorf("failed to parse the date header: %s", err)
 	}
 	response.date = date
 
-	return response, nil
+	return nil
 }
 
 func (cs CommitStatus) checkStatus(resp HttpResponse, state, sha, url string) error {
@@ -208,7 +218,7 @@ func (cs CommitStatus) checkStatus(resp HttpResponse, state, sha, url string) er
 		hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 	case http.StatusForbidden:
 		if resp.rateLimitRemaining == 0 {
-			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (MaxSleepRateLimited)", cs.target.Retry.MaxSleepRateLimited)
+			hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (Retry.UpTo)", cs.target.Retry.UpTo)
 		} else {
 			hint = "none"
 		}
