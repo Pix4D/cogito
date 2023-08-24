@@ -11,12 +11,12 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
-	"golang.org/x/exp/slices"
 )
 
 // StatusError is one of the possible errors returned by the github package.
@@ -264,13 +264,6 @@ OAuth: %s`,
 			url,
 			resp.oauthInfo),
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 // checkForRetry determines if the HTTP request should be retried after a sleep.

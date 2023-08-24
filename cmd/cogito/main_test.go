@@ -11,12 +11,13 @@ import (
 	"testing"
 	"testing/iotest"
 
+	"gotest.tools/v3/assert"
+	"gotest.tools/v3/assert/cmp"
+
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/googlechat"
 	"github.com/Pix4D/cogito/testhelp"
-	"gotest.tools/v3/assert"
-	"gotest.tools/v3/assert/cmp"
 )
 
 func TestRunCheckSuccess(t *testing.T) {

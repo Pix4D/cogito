@@ -7,10 +7,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Pix4D/cogito/cogito"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
+
+	"github.com/Pix4D/cogito/cogito"
 )
 
 func TestSourceValidationSuccess(t *testing.T) {

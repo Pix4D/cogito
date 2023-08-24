@@ -11,9 +11,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Pix4D/cogito/sets"
 	"github.com/hashicorp/go-hclog"
 	"github.com/sasbury/mini"
+
+	"github.com/Pix4D/cogito/sets"
 )
 
 // ProdPutter is an implementation of a [Putter] for the Cogito resource.

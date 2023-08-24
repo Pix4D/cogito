@@ -5,8 +5,8 @@ on: [push]
 name: ci
 
 env:
-  go-version: 1.20.x
-  task-version: v3.27.0
+  go-version: 1.21.x
+  task-version: v3.28.0
 
 jobs:
   all:

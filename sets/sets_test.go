@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Pix4D/cogito/sets"
 	"gotest.tools/v3/assert"
+
+	"github.com/Pix4D/cogito/sets"
 )
 
 func TestFromInt(t *testing.T) {
