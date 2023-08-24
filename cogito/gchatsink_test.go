@@ -7,12 +7,13 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/googlechat"
-	"github.com/Pix4D/cogito/testhelp"
 	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
+
+	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/googlechat"
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 func TestSinkGoogleChatSendSuccess(t *testing.T) {

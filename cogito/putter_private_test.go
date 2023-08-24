@@ -7,9 +7,10 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Pix4D/cogito/testhelp"
 	"github.com/google/go-cmp/cmp"
 	"gotest.tools/v3/assert"
+
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 func TestCollectInputDirs(t *testing.T) {

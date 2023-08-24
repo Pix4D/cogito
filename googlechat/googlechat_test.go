@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Pix4D/cogito/googlechat"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
+
+	"github.com/Pix4D/cogito/googlechat"
 )
 
 func TestTextMessageIntegration(t *testing.T) {
