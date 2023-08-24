@@ -3,26 +3,25 @@
 package sets
 
 import (
+	"cmp"
 	"fmt"
 	"sort"
-
-	"golang.org/x/exp/constraints"
 )
 
 // Set is a minimal set that takes only ordered types: any type that supports the
 // operators < <= >= >.
-type Set[T constraints.Ordered] struct {
+type Set[T cmp.Ordered] struct {
 	items map[T]struct{}
 }
 
 // New returns an empty set with capacity size. The capacity will grow and shrink as a
 // stdlib map.
-func New[T constraints.Ordered](size int) *Set[T] {
+func New[T cmp.Ordered](size int) *Set[T] {
 	return &Set[T]{items: make(map[T]struct{}, size)}
 }
 
 // From returns a set from elements.
-func From[T constraints.Ordered](elements ...T) *Set[T] {
+func From[T cmp.Ordered](elements ...T) *Set[T] {
 	s := New[T](len(elements))
 	for _, i := range elements {
 		s.items[i] = struct{}{}

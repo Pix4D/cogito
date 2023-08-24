@@ -8,7 +8,6 @@ require (
 	github.com/hashicorp/go-hclog v1.5.0
 	github.com/imdario/mergo v0.3.16
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
-	golang.org/x/exp v0.0.0-20230725012225-302865e7556b
 	gotest.tools/v3 v3.5.0
 )
 
