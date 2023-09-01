@@ -69,11 +69,12 @@ func TestRunPutSuccess(t *testing.T) {
 	googleChatSpy := testhelp.SpyHttpServer(&chatMsg, chatReply, &gchatUrl, http.StatusOK)
 	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
-			Owner:        "the-owner",
-			Repo:         "the-repo",
-			AccessToken:  "the-secret",
-			GChatWebHook: googleChatSpy.URL,
-			LogLevel:     "debug",
+			Owner:             "the-owner",
+			Repo:              "the-repo",
+			AccessToken:       "the-secret",
+			GithubApiEndpoint: gitHubSpy.URL,
+			GChatWebHook:      googleChatSpy.URL,
+			LogLevel:          "debug",
 		},
 		Params: cogito.PutParams{State: wantState},
 	}))
@@ -81,7 +82,6 @@ func TestRunPutSuccess(t *testing.T) {
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", wantGitRef)
-	t.Setenv("COGITO_GITHUB_API", gitHubSpy.URL)
 
 	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
 

@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"os"
 	"strings"
 
@@ -171,6 +172,7 @@ type Source struct {
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 	Sinks              []string     `json:"sinks"`
+	GithubApiEndpoint  string       `json:"github_api_endpoint"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -186,7 +188,8 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
 	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
+	fmt.Fprintf(&bld, "sinks: %s\n", src.Sinks)
+	fmt.Fprintf(&bld, "github_api_endpoint: %s", src.GithubApiEndpoint)
 
 	return bld.String()
 }
@@ -254,10 +257,13 @@ func (src *Source) Validate() error {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
 
-	//
 	// Validate optional fields.
-	//
-	// In this case, nothing to validate.
+	if src.GithubApiEndpoint != "" {
+		u, err := url.ParseRequestURI(src.GithubApiEndpoint)
+		if err != nil || u.Host == "" {
+			return fmt.Errorf("source: github_api_endpoint '%s' is an invalid api endpoint", src.GithubApiEndpoint)
+		}
+	}
 
 	//
 	// Apply defaults.

@@ -58,6 +58,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 		"state", ghState, "owner", sink.Request.Source.Owner,
 		"repo", sink.Request.Source.Repo, "git-ref", sink.GitRef,
 		"context", context, "buildURL", buildURL, "description", description)
+
 	if err := commitStatus.Add(sink.GitRef, ghState, buildURL, description); err != nil {
 		return err
 	}

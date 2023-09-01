@@ -50,21 +50,14 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 	})
 	log.Info(cogito.BuildInfo())
 
-	ghAPI := os.Getenv("COGITO_GITHUB_API")
-	if ghAPI != "" {
-		log.Info("endpoint override", "COGITO_GITHUB_API", ghAPI)
-	} else {
-		ghAPI = github.API
-	}
-
 	switch cmd {
 	case "check":
 		return cogito.Check(log, input, out, args[1:])
 	case "in":
 		return cogito.Get(log, input, out, args[1:])
 	case "out":
-		putter := cogito.NewPutter(ghAPI, log)
-		return cogito.Put(log, input, out, args[1:], putter)
+		putter := cogito.NewPutter(github.API, log)
+		return cogito.Put(input, out, args[1:], putter)
 	default:
 		return fmt.Errorf("cli wiring error; please report")
 	}

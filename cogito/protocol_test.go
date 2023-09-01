@@ -46,6 +46,14 @@ func TestSourceValidationSuccess(t *testing.T) {
 				return source
 			},
 		},
+		{
+			name: "optional git source github_api_endpoint",
+			mkSource: func() cogito.Source {
+				source := baseGithubSource
+				source.GithubApiEndpoint = "https://github.coffee.com/api/v3"
+				return source
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -101,6 +109,36 @@ func TestSourceValidationFailure(t *testing.T) {
 				AccessToken:  "the-token",
 			},
 			wantErr: "source: invalid sink(s): [closed coffee shop]",
+		},
+		{
+			name: "no protocol prefix in git source github_api_endpoint",
+			source: cogito.Source{
+				Owner:             "the-owner",
+				Repo:              "the-repo",
+				AccessToken:       "the-token",
+				GithubApiEndpoint: "github.coffee.com/api/v3",
+			},
+			wantErr: "source: github_api_endpoint 'github.coffee.com/api/v3' is an invalid api endpoint",
+		},
+		{
+			name: "invalid http protocol prefix in git source github_api_endpoint",
+			source: cogito.Source{
+				Owner:             "the-owner",
+				Repo:              "the-repo",
+				AccessToken:       "the-token",
+				GithubApiEndpoint: "https:github.coffee.com/api/v3",
+			},
+			wantErr: "source: github_api_endpoint 'https:github.coffee.com/api/v3' is an invalid api endpoint",
+		},
+		{
+			name: "invalid http protocol prefix in git source github_api_endpoint",
+			source: cogito.Source{
+				Owner:             "the-owner",
+				Repo:              "the-repo",
+				AccessToken:       "the-token",
+				GithubApiEndpoint: "john.smith.cim",
+			},
+			wantErr: "source: github_api_endpoint 'john.smith.cim' is an invalid api endpoint",
 		},
 	}
 
@@ -192,7 +230,8 @@ log_level:             debug
 context_prefix:        the-prefix
 chat_append_summary:   true
 chat_notify_on_states: [success failure]
-sinks: []`
+sinks: []
+github_api_endpoint: `
 
 		have := fmt.Sprint(source)
 
@@ -211,7 +250,8 @@ log_level:
 context_prefix:        
 chat_append_summary:   false
 chat_notify_on_states: []
-sinks: []`
+sinks: []
+github_api_endpoint: `
 
 		have := fmt.Sprint(input)
 

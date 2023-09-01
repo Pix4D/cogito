@@ -3,6 +3,7 @@ package cogito_test
 import (
 	"errors"
 	"fmt"
+	"github.com/Pix4D/cogito/github"
 	"io"
 	"path/filepath"
 	"testing"
@@ -64,7 +65,7 @@ func (ms MockSinker) Send() error {
 func TestPutSuccess(t *testing.T) {
 	putter := MockPutter{sinkers: []cogito.Sinker{MockSinker{}}}
 
-	err := cogito.Put(hclog.NewNullLogger(), nil, nil, nil, putter)
+	err := cogito.Put(nil, nil, nil, putter)
 
 	assert.NilError(t, err)
 }
@@ -77,7 +78,7 @@ func TestPutFailure(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		err := cogito.Put(hclog.NewNullLogger(), nil, nil, nil, tc.putter)
+		err := cogito.Put(nil, nil, nil, tc.putter)
 
 		assert.ErrorContains(t, err, tc.wantErr)
 	}
@@ -153,6 +154,22 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 	assert.NilError(t, err)
 }
 
+func TestPutterLoadConfigurationGhApiEndpointOverrideSuccess(t *testing.T) {
+	in := []byte(`
+	{
+		"source": {
+			"owner": "the-owner",
+			"repo": "the-repo",
+			"access_token": "the-token",
+			"github_api_endpoint": "https://ghe.company.com"
+		}
+	}`)
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	inputDir := []string{""}
+	err := putter.LoadConfiguration(in, inputDir)
+	assert.NilError(t, err)
+}
+
 func TestPutterLoadConfigurationFailure(t *testing.T) {
 	type testCase struct {
 		name     string
@@ -189,6 +206,20 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 			putInput: basePutRequest,
 			args:     []string{},
 			wantErr:  "put: concourse resource protocol violation: missing input directory",
+		},
+		{
+			name: "invalid GH endpoint url in source",
+			putInput: cogito.PutRequest{
+				Source: cogito.Source{
+					Owner:             "owner",
+					Repo:              "repo",
+					AccessToken:       "token",
+					GithubApiEndpoint: "invalid-api-endpoint",
+				},
+				Params: cogito.PutParams{State: cogito.StateSuccess},
+			},
+			args:    []string{},
+			wantErr: "put: source: github_api_endpoint 'invalid-api-endpoint' is an invalid api endpoint",
 		},
 	}
 
@@ -403,6 +434,25 @@ func TestPutterSinks(t *testing.T) {
 	assert.Assert(t, ok1)
 	_, ok2 := sinks[1].(cogito.GitHubCommitStatusSink)
 	assert.Assert(t, ok2)
+}
+
+func TestGitHubCommitStatusSinkApiEndpointOverrideFromSource(t *testing.T) {
+	// default case
+	defaultApiEndpoint := github.API
+	defaultPutter := cogito.NewPutter(defaultApiEndpoint, hclog.NewNullLogger())
+	sinks := defaultPutter.Sinks()
+	ghSink := sinks[1].(cogito.GitHubCommitStatusSink)
+	assert.Assert(t, ghSink.GhAPI == defaultApiEndpoint)
+
+	// override
+	customEndpointPutter := cogito.NewPutter(defaultApiEndpoint, hclog.NewNullLogger())
+	customEndpoint := "https://ghe.company.com"
+	customEndpointPutter.Request = cogito.PutRequest{
+		Source: cogito.Source{GithubApiEndpoint: customEndpoint},
+	}
+	customPutterSinks := customEndpointPutter.Sinks()
+	customPutterGhSink := customPutterSinks[1].(cogito.GitHubCommitStatusSink)
+	assert.Assert(t, customPutterGhSink.GhAPI == customEndpoint)
 }
 
 func TestPutterCustomSinks(t *testing.T) {
