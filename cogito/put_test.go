@@ -3,6 +3,7 @@ package cogito_test
 import (
 	"errors"
 	"fmt"
+	"github.com/Pix4D/cogito/github"
 	"io"
 	"path/filepath"
 	"testing"
@@ -152,6 +153,24 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 	}
 	assert.NilError(t, err)
 }
+
+func TestPutterLoadConfigurationGhApiEndpointSuccess(t *testing.T) {
+	in := []byte(`
+	{
+		"source": {
+			"owner": "the-owner",
+			"repo": "the-repo",
+			"access_token": "the-token",
+			"github_api_endpoint": "https://ghe.company.com"
+		}
+	}`)
+	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	inputDir := []string{""}
+	err := putter.LoadConfiguration(in, inputDir)
+	assert.NilError(t, err)
+}
+
+//todo: add test for load configuration failure when github_api_endpoint is invalid URL.
 
 func TestPutterLoadConfigurationFailure(t *testing.T) {
 	type testCase struct {
@@ -403,6 +422,25 @@ func TestPutterSinks(t *testing.T) {
 	assert.Assert(t, ok1)
 	_, ok2 := sinks[1].(cogito.GitHubCommitStatusSink)
 	assert.Assert(t, ok2)
+}
+
+func TestGitHubCommitStatusSinkApiEndpointOverrideFromSource(t *testing.T) {
+	// default case
+	defaultApiEndpoint := github.API
+	defaultPutter := cogito.NewPutter(defaultApiEndpoint, hclog.NewNullLogger())
+	sinks := defaultPutter.Sinks()
+	ghSink := sinks[1].(cogito.GitHubCommitStatusSink)
+	assert.Assert(t, ghSink.GhAPI == defaultApiEndpoint)
+
+	// override
+	customEndpointPutter := cogito.NewPutter(defaultApiEndpoint, hclog.NewNullLogger())
+	customEndpoint := "https://ghe.company.com"
+	customEndpointPutter.Request = cogito.PutRequest{
+		Source: cogito.Source{GithubApiEndpoint: customEndpoint},
+	}
+	customPutterSinks := customEndpointPutter.Sinks()
+	customPutterGhSink := customPutterSinks[1].(cogito.GitHubCommitStatusSink)
+	assert.Assert(t, customPutterGhSink.GhAPI == customEndpoint)
 }
 
 func TestPutterCustomSinks(t *testing.T) {
