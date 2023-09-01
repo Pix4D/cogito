@@ -64,7 +64,7 @@ func (ms MockSinker) Send() error {
 func TestPutSuccess(t *testing.T) {
 	putter := MockPutter{sinkers: []cogito.Sinker{MockSinker{}}}
 
-	err := cogito.Put(hclog.NewNullLogger(), nil, nil, nil, putter)
+	err := cogito.Put(nil, nil, nil, putter)
 
 	assert.NilError(t, err)
 }
@@ -77,7 +77,7 @@ func TestPutFailure(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		err := cogito.Put(hclog.NewNullLogger(), nil, nil, nil, tc.putter)
+		err := cogito.Put(nil, nil, nil, tc.putter)
 
 		assert.ErrorContains(t, err, tc.wantErr)
 	}

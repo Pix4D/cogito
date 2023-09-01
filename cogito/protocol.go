@@ -171,6 +171,7 @@ type Source struct {
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 	Sinks              []string     `json:"sinks"`
+	GithubApiEndpoint  string       `json:"github_api_endpoint"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -186,7 +187,8 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
 	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
+	fmt.Fprintf(&bld, "sinks: %s\n", src.Sinks)
+	fmt.Fprintf(&bld, "github_api_endpoint: %s", src.GithubApiEndpoint)
 
 	return bld.String()
 }
@@ -258,6 +260,9 @@ func (src *Source) Validate() error {
 	// Validate optional fields.
 	//
 	// In this case, nothing to validate.
+
+	// todo: Validate that the github_api_endpoint is a valid URL with a protocol if it is provided
+	// todo: add a test for this validation in protocol_test.go
 
 	//
 	// Apply defaults.

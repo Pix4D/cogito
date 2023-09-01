@@ -152,10 +152,12 @@ func (putter *ProdPutter) ProcessInputDir() error {
 }
 
 func (putter *ProdPutter) Sinks() []Sinker {
+	source := putter.Request.Source
+	ghApiEndpoint := getEndpointFromSourceOrDefault(putter, source)
 	supportedSinkers := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
-			GhAPI:   putter.ghAPI,
+			GhAPI:   ghApiEndpoint,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
@@ -167,9 +169,9 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
-	source := putter.Request.Source.Sinks
+	sourceSinks := source.Sinks
 	params := putter.Request.Params.Sinks
-	sinks, _ := MergeAndValidateSinks(source, params)
+	sinks, _ := MergeAndValidateSinks(sourceSinks, params)
 
 	sinkers := make([]Sinker, 0, sinks.Size())
 	for _, s := range sinks.OrderedList() {
@@ -177,6 +179,15 @@ func (putter *ProdPutter) Sinks() []Sinker {
 	}
 
 	return sinkers
+}
+
+func getEndpointFromSourceOrDefault(putter *ProdPutter, source Source) string {
+	if source.GithubApiEndpoint != "" {
+		return source.GithubApiEndpoint
+	} else {
+		// the default
+		return putter.ghAPI
+	}
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
@@ -262,8 +273,10 @@ func checkGitRepoDir(dir, owner, repo string) error {
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
-	left := []string{"github.com", owner, repo}
-	right := []string{gu.URL.Host, gu.Owner, gu.Repo}
+	// todo: Ask author why we need to be this prescriptive about the github host. A GHE service can be hosted anywhere.
+	// 	Can we just remove it?
+	left := []string{owner, repo}
+	right := []string{gu.Owner, gu.Repo}
 	for i, l := range left {
 		r := right[i]
 		if !strings.EqualFold(l, r) {

@@ -192,7 +192,8 @@ log_level:             debug
 context_prefix:        the-prefix
 chat_append_summary:   true
 chat_notify_on_states: [success failure]
-sinks: []`
+sinks: []
+github_api_endpoint: `
 
 		have := fmt.Sprint(source)
 
@@ -211,7 +212,8 @@ log_level:
 context_prefix:        
 chat_append_summary:   false
 chat_notify_on_states: []
-sinks: []`
+sinks: []
+github_api_endpoint: `
 
 		have := fmt.Sprint(input)
 

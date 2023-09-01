@@ -198,6 +198,10 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
   Default: `info`.
 
+- `github_api_endpoint`:\
+  Override the default API endpoint. This allows you to post commit statuses to repos hosted by GitHub Enterprise (GHE) instances. When provided, this parameter must be a valid https url.
+  Default: `https://api.github.com`
+
 - `log_url`. **DEPRECATED, no-op, will be removed**\
   A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < v7.x
 
