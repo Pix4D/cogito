@@ -154,7 +154,7 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 	assert.NilError(t, err)
 }
 
-func TestPutterLoadConfigurationGhApiEndpointSuccess(t *testing.T) {
+func TestPutterLoadConfigurationGhApiEndpointOverrideSuccess(t *testing.T) {
 	in := []byte(`
 	{
 		"source": {
@@ -169,8 +169,6 @@ func TestPutterLoadConfigurationGhApiEndpointSuccess(t *testing.T) {
 	err := putter.LoadConfiguration(in, inputDir)
 	assert.NilError(t, err)
 }
-
-//todo: add test for load configuration failure when github_api_endpoint is invalid URL.
 
 func TestPutterLoadConfigurationFailure(t *testing.T) {
 	type testCase struct {
@@ -208,6 +206,20 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 			putInput: basePutRequest,
 			args:     []string{},
 			wantErr:  "put: concourse resource protocol violation: missing input directory",
+		},
+		{
+			name: "invalid GH endpoint url in source",
+			putInput: cogito.PutRequest{
+				Source: cogito.Source{
+					Owner:             "owner",
+					Repo:              "repo",
+					AccessToken:       "token",
+					GithubApiEndpoint: "invalid-api-endpoint",
+				},
+				Params: cogito.PutParams{State: cogito.StateSuccess},
+			},
+			args:    []string{},
+			wantErr: "put: source: github_api_endpoint 'invalid-api-endpoint' is an invalid api endpoint",
 		},
 	}
 
