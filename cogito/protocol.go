@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"net/url"
 
 	"github.com/Pix4D/cogito/sets"
 )
@@ -256,14 +257,19 @@ func (src *Source) Validate() error {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
 
-	//
 	// Validate optional fields.
-	//
-	// In this case, nothing to validate.
-
-	// todo: Validate that the github_api_endpoint is a valid URL with a protocol if it is provided
-	// todo: add a test for this validation in protocol_test.go
-
+	if src.GithubApiEndpoint != "" {
+		u, err := url.ParseRequestURI(src.GithubApiEndpoint)
+		if err != nil || u.Host == ""{
+			return fmt.Errorf("source: github_api_endpoint %s is an invalid api endpoint", src.GithubApiEndpoint)
+		}
+		if u.Scheme != "https" { //catch http prefix that falls through
+			return fmt.Errorf("source: github_api_endpoint %s must have a https prefix, not http", src.GithubApiEndpoint)
+		}
+	}	
+ 
+	fmt.Println("All ok")
+	
 	//
 	// Apply defaults.
 	//
