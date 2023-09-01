@@ -256,14 +256,13 @@ func (src *Source) Validate() error {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
 
-	//
 	// Validate optional fields.
-	//
-	// In this case, nothing to validate.
-
-	// todo: Validate that the github_api_endpoint is a valid URL with a protocol if it is provided
-	// todo: add a test for this validation in protocol_test.go
-
+	if src.GithubApiEndpoint != "" {
+		if !(strings.HasPrefix(src.GithubApiEndpoint, "https://")) {
+			return fmt.Errorf("source: github_api_endpoint %s must start with the https prefix", src.GithubApiEndpoint)
+		}
+	}
+	
 	//
 	// Apply defaults.
 	//

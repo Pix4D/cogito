@@ -46,6 +46,14 @@ func TestSourceValidationSuccess(t *testing.T) {
 				return source
 			},
 		},
+		{
+			name: "optional git source github_api_endpoint",
+			mkSource: func() cogito.Source{
+				source := baseGithubSource
+				source.GithubApiEndpoint = "https://github.coffee.com/api/v3"
+				return source
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -101,6 +109,16 @@ func TestSourceValidationFailure(t *testing.T) {
 				AccessToken:  "the-token",
 			},
 			wantErr: "source: invalid sink(s): [closed coffee shop]",
+		},
+		{
+			name: "invalid https protocol prefix in git source github_api_endpoint",
+			source: cogito.Source{
+				Owner:        		"the-owner",
+				Repo:         		"the-repo",
+				AccessToken:  		"the-token",
+				GithubApiEndpoint: 	"github.coffee.com/api/v3",
+			},
+			wantErr: "source: github_api_endpoint github.coffee.com/api/v3 must start with the https prefix",
 		},
 	}
 
