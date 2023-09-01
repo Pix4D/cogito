@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"net/url"
 
 	"github.com/Pix4D/cogito/sets"
 )
@@ -258,10 +259,16 @@ func (src *Source) Validate() error {
 
 	// Validate optional fields.
 	if src.GithubApiEndpoint != "" {
-		if !(strings.HasPrefix(src.GithubApiEndpoint, "https://")) {
-			return fmt.Errorf("source: github_api_endpoint %s must start with the https prefix", src.GithubApiEndpoint)
+		u, err := url.ParseRequestURI(src.GithubApiEndpoint)
+		if err != nil || u.Host == ""{
+			return fmt.Errorf("source: github_api_endpoint %s is an invalid api endpoint", src.GithubApiEndpoint)
 		}
-	}
+		if u.Scheme != "https" { //catch http prefix that falls through
+			return fmt.Errorf("source: github_api_endpoint %s must have a https prefix, not http", src.GithubApiEndpoint)
+		}
+	}	
+ 
+	fmt.Println("All ok")
 	
 	//
 	// Apply defaults.
