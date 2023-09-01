@@ -273,8 +273,7 @@ func checkGitRepoDir(dir, owner, repo string) error {
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
-	// todo: Ask author why we need to be this prescriptive about the github host. A GHE service can be hosted anywhere.
-	// 	Can we just remove it?
+
 	left := []string{owner, repo}
 	right := []string{gu.Owner, gu.Repo}
 	for i, l := range left {
