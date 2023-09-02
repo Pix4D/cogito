@@ -50,21 +50,13 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 	})
 	log.Info(cogito.BuildInfo())
 
-	// todo: Do we need this anymore. Can the users of this env var use the new source config we just added?
-	ghAPI := os.Getenv("COGITO_GITHUB_API")
-	if ghAPI != "" {
-		log.Info("github api endpoint override", "COGITO_GITHUB_API", ghAPI)
-	} else {
-		ghAPI = github.API
-	}
-
 	switch cmd {
 	case "check":
 		return cogito.Check(log, input, out, args[1:])
 	case "in":
 		return cogito.Get(log, input, out, args[1:])
 	case "out":
-		putter := cogito.NewPutter(ghAPI, log)
+		putter := cogito.NewPutter(github.API, log)
 		return cogito.Put(input, out, args[1:], putter)
 	default:
 		return fmt.Errorf("cli wiring error; please report")

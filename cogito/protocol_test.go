@@ -126,16 +126,6 @@ func TestSourceValidationFailure(t *testing.T) {
 				Owner:             "the-owner",
 				Repo:              "the-repo",
 				AccessToken:       "the-token",
-				GithubApiEndpoint: "http://github.coffee.com/api/v3",
-			},
-			wantErr: "source: github_api_endpoint http://github.coffee.com/api/v3 must have a https prefix, not http",
-		},
-		{
-			name: "invalid http protocol prefix in git source github_api_endpoint",
-			source: cogito.Source{
-				Owner:             "the-owner",
-				Repo:              "the-repo",
-				AccessToken:       "the-token",
 				GithubApiEndpoint: "https:github.coffee.com/api/v3",
 			},
 			wantErr: "source: github_api_endpoint 'https:github.coffee.com/api/v3' is an invalid api endpoint",

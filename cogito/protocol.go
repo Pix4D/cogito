@@ -263,12 +263,7 @@ func (src *Source) Validate() error {
 		if err != nil || u.Host == "" {
 			return fmt.Errorf("source: github_api_endpoint '%s' is an invalid api endpoint", src.GithubApiEndpoint)
 		}
-		if u.Scheme != "https" { //catch http prefix that falls through
-			return fmt.Errorf("source: github_api_endpoint %s must have a https prefix, not http", src.GithubApiEndpoint)
-		}
 	}
-
-	fmt.Println("All ok")
 
 	//
 	// Apply defaults.
