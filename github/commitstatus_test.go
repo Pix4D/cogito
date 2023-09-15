@@ -3,6 +3,7 @@ package github_test
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -13,6 +14,8 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/internal/hclogslog"
+	"github.com/Pix4D/cogito/retry"
 	"github.com/Pix4D/cogito/testhelp"
 )
 
@@ -29,18 +32,18 @@ const (
 )
 
 // Copied from ghcommitsink.go
+// Note that sometimes in tests we override these values for practical reasons.
 const (
-	// maxAttempts is the maximum number of attempts when retrying an HTTP request to
-	// GitHub, no matter the reason (rate limited or transient error).
-	maxAttempts = 3
+	// retryUpTo is the total maximum duration of the retries.
+	retryUpTo = 15 * time.Minute
 
-	// maxSleepRateLimited is the maximum sleep time (over all attempts) when rate
-	// limited from GitHub.
-	maxSleepRateLimited = 15 * time.Minute
+	// retryFirstDelay is duration of the first backoff.
+	retryFirstDelay = 2 * time.Second
 
-	// waitTransient is the wait time before the next attempt when encountering a
-	// transient error from GitHub.
-	waitTransient = 5 * time.Second
+	// retryBackoffLimit is the upper bound duration of a backoff.
+	// That is, with an exponential backoff and a retryFirstDelay = 2s, the sequence will be:
+	// 2s 4s 8s 16s 32s 60s ... 60s, until reaching a cumulative delay of retryUpTo.
+	retryBackoffLimit = 1 * time.Minute
 )
 
 func TestGitHubStatusSuccessMockAPI(t *testing.T) {
@@ -74,34 +77,34 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-		target := github.Target{
-			Server:              ts.URL,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: maxSleepRateLimited,
+		log := hclog.NewNullLogger()
+		if testing.Verbose() {
+			log = hclog.Default()
 		}
-		var haveSleeps []time.Duration
-		sleepSpy := func(d time.Duration) {
-			haveSleeps = append(haveSleeps, d)
+		sleepSpy := SleepSpy{}
+		target := &github.Target{
+			Server: ts.URL,
+			Retry: retry.Retry{
+				FirstDelay:   retryFirstDelay,
+				BackoffLimit: retryBackoffLimit,
+				UpTo:         retryUpTo,
+				SleepFn:      sleepSpy.Sleep,
+				Log:          slog.New(hclogslog.Adapt(log)),
+			},
 		}
-		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-		ghStatus.SetSleepFn(sleepSpy)
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
 		assert.NilError(t, err)
-		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
+		assert.DeepEqual(t, sleepSpy.sleeps, tc.wantSleeps)
 	}
 
 	testCases := []testCase{
 		{
 			name: "Success at first attempt",
 			response: []mockedResponse{
-				{
-					status:             http.StatusCreated,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Unix(),
-				},
+				{status: http.StatusCreated},
 			},
 			wantSleeps: nil,
 		},
@@ -122,7 +125,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 			wantSleeps: []time.Duration{42 * time.Second},
 		},
 		{
-			name: "retry also on server-side inconsistency (zero or negative sleep time), repro of Pix4D/cogito#124",
+			name: "retry also on server-side inconsistency (zero sleep time), repro of Pix4D/cogito#124",
 			response: []mockedResponse{
 				{
 					status:             http.StatusForbidden,
@@ -139,23 +142,39 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
-			wantSleeps: []time.Duration{0 * time.Second},
+			wantSleeps: []time.Duration{retryFirstDelay},
 		},
 		{
-			name: "Github is flaky (Gateway timeout) at the first attempt, success at second attempt",
+			name: "retry also on server-side inconsistency (negative sleep time), repro of Pix4D/cogito#124",
 			response: []mockedResponse{
 				{
-					status:             http.StatusGatewayTimeout,
-					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Add(1 * time.Second).Unix(),
+					status:             http.StatusForbidden,
+					rateLimitRemaining: emptyRateRemaining,
+					// This causes sleep time to be < 0.
+					rateLimitReset: now.Add(-30 * time.Minute).Unix(),
+				},
+				{
+					status:             http.StatusForbidden,
+					rateLimitRemaining: emptyRateRemaining,
+					// This causes sleep time to be < 0.
+					rateLimitReset: now.Add(-30 * time.Minute).Unix(),
 				},
 				{
 					status:             http.StatusCreated,
 					rateLimitRemaining: fullRateRemaining,
-					rateLimitReset:     now.Add(1 * time.Second).Unix(),
+					rateLimitReset:     now.Add(1 * time.Hour).Unix(),
 				},
 			},
-			wantSleeps: []time.Duration{waitTransient},
+			wantSleeps: []time.Duration{retryFirstDelay, 2 * retryFirstDelay},
+		},
+		{
+			name: "Github is flaky at the first attempt, success at 3rd attempt",
+			response: []mockedResponse{
+				{status: http.StatusGatewayTimeout},
+				{status: http.StatusGatewayTimeout},
+				{status: http.StatusCreated},
+			},
+			wantSleeps: []time.Duration{retryFirstDelay, 2 * retryFirstDelay},
 		},
 	}
 
@@ -180,13 +199,20 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	now := time.Now()
 	desc := now.Format("15:04:05")
+	upTo := 5 * time.Minute
 
 	run := func(t *testing.T, tc testCase) {
 		attempt := 0
 		handler := func(w http.ResponseWriter, r *http.Request) {
 			response := tc.response[attempt]
+			if response.body == "" {
+				response.body = "fake body"
+			}
 			w.Header().Set("x-ratelimit-remaining", response.rateLimitRemaining)
 			w.Header().Set("x-ratelimit-reset", strconv.Itoa(int(response.rateLimitReset)))
+			// The Date header is set automatically by default, but we override it
+			// for better control.
+			w.Header().Set("Date", now.Format(time.RFC1123))
 			w.WriteHeader(response.status)
 			fmt.Fprintln(w, response.body)
 			attempt++
@@ -194,18 +220,22 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-		target := github.Target{
-			Server:              ts.URL,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: maxSleepRateLimited,
+		log := hclog.NewNullLogger()
+		if testing.Verbose() {
+			log = hclog.Default()
 		}
-		var haveSleeps []time.Duration
-		sleepSpy := func(d time.Duration) {
-			haveSleeps = append(haveSleeps, d)
+		sleepSpy := SleepSpy{}
+		target := &github.Target{
+			Server: ts.URL,
+			Retry: retry.Retry{
+				FirstDelay:   retryFirstDelay,
+				BackoffLimit: retryBackoffLimit,
+				UpTo:         upTo,
+				SleepFn:      sleepSpy.Sleep,
+				Log:          slog.New(hclogslog.Adapt(log)),
+			},
 		}
-		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
-		ghStatus.SetSleepFn(sleepSpy)
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -214,7 +244,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		if !errors.As(err, &ghError) {
 			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
 		}
-		assert.DeepEqual(t, haveSleeps, tc.wantSleeps)
+		assert.DeepEqual(t, sleepSpy.sleeps, tc.wantSleeps)
 		wantStatus := tc.response[len(tc.response)-1].status
 		assert.Equal(t, ghError.StatusCode, wantStatus)
 	}
@@ -241,40 +271,47 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		{
 			name: "transient error, consume all attempts",
 			response: []mockedResponse{
-				{
-					body:   "fake body 1",
-					status: http.StatusServiceUnavailable,
-				},
-				{
-					body:   "fake body 2",
-					status: http.StatusServiceUnavailable,
-				},
-				{
-					body:   "fake body 3",
-					status: http.StatusInternalServerError,
-				},
+				//                                                cumulative
+				{status: http.StatusInternalServerError}, // 2s     2s
+				{status: http.StatusInternalServerError}, // 4s     6s
+				{status: http.StatusInternalServerError}, // 8s    14s
+				{status: http.StatusInternalServerError}, // 16s   30s
+				{status: http.StatusInternalServerError}, // 32s  1m2s
+				{status: http.StatusInternalServerError}, // 1m   2m2s
+				{status: http.StatusInternalServerError}, // 1m   3m2s
+				{status: http.StatusInternalServerError}, // 1m   4m2s
+				{status: http.StatusInternalServerError}, // 1m   5m2s too long
 			},
-			wantSleeps: []time.Duration{waitTransient, waitTransient},
+			wantSleeps: []time.Duration{
+				retryFirstDelay,
+				4 * time.Second,
+				8 * time.Second,
+				16 * time.Second,
+				32 * time.Second,
+				1 * time.Minute,
+				1 * time.Minute,
+				1 * time.Minute,
+			},
 			wantErr: `failed to add state "success" for commit 0123456: 500 Internal Server Error
-Body: fake body 3
+Body: fake body
 Hint: Github API is down
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
 		{
-			name: "Rate limited: wait time too long (> MaxSleepRateLimited)",
+			name: "Rate limited: wait time too long (> Retry.UpTo)",
 			response: []mockedResponse{
 				{
 					body:               "API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]",
 					status:             http.StatusForbidden,
 					rateLimitRemaining: emptyRateRemaining,
-					rateLimitReset:     now.Add(5 * maxSleepRateLimited).Unix(),
+					rateLimitReset:     now.Add(upTo + time.Second).Unix(),
 				},
 			},
 			wantSleeps: nil,
 			wantErr: `failed to add state "success" for commit 0123456: 403 Forbidden
 Body: API rate limit exceeded for user ID 123456789. [rate reset in XXmXXs]
-Hint: Rate limited but the wait time to reset would be longer than 15m0s (MaxSleepRateLimited)
+Hint: Rate limited but the wait time to reset would be longer than 5m0s (Retry.UpTo)
 Action: POST %s/repos/fakeOwner/fakeRepo/statuses/0123456789012345678901234567890123456789
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 		},
@@ -295,12 +332,18 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-
-	target := github.Target{
-		Server:              github.API,
-		MaxAttempts:         maxAttempts,
-		WaitTransient:       waitTransient,
-		MaxSleepRateLimited: 5 * time.Second,
+	log := hclog.NewNullLogger()
+	if testing.Verbose() {
+		log = hclog.Default()
+	}
+	target := &github.Target{
+		Server: github.API,
+		Retry: retry.Retry{
+			FirstDelay:   retryFirstDelay,
+			BackoffLimit: retryBackoffLimit,
+			UpTo:         retryUpTo,
+			Log:          slog.New(hclogslog.Adapt(log)),
+		},
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
 
@@ -326,6 +369,10 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 
 	cfg := testhelp.GitHubSecretsOrFail(t)
 	state := "success"
+	log := hclog.NewNullLogger()
+	if testing.Verbose() {
+		log = hclog.Default()
+	}
 
 	run := func(t *testing.T, tc testCase) {
 		// zero values are defaults
@@ -342,11 +389,14 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			tc.sha = cfg.SHA
 		}
 
-		target := github.Target{
-			Server:              github.API,
-			MaxAttempts:         maxAttempts,
-			WaitTransient:       waitTransient,
-			MaxSleepRateLimited: 5 * time.Second,
+		target := &github.Target{
+			Server: github.API,
+			Retry: retry.Retry{
+				FirstDelay:   retryFirstDelay,
+				BackoffLimit: retryBackoffLimit,
+				UpTo:         retryUpTo,
+				Log:          slog.New(hclogslog.Adapt(log)),
+			},
 		}
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
@@ -398,4 +448,12 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: repo:status`,
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
 	}
+}
+
+type SleepSpy struct {
+	sleeps []time.Duration
+}
+
+func (spy *SleepSpy) Sleep(d time.Duration) {
+	spy.sleeps = append(spy.sleeps, d)
 }
