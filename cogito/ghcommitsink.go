@@ -1,26 +1,27 @@
 package cogito
 
 import (
-	"math/rand"
+	"log/slog"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/cogito/internal/hclogslog"
+	"github.com/Pix4D/cogito/retry"
 )
 
 const (
-	// maxAttempts is the maximum number of attempts when retrying an HTTP request to
-	// GitHub, no matter the reason (rate limited or transient error).
-	maxAttempts = 3
+	// retryUpTo is the total maximum duration of the retries.
+	retryUpTo = 15 * time.Minute
 
-	// maxSleepRateLimited is the maximum sleep time (over all attempts) when rate
-	// limited from GitHub.
-	maxSleepRateLimited = 15 * time.Minute
+	// retryFirstDelay is duration of the first backoff.
+	retryFirstDelay = 2 * time.Second
 
-	// waitTransient is the wait time before the next attempt when encountering a
-	// transient error from GitHub.
-	waitTransient = 5 * time.Second
+	// retryBackoffLimit is the upper bound duration of a backoff.
+	// That is, with an exponential backoff and a retryFirstDelay = 2s, the sequence will be:
+	// 2s 4s 8s 16s 32s 60s ... 60s, until reaching a cumulative delay of retryUpTo.
+	retryBackoffLimit = 1 * time.Minute
 )
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
@@ -40,12 +41,14 @@ func (sink GitHubCommitStatusSink) Send() error {
 	buildURL := concourseBuildURL(sink.Request.Env)
 	context := ghMakeContext(sink.Request)
 
-	target := github.Target{
-		Server:              sink.GhAPI,
-		MaxAttempts:         maxAttempts,
-		WaitTransient:       waitTransient,
-		MaxSleepRateLimited: maxSleepRateLimited,
-		Jitter:              time.Duration(rand.Intn(30)) * time.Second,
+	target := &github.Target{
+		Server: sink.GhAPI,
+		Retry: retry.Retry{
+			FirstDelay:   retryFirstDelay,
+			BackoffLimit: retryBackoffLimit,
+			UpTo:         retryUpTo,
+			Log:          slog.New(hclogslog.Adapt(sink.Log)),
+		},
 	}
 	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)

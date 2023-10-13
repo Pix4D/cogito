@@ -5,7 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## UNRELEASED
+## [v0.11.0] - 2023-09-22
+
+### Added 
+
+- Retry GitHub API HTTP request when rate limited or when transient server error:
+  - New generic and customizable `retry` package, usable with any API (not GitHub specific).
+  - New Retry adapters for the GitHub API in the `github` package, usable for any GitHub API, not only the Commit Statuses API.
+  - Easily integrable also by tools using the go-github package, although not dependent upon it.
+
+### Removed
+
+- Previous code to retry GitHub API HTTP request when rate limited or when transient server error.
 
 ### Changed
 
@@ -270,3 +281,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.10.1]: https://github.com/Pix4D/cogito/releases/tag/v0.10.1
 [v0.10.2]: https://github.com/Pix4D/cogito/releases/tag/v0.10.2
 [v0.10.3]: https://github.com/Pix4D/cogito/releases/tag/v0.10.3
+[v0.11.0]: https://github.com/Pix4D/cogito/releases/tag/v0.11.0
