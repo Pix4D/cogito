@@ -23,16 +23,14 @@ type ProdPutter struct {
 	Request  PutRequest
 	InputDir string
 	// Cogito specific fields.
-	ghAPI  string
 	log    hclog.Logger
 	gitRef string
 }
 
 // NewPutter returns a Cogito ProdPutter.
-func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
+func NewPutter(log hclog.Logger) *ProdPutter {
 	return &ProdPutter{
-		ghAPI: ghAPI,
-		log:   log,
+		log: log,
 	}
 }
 
@@ -133,7 +131,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	case 1:
 		repoDir := filepath.Join(putter.InputDir, inputDirs.OrderedList()[0])
 		putter.log.Debug("", "inputDirs", inputDirs, "repoDir", repoDir, "msgDir", msgDir)
-		if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
+		if err := checkGitRepoDir(repoDir, source.GithubApiEndpoint, source.Owner, source.Repo); err != nil {
 			return err
 		}
 		putter.gitRef, err = getGitCommit(repoDir)
@@ -152,12 +150,9 @@ func (putter *ProdPutter) ProcessInputDir() error {
 }
 
 func (putter *ProdPutter) Sinks() []Sinker {
-	source := putter.Request.Source
-	ghApiEndpoint := getEndpointFromSourceOrDefault(putter, source)
 	supportedSinkers := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
-			GhAPI:   ghApiEndpoint,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
@@ -169,9 +164,9 @@ func (putter *ProdPutter) Sinks() []Sinker {
 			Request:  putter.Request,
 		},
 	}
-	sourceSinks := source.Sinks
+	source := putter.Request.Source.Sinks
 	params := putter.Request.Params.Sinks
-	sinks, _ := MergeAndValidateSinks(sourceSinks, params)
+	sinks, _ := MergeAndValidateSinks(source, params)
 
 	sinkers := make([]Sinker, 0, sinks.Size())
 	for _, s := range sinks.OrderedList() {
@@ -179,15 +174,6 @@ func (putter *ProdPutter) Sinks() []Sinker {
 	}
 
 	return sinkers
-}
-
-func getEndpointFromSourceOrDefault(putter *ProdPutter, source Source) string {
-	if source.GithubApiEndpoint != "" {
-		return source.GithubApiEndpoint
-	} else {
-		// the default
-		return putter.ghAPI
-	}
 }
 
 func (putter *ProdPutter) Output(out io.Writer) error {
@@ -251,7 +237,7 @@ func collectInputDirs(dir string) ([]string, error) {
 // - The repo configuration contains a "remote origin" section.
 // - The remote origin url can be parsed following the GitHub conventions.
 // - The result of the parse matches OWNER and REPO.
-func checkGitRepoDir(dir, owner, repo string) error {
+func checkGitRepoDir(dir, endpoint, owner, repo string) error {
 	cfg, err := mini.LoadConfiguration(filepath.Join(dir, ".git/config"))
 	if err != nil {
 		return fmt.Errorf("parsing .git/config: %w", err)
@@ -273,7 +259,6 @@ func checkGitRepoDir(dir, owner, repo string) error {
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
-
 	left := []string{owner, repo}
 	right := []string{gu.Owner, gu.Repo}
 	for i, l := range left {
@@ -282,15 +267,16 @@ func checkGitRepoDir(dir, owner, repo string) error {
 			return fmt.Errorf(`the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
-      url: %s
+    url: %s
     owner: %s
-     repo: %s
+    repo: %s
 
 Cogito SOURCE configuration:
+    github_api_endpoint: %s
     owner: %s
-     repo: %s`,
+    repo: %s`,
 				gitUrl, gu.Owner, gu.Repo,
-				owner, repo)
+				endpoint, owner, repo)
 		}
 	}
 	return nil

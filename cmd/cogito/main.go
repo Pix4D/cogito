@@ -12,7 +12,6 @@ import (
 	"github.com/hashicorp/go-hclog"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/sets"
 )
 
@@ -56,7 +55,7 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 	case "in":
 		return cogito.Get(log, input, out, args[1:])
 	case "out":
-		putter := cogito.NewPutter(github.API, log)
+		putter := cogito.NewPutter(log)
 		return cogito.Put(input, out, args[1:], putter)
 	default:
 		return fmt.Errorf("cli wiring error; please report")

@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/sets"
 )
 
@@ -165,6 +166,7 @@ type Source struct {
 	//
 	// Optional
 	//
+	GithubApiEndpoint  string       `json:"github_api_endpoint"`
 	GChatWebHook       string       `json:"gchat_webhook"` // SENSITIVE
 	LogLevel           string       `json:"log_level"`
 	LogUrl             string       `json:"log_url"` // DEPRECATED
@@ -172,7 +174,6 @@ type Source struct {
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 	Sinks              []string     `json:"sinks"`
-	GithubApiEndpoint  string       `json:"github_api_endpoint"`
 }
 
 // String renders Source, redacting the sensitive fields.
@@ -181,6 +182,7 @@ func (src Source) String() string {
 
 	fmt.Fprintf(&bld, "owner:                 %s\n", src.Owner)
 	fmt.Fprintf(&bld, "repo:                  %s\n", src.Repo)
+	fmt.Fprintf(&bld, "github_api_endpoint:   %s\n", src.GithubApiEndpoint)
 	fmt.Fprintf(&bld, "access_token:          %s\n", redact(src.AccessToken))
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
@@ -188,8 +190,7 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
 	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
-	fmt.Fprintf(&bld, "sinks: %s\n", src.Sinks)
-	fmt.Fprintf(&bld, "github_api_endpoint: %s", src.GithubApiEndpoint)
+	fmt.Fprintf(&bld, "sinks: %s", src.Sinks)
 
 	return bld.String()
 }
@@ -257,7 +258,9 @@ func (src *Source) Validate() error {
 		return fmt.Errorf("source: missing keys: %s", strings.Join(mandatory, ", "))
 	}
 
+	//
 	// Validate optional fields.
+	//
 	if src.GithubApiEndpoint != "" {
 		u, err := url.ParseRequestURI(src.GithubApiEndpoint)
 		if err != nil || u.Host == "" {
@@ -273,6 +276,9 @@ func (src *Source) Validate() error {
 	}
 	if len(src.ChatNotifyOnStates) == 0 {
 		src.ChatNotifyOnStates = defaultNotifyStates
+	}
+	if len(src.GithubApiEndpoint) == 0 {
+		src.GithubApiEndpoint = github.API
 	}
 
 	return nil

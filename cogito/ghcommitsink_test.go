@@ -25,9 +25,9 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	ts := testhelp.SpyHttpServer(&ghReq, nil, &URL, http.StatusCreated)
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
-		GhAPI:  ts.URL,
 		GitRef: wantGitRef,
 		Request: cogito.PutRequest{
+			Source: cogito.Source{GithubApiEndpoint: ts.URL},
 			Params: cogito.PutParams{State: wantState},
 			Env:    cogito.Environment{BuildJobName: jobName},
 		},
@@ -50,9 +50,9 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 	defer ts.Close()
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
-		GhAPI:  ts.URL,
 		GitRef: "deadbeefdeadbeef",
 		Request: cogito.PutRequest{
+			Source: cogito.Source{GithubApiEndpoint: ts.URL},
 			Params: cogito.PutParams{State: cogito.StatePending},
 		},
 	}

@@ -213,6 +213,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
 		Owner:              "the-owner",
 		Repo:               "the-repo",
+		GithubApiEndpoint:  "dummy-api",
 		AccessToken:        "sensitive-the-access-token",
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
@@ -224,14 +225,14 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `owner:                 the-owner
 repo:                  the-repo
+github_api_endpoint:   dummy-api
 access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
 chat_append_summary:   true
 chat_notify_on_states: [success failure]
-sinks: []
-github_api_endpoint: `
+sinks: []`
 
 		have := fmt.Sprint(source)
 
@@ -244,14 +245,14 @@ github_api_endpoint: `
 		}
 		want := `owner:                 the-owner
 repo:                  
+github_api_endpoint:   
 access_token:          
 gchat_webhook:         
 log_level:             
 context_prefix:        
 chat_append_summary:   false
 chat_notify_on_states: []
-sinks: []
-github_api_endpoint: `
+sinks: []`
 
 		have := fmt.Sprint(input)
 
