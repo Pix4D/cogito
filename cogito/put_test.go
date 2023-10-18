@@ -262,7 +262,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+		putter := cogito.NewPutter("https://github.com", hclog.NewNullLogger())
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
@@ -317,7 +317,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
-		putter := cogito.NewPutter("dummy-api", hclog.NewNullLogger())
+		putter := cogito.NewPutter("https://github.com", hclog.NewNullLogger())
 		putter.Request = cogito.PutRequest{
 			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
 			Params: tc.params,

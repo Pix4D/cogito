@@ -65,6 +65,7 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 		repoURL string
 	}
 
+	const wantDomain = "github.com"
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
 
@@ -73,7 +74,7 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 			"dummySHA", "dummyHead")
 
 		err := checkGitRepoDir(filepath.Join(inputDir, filepath.Base(tc.dir)),
-			wantOwner, wantRepo)
+			"https://github.com", wantOwner, wantRepo)
 
 		assert.NilError(t, err)
 	}
@@ -82,17 +83,17 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 		{
 			name:    "repo with good SSH remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.SshRemote(wantOwner, wantRepo),
+			repoURL: testhelp.SshRemote(wantDomain, wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTPS remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.HttpsRemote(wantOwner, wantRepo),
+			repoURL: testhelp.HttpsRemote(wantDomain, wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTP remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.HttpRemote(wantOwner, wantRepo),
+			repoURL: testhelp.HttpRemote(wantDomain, wantOwner, wantRepo),
 		},
 		{
 			name:    "PR resource but with basic auth in URL (see PR #46)",
@@ -122,7 +123,7 @@ func TestCheckGitRepoDirFailure(t *testing.T) {
 			"dummySHA", "dummyHead")
 
 		err := checkGitRepoDir(filepath.Join(inDir, filepath.Base(tc.dir)),
-			wantOwner, wantRepo)
+			"https://github.com", wantOwner, wantRepo)
 
 		assert.ErrorContains(t, err, tc.wantErrWild)
 	}
@@ -143,7 +144,7 @@ func TestCheckGitRepoDirFailure(t *testing.T) {
 		{
 			name:    "repo with unrelated HTTPS remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.HttpsRemote("owner-a", "repo-a"),
+			repoURL: testhelp.HttpsRemote("github.com", "owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
@@ -158,7 +159,7 @@ Cogito SOURCE configuration:
 		{
 			name:    "repo with unrelated SSH remote or wrong source config",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.SshRemote("owner-a", "repo-a"),
+			repoURL: testhelp.SshRemote("github.com", "owner-a", "repo-a"),
 			wantErrWild: `the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):

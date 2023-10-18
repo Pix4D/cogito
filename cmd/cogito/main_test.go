@@ -79,8 +79,10 @@ func TestRunPutSuccess(t *testing.T) {
 	}))
 	var out bytes.Buffer
 	var logOut bytes.Buffer
+
+	gitHubSpyDomain, _ := url.Parse(gitHubSpy.URL)
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", wantGitRef)
+		testhelp.HttpsRemote(gitHubSpyDomain.Host, "the-owner", "the-repo"), "dummySHA", wantGitRef)
 	t.Setenv("COGITO_GITHUB_API", gitHubSpy.URL)
 
 	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
@@ -115,7 +117,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote(gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
+		testhelp.HttpsRemote("github.com", gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
 		"ref: refs/heads/a-branch-FIXME")
 	t.Setenv("BUILD_JOB_NAME", "TestRunPutSuccessIntegration")
 	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
