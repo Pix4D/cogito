@@ -67,11 +67,6 @@ func TestRunPutSuccess(t *testing.T) {
 	chatReply := googlechat.MessageReply{}
 	var gchatUrl *url.URL
 	googleChatSpy := testhelp.SpyHttpServer(&chatMsg, chatReply, &gchatUrl, http.StatusOK)
-	gitHubSpyDomain, err := url.Parse(gitHubSpy.URL)
-	if err != nil {
-		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
-	}
-
 	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
 			Owner:             "the-owner",
@@ -85,6 +80,10 @@ func TestRunPutSuccess(t *testing.T) {
 	}))
 	var out bytes.Buffer
 	var logOut bytes.Buffer
+	gitHubSpyDomain, err := url.Parse(gitHubSpy.URL)
+	if err != nil {
+		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
+	}
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote(gitHubSpyDomain.Host, "the-owner", "the-repo"), "dummySHA", wantGitRef)
 

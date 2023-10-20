@@ -111,7 +111,7 @@ func TestSourceValidationFailure(t *testing.T) {
 			wantErr: "source: invalid sink(s): [closed coffee shop]",
 		},
 		{
-			name: "no protocol prefix in git source github_api_endpoint",
+			name: "invalid URI: missing scheme in source.github_api_endpoint",
 			source: cogito.Source{
 				Owner:             "the-owner",
 				Repo:              "the-repo",
@@ -121,7 +121,7 @@ func TestSourceValidationFailure(t *testing.T) {
 			wantErr: "source: github_api_endpoint 'github.coffee.com/api/v3' is an invalid api endpoint",
 		},
 		{
-			name: "invalid http protocol prefix in git source github_api_endpoint",
+			name: "invalid URI: missing authorithy in source.github_api_endpoint",
 			source: cogito.Source{
 				Owner:             "the-owner",
 				Repo:              "the-repo",
@@ -129,16 +129,6 @@ func TestSourceValidationFailure(t *testing.T) {
 				GithubApiEndpoint: "https:github.coffee.com/api/v3",
 			},
 			wantErr: "source: github_api_endpoint 'https:github.coffee.com/api/v3' is an invalid api endpoint",
-		},
-		{
-			name: "invalid http protocol prefix in git source github_api_endpoint",
-			source: cogito.Source{
-				Owner:             "the-owner",
-				Repo:              "the-repo",
-				AccessToken:       "the-token",
-				GithubApiEndpoint: "john.smith.cim",
-			},
-			wantErr: "source: github_api_endpoint 'john.smith.cim' is an invalid api endpoint",
 		},
 	}
 
