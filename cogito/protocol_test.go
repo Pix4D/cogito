@@ -47,10 +47,10 @@ func TestSourceValidationSuccess(t *testing.T) {
 			},
 		},
 		{
-			name: "optional git source github_api_endpoint",
+			name: "optional git source github_api_hostname",
 			mkSource: func() cogito.Source {
 				source := baseGithubSource
-				source.GithubApiEndpoint = "https://github.coffee.com/api/v3"
+				source.GithubApiHostname = "https://github.coffee.com/api/v3"
 				return source
 			},
 		},
@@ -111,24 +111,24 @@ func TestSourceValidationFailure(t *testing.T) {
 			wantErr: "source: invalid sink(s): [closed coffee shop]",
 		},
 		{
-			name: "invalid URI: missing scheme in source.github_api_endpoint",
+			name: "invalid URI: missing scheme in source.github_api_hostname",
 			source: cogito.Source{
 				Owner:             "the-owner",
 				Repo:              "the-repo",
 				AccessToken:       "the-token",
-				GithubApiEndpoint: "github.coffee.com/api/v3",
+				GithubApiHostname: "github.coffee.com/api/v3",
 			},
-			wantErr: "source: github_api_endpoint 'github.coffee.com/api/v3' is an invalid api endpoint",
+			wantErr: `source: invalid github_api_hostname: parse "github.coffee.com/api/v3": invalid URI for request`,
 		},
 		{
-			name: "invalid URI: missing authorithy in source.github_api_endpoint",
+			name: "invalid URI: missing authorithy in source.github_api_hostname",
 			source: cogito.Source{
 				Owner:             "the-owner",
 				Repo:              "the-repo",
 				AccessToken:       "the-token",
-				GithubApiEndpoint: "https:github.coffee.com/api/v3",
+				GithubApiHostname: "https:github.coffee.com/api/v3",
 			},
-			wantErr: "source: github_api_endpoint 'https:github.coffee.com/api/v3' is an invalid api endpoint",
+			wantErr: `source: invalid github_api_hostname "https:github.coffee.com/api/v3": empty hostname`,
 		},
 	}
 
@@ -203,7 +203,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
 		Owner:              "the-owner",
 		Repo:               "the-repo",
-		GithubApiEndpoint:  "dummy-api",
+		GithubApiHostname:  "dummy-api",
 		AccessToken:        "sensitive-the-access-token",
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
@@ -215,7 +215,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `owner:                 the-owner
 repo:                  the-repo
-github_api_endpoint:   dummy-api
+github_api_hostname:   dummy-api
 access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
@@ -235,7 +235,7 @@ sinks: []`
 		}
 		want := `owner:                 the-owner
 repo:                  
-github_api_endpoint:   
+github_api_hostname:   
 access_token:          
 gchat_webhook:         
 log_level:             

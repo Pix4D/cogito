@@ -166,7 +166,7 @@ type Source struct {
 	//
 	// Optional
 	//
-	GithubApiEndpoint  string       `json:"github_api_endpoint"`
+	GithubApiHostname  string       `json:"github_api_hostname"`
 	GChatWebHook       string       `json:"gchat_webhook"` // SENSITIVE
 	LogLevel           string       `json:"log_level"`
 	LogUrl             string       `json:"log_url"` // DEPRECATED
@@ -182,7 +182,7 @@ func (src Source) String() string {
 
 	fmt.Fprintf(&bld, "owner:                 %s\n", src.Owner)
 	fmt.Fprintf(&bld, "repo:                  %s\n", src.Repo)
-	fmt.Fprintf(&bld, "github_api_endpoint:   %s\n", src.GithubApiEndpoint)
+	fmt.Fprintf(&bld, "github_api_hostname:   %s\n", src.GithubApiHostname)
 	fmt.Fprintf(&bld, "access_token:          %s\n", redact(src.AccessToken))
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
@@ -261,10 +261,13 @@ func (src *Source) Validate() error {
 	//
 	// Validate optional fields.
 	//
-	if src.GithubApiEndpoint != "" {
-		u, err := url.ParseRequestURI(src.GithubApiEndpoint)
-		if err != nil || u.Host == "" {
-			return fmt.Errorf("source: github_api_endpoint '%s' is an invalid api endpoint", src.GithubApiEndpoint)
+	if src.GithubApiHostname != "" {
+		u, err := url.ParseRequestURI(src.GithubApiHostname)
+		if err != nil {
+			return fmt.Errorf("source: invalid github_api_hostname: %s", err)
+		}
+		if u.Host == "" {
+			return fmt.Errorf("source: invalid github_api_hostname %q: %s", src.GithubApiHostname, "empty hostname")
 		}
 	}
 
@@ -277,8 +280,8 @@ func (src *Source) Validate() error {
 	if len(src.ChatNotifyOnStates) == 0 {
 		src.ChatNotifyOnStates = defaultNotifyStates
 	}
-	if len(src.GithubApiEndpoint) == 0 {
-		src.GithubApiEndpoint = github.API
+	if src.GithubApiHostname == "" {
+		src.GithubApiHostname = github.API
 	}
 
 	return nil

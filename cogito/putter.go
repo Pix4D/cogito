@@ -131,7 +131,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	case 1:
 		repoDir := filepath.Join(putter.InputDir, inputDirs.OrderedList()[0])
 		putter.log.Debug("", "inputDirs", inputDirs, "repoDir", repoDir, "msgDir", msgDir)
-		if err := checkGitRepoDir(repoDir, source.GithubApiEndpoint, source.Owner, source.Repo); err != nil {
+		if err := checkGitRepoDir(repoDir, source.GithubApiHostname, source.Owner, source.Repo); err != nil {
 			return err
 		}
 		putter.gitRef, err = getGitCommit(repoDir)
@@ -272,7 +272,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: %s
 
 Cogito SOURCE configuration:
-    github_api_endpoint: %s
+    github_api_hostname: %s
     owner: %s
     repo: %s`,
 				gitUrl, gu.Owner, gu.Repo,

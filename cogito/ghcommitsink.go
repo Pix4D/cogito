@@ -41,7 +41,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	context := ghMakeContext(sink.Request)
 
 	target := &github.Target{
-		Server: sink.Request.Source.GithubApiEndpoint,
+		Server: sink.Request.Source.GithubApiHostname,
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,

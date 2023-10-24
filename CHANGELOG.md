@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added 
 
-- `source.github_api_endpoint`: override the default API endpoint. This allows you to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. When provided, this parameter must be a valid HTTPS URL.
+- Support GitHub Enterprise (see `source.github_api_hostname` in the README). Initial implementation by @wanderanimrod and @dev-jin.
 
 ## [v0.11.0] - 2023-09-22
 

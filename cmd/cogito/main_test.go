@@ -72,7 +72,7 @@ func TestRunPutSuccess(t *testing.T) {
 			Owner:             "the-owner",
 			Repo:              "the-repo",
 			AccessToken:       "the-secret",
-			GithubApiEndpoint: gitHubSpy.URL,
+			GithubApiHostname: gitHubSpy.URL,
 			GChatWebHook:      googleChatSpy.URL,
 			LogLevel:          "debug",
 		},

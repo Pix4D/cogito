@@ -155,7 +155,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: repo-a
 
 Cogito SOURCE configuration:
-    github_api_endpoint: https://api.github.com
+    github_api_hostname: https://api.github.com
     owner: smiling
     repo: butterfly`,
 		},
@@ -171,7 +171,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: repo-a
 
 Cogito SOURCE configuration:
-    github_api_endpoint: https://api.github.com
+    github_api_hostname: https://api.github.com
     owner: smiling
     repo: butterfly`,
 		},

@@ -198,8 +198,8 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
   Default: `info`.
 
-- `github_api_endpoint`:\
-  Override the default API endpoint. This allows you to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. When provided, this parameter must be a valid https url.
+- `github_api_hostname`:\
+  Override the default API hostname. This allows you to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. When provided, this parameter must be a valid https url.
   Default: `https://api.github.com`
 
 - `log_url`. **DEPRECATED, no-op, will be removed**\

@@ -27,7 +27,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 		Log:    hclog.NewNullLogger(),
 		GitRef: wantGitRef,
 		Request: cogito.PutRequest{
-			Source: cogito.Source{GithubApiEndpoint: ts.URL},
+			Source: cogito.Source{GithubApiHostname: ts.URL},
 			Params: cogito.PutParams{State: wantState},
 			Env:    cogito.Environment{BuildJobName: jobName},
 		},
@@ -52,7 +52,7 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 		Log:    hclog.NewNullLogger(),
 		GitRef: "deadbeefdeadbeef",
 		Request: cogito.PutRequest{
-			Source: cogito.Source{GithubApiEndpoint: ts.URL},
+			Source: cogito.Source{GithubApiHostname: ts.URL},
 			Params: cogito.PutParams{State: cogito.StatePending},
 		},
 	}
