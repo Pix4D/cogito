@@ -56,7 +56,7 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 		return cogito.Get(log, input, out, args[1:])
 	case "out":
 		putter := cogito.NewPutter(log)
-		return cogito.Put(input, out, args[1:], putter)
+		return cogito.Put(log, input, out, args[1:], putter)
 	default:
 		return fmt.Errorf("cli wiring error; please report")
 	}
