@@ -270,13 +270,13 @@ func checkGitRepoDir(dir, owner, repo string) error {
 			return fmt.Errorf(`the received git repository is incompatible with the Cogito configuration.
 
 Git repository configuration (received as 'inputs:' in this PUT step):
-      url: %s
+    url: %s
     owner: %s
-     repo: %s
+    repo: %s
 
 Cogito SOURCE configuration:
     owner: %s
-     repo: %s`,
+    repo: %s`,
 				gitUrl, gu.Owner, gu.Repo,
 				owner, repo)
 		}
