@@ -31,12 +31,14 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
 
+// Default GitHub hostname
+const GhDefaultHostname = "github.com"
+
 // API is the GitHub API endpoint.
 const API = "https://api.github.com"
 
 type Target struct {
 	// Server is the GitHub API server.
-	// Currently, hardcoded to https://api.github.com
 	Server string
 	// Retry controls the retry logic.
 	Retry retry.Retry

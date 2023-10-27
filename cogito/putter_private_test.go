@@ -2,6 +2,7 @@ package cogito
 
 import (
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -65,6 +66,7 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 		repoURL string
 	}
 
+	const wantHostname = "github.com"
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
 
@@ -73,7 +75,7 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 			"dummySHA", "dummyHead")
 
 		err := checkGitRepoDir(filepath.Join(inputDir, filepath.Base(tc.dir)),
-			wantOwner, wantRepo)
+			wantHostname, wantOwner, wantRepo)
 
 		assert.NilError(t, err)
 	}
@@ -82,22 +84,22 @@ func TestCheckGitRepoDirSuccess(t *testing.T) {
 		{
 			name:    "repo with good SSH remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.SshRemote("github.com", wantOwner, wantRepo),
+			repoURL: testhelp.SshRemote(wantHostname, wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTPS remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.HttpsRemote("github.com", wantOwner, wantRepo),
+			repoURL: testhelp.HttpsRemote(wantHostname, wantOwner, wantRepo),
 		},
 		{
 			name:    "repo with good HTTP remote",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: testhelp.HttpRemote("github.com", wantOwner, wantRepo),
+			repoURL: testhelp.HttpRemote(wantHostname, wantOwner, wantRepo),
 		},
 		{
 			name:    "PR resource but with basic auth in URL (see PR #46)",
 			dir:     "testdata/one-repo/a-repo",
-			repoURL: "https://x-oauth-basic:ghp_XXX@github.com/smiling/butterfly.git",
+			repoURL: fmt.Sprintf("https://x-oauth-basic:ghp_XXX@%s/%s/%s.git", wantHostname, wantOwner, wantRepo),
 		},
 	}
 
@@ -114,6 +116,7 @@ func TestCheckGitRepoDirFailure(t *testing.T) {
 		wantErrWild string // wildcard matching
 	}
 
+	const wantHostname = "github.com"
 	const wantOwner = "smiling"
 	const wantRepo = "butterfly"
 
@@ -122,7 +125,7 @@ func TestCheckGitRepoDirFailure(t *testing.T) {
 			"dummySHA", "dummyHead")
 
 		err := checkGitRepoDir(filepath.Join(inDir, filepath.Base(tc.dir)),
-			wantOwner, wantRepo)
+			wantHostname, wantOwner, wantRepo)
 
 		assert.ErrorContains(t, err, tc.wantErrWild)
 	}
@@ -152,6 +155,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: repo-a
 
 Cogito SOURCE configuration:
+    hostname: github.com
     owner: smiling
     repo: butterfly`,
 		},
@@ -167,6 +171,7 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: repo-a
 
 Cogito SOURCE configuration:
+    hostname: github.com
     owner: smiling
     repo: butterfly`,
 		},

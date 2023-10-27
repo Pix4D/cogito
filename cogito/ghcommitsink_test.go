@@ -23,16 +23,21 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	var ghReq github.AddRequest
 	var URL *url.URL
 	ts := testhelp.SpyHttpServer(&ghReq, nil, &URL, http.StatusCreated)
+	gitHubSpyURL, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
+	}
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
 		GitRef: wantGitRef,
 		Request: cogito.PutRequest{
+			Source: cogito.Source{GhHostname: gitHubSpyURL.Host},
 			Params: cogito.PutParams{State: wantState},
 			Env:    cogito.Environment{BuildJobName: jobName},
 		},
 	}
 
-	err := sink.Send()
+	err = sink.Send()
 
 	assert.NilError(t, err)
 	ts.Close() // Avoid races before the following asserts.
@@ -46,16 +51,21 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			w.WriteHeader(http.StatusTeapot)
 		}))
+	gitHubSpyURL, err := url.Parse(ts.URL)
+	if err != nil {
+		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
+	}
 	defer ts.Close()
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
 		GitRef: "deadbeefdeadbeef",
 		Request: cogito.PutRequest{
+			Source: cogito.Source{GhHostname: gitHubSpyURL.Host},
 			Params: cogito.PutParams{State: cogito.StatePending},
 		},
 	}
 
-	err := sink.Send()
+	err = sink.Send()
 
 	assert.ErrorContains(t, err,
 		`failed to add state "pending" for commit deadbee: 418 I'm a teapot`)

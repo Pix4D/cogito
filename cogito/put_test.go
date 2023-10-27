@@ -11,6 +11,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 )
 
@@ -267,7 +268,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
 		putter.Request = cogito.PutRequest{
-			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo", Sinks: tc.sink},
+			Source: cogito.Source{GhHostname: github.GhDefaultHostname, Owner: "dummy-owner", Repo: "dummy-repo", Sinks: tc.sink},
 			Params: tc.params,
 		}
 
@@ -319,7 +320,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
 		putter := cogito.NewPutter(hclog.NewNullLogger())
 		putter.Request = cogito.PutRequest{
-			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
+			Source: cogito.Source{GhHostname: github.GhDefaultHostname, Owner: "dummy-owner", Repo: "dummy-repo"},
 			Params: tc.params,
 		}
 		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))

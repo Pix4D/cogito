@@ -175,6 +175,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
 		Owner:              "the-owner",
 		Repo:               "the-repo",
+		GhHostname:         "github.com",
 		AccessToken:        "sensitive-the-access-token",
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
@@ -186,6 +187,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `owner:                 the-owner
 repo:                  the-repo
+github_hostname:       github.com
 access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
@@ -205,6 +207,7 @@ sinks: []`
 		}
 		want := `owner:                 the-owner
 repo:                  
+github_hostname:       
 access_token:          
 gchat_webhook:         
 log_level:             

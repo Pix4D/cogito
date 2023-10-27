@@ -131,7 +131,7 @@ func (putter *ProdPutter) ProcessInputDir() error {
 	case 1:
 		repoDir := filepath.Join(putter.InputDir, inputDirs.OrderedList()[0])
 		putter.log.Debug("", "inputDirs", inputDirs, "repoDir", repoDir, "msgDir", msgDir)
-		if err := checkGitRepoDir(repoDir, source.Owner, source.Repo); err != nil {
+		if err := checkGitRepoDir(repoDir, source.GhHostname, source.Owner, source.Repo); err != nil {
 			return err
 		}
 		putter.gitRef, err = getGitCommit(repoDir)
@@ -237,7 +237,7 @@ func collectInputDirs(dir string) ([]string, error) {
 // - The repo configuration contains a "remote origin" section.
 // - The remote origin url can be parsed following the GitHub conventions.
 // - The result of the parse matches OWNER and REPO.
-func checkGitRepoDir(dir, owner, repo string) error {
+func checkGitRepoDir(dir, hostname, owner, repo string) error {
 	cfg, err := mini.LoadConfiguration(filepath.Join(dir, ".git/config"))
 	if err != nil {
 		return fmt.Errorf("parsing .git/config: %w", err)
@@ -259,7 +259,7 @@ func checkGitRepoDir(dir, owner, repo string) error {
 	if err != nil {
 		return fmt.Errorf(".git/config: remote: %w", err)
 	}
-	left := []string{"github.com", owner, repo}
+	left := []string{hostname, owner, repo}
 	right := []string{gu.URL.Host, gu.Owner, gu.Repo}
 	for i, l := range left {
 		r := right[i]
@@ -272,10 +272,11 @@ Git repository configuration (received as 'inputs:' in this PUT step):
     repo: %s
 
 Cogito SOURCE configuration:
+    hostname: %s
     owner: %s
     repo: %s`,
 				gitUrl, gu.Owner, gu.Repo,
-				owner, repo)
+				hostname, owner, repo)
 		}
 	}
 	return nil
