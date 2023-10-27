@@ -123,7 +123,7 @@ func TestPutFailure(t *testing.T) {
 
 func TestPutterLoadConfigurationSuccess(t *testing.T) {
 	in := testhelp.ToJSON(t, basePutRequest)
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, []string{"dummy-dir"})
 
@@ -142,7 +142,7 @@ func TestPutterLoadConfigurationSinksOverrideSuccess(t *testing.T) {
 	},
 	  "params": {"sinks": ["gchat"]}
 	}`)
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 	inputDir := []string{""}
 	err := putter.LoadConfiguration(in, inputDir)
 	assert.NilError(t, err)
@@ -163,7 +163,7 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		in := testhelp.ToJSON(t, tc.putInput)
-		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+		putter := cogito.NewPutter(hclog.NewNullLogger())
 
 		err := putter.LoadConfiguration(in, tc.args)
 
@@ -204,7 +204,7 @@ func TestPutterLoadConfigurationInvalidParamsFailure(t *testing.T) {
   "params": {"pizza": "margherita"}
 }`)
 	wantErr := `put: parsing request: json: unknown field "pizza"`
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
 
@@ -218,7 +218,7 @@ func TestPutterLoadConfigurationMissingGchatwebHook(t *testing.T) {
   "params": {}
 }`)
 	wantErr := `put: source: missing keys: gchat_webhook`
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
 
@@ -232,7 +232,7 @@ func TestPutterLoadConfigurationUnknownSink(t *testing.T) {
   "params": {}
 }`)
 	wantErr := `put: source: invalid sink(s): [pizza]`
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
 
@@ -246,7 +246,7 @@ func TestPutterLoadConfigurationUnknownSinkPutParams(t *testing.T) {
   "params": {"sinks": ["pizza"]}
 }`)
 	wantErr := `put: arguments: unsupported sink(s): [pizza]`
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.LoadConfiguration(in, nil)
 
@@ -262,7 +262,7 @@ func TestPutterProcessInputDirSuccess(t *testing.T) {
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+		putter := cogito.NewPutter(hclog.NewNullLogger())
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana")
 		putter.InputDir = filepath.Join(tmpDir, filepath.Base(tc.inputDir))
@@ -317,7 +317,7 @@ func TestPutterProcessInputDirFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		tmpDir := testhelp.MakeGitRepoFromTestdata(t, tc.inputDir,
 			"https://github.com/dummy-owner/dummy-repo", "dummySHA", "banana mango")
-		putter := cogito.NewPutter("dummy-api", hclog.NewNullLogger())
+		putter := cogito.NewPutter(hclog.NewNullLogger())
 		putter.Request = cogito.PutRequest{
 			Source: cogito.Source{Owner: "dummy-owner", Repo: "dummy-repo"},
 			Params: tc.params,
@@ -394,7 +394,7 @@ func TestPutterProcessInputDirNonExisting(t *testing.T) {
 }
 
 func TestPutterSinks(t *testing.T) {
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	sinks := putter.Sinks()
 	assert.Assert(t, len(sinks) == 2)
@@ -406,7 +406,7 @@ func TestPutterSinks(t *testing.T) {
 }
 
 func TestPutterCustomSinks(t *testing.T) {
-	putter := cogito.NewPutter("dummy-api", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 	putter.Request = cogito.PutRequest{
 		Params: cogito.PutParams{Sinks: []string{"gchat"}},
 	}
@@ -417,7 +417,7 @@ func TestPutterCustomSinks(t *testing.T) {
 }
 
 func TestPutterOutputSuccess(t *testing.T) {
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.Output(io.Discard)
 
@@ -425,7 +425,7 @@ func TestPutterOutputSuccess(t *testing.T) {
 }
 
 func TestPutterOutputFailure(t *testing.T) {
-	putter := cogito.NewPutter("dummy-API", hclog.NewNullLogger())
+	putter := cogito.NewPutter(hclog.NewNullLogger())
 
 	err := putter.Output(&testhelp.FailingWriter{})
 

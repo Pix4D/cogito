@@ -81,7 +81,6 @@ func TestRunPutSuccess(t *testing.T) {
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote("github.com", "the-owner", "the-repo"), "dummySHA", wantGitRef)
-	t.Setenv("COGITO_GITHUB_API", gitHubSpy.URL)
 
 	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
 

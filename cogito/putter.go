@@ -23,16 +23,14 @@ type ProdPutter struct {
 	Request  PutRequest
 	InputDir string
 	// Cogito specific fields.
-	ghAPI  string
 	log    hclog.Logger
 	gitRef string
 }
 
 // NewPutter returns a Cogito ProdPutter.
-func NewPutter(ghAPI string, log hclog.Logger) *ProdPutter {
+func NewPutter(log hclog.Logger) *ProdPutter {
 	return &ProdPutter{
-		ghAPI: ghAPI,
-		log:   log,
+		log: log,
 	}
 }
 
@@ -155,7 +153,6 @@ func (putter *ProdPutter) Sinks() []Sinker {
 	supportedSinkers := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
 			Log:     putter.log.Named("ghCommitStatus"),
-			GhAPI:   putter.ghAPI,
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
