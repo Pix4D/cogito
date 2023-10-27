@@ -122,8 +122,8 @@ func gChatBuildSummaryText(gitRef string, state BuildState, src Source, env Envi
 	fmt.Fprintf(&bld, "*state* %s\n", decorateState(state))
 	// An empty gitRef means that cogito has been configured as chat only.
 	if gitRef != "" {
-		commitUrl := fmt.Sprintf("https://github.com/%s/%s/commit/%s",
-			src.Owner, src.Repo, gitRef)
+		commitUrl := fmt.Sprintf("https://%s/%s/%s/commit/%s",
+			src.GhHostname, src.Owner, src.Repo, gitRef)
 		commit := fmt.Sprintf("<%s|%.10s> (repo: %s/%s)",
 			commitUrl, gitRef, src.Owner, src.Repo)
 		fmt.Fprintf(&bld, "*commit* %s\n", commit)
