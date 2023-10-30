@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -34,8 +35,10 @@ func (e *StatusError) Error() string {
 // GhDefaultHostname is the default GitHub hostname (used for git but not for the API)
 const GhDefaultHostname = "github.com"
 
-// API is the default GitHub API hostname.
+// API is the default GitHub API root URL.
 const API = "https://api.github.com"
+
+var localhostRegexp = regexp.MustCompile(`^127.0.0.1:[0-9]+$`)
 
 type Target struct {
 	// Server is the GitHub API server.
@@ -194,11 +197,12 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 // ApiRoot constructs the root part of the GitHub API URL for a given hostname.
 // Example:
 // if hostname is: github.com it returns https://api.github.com
-// if hostname is overrriden in tests by localhost HTTP testserver it returns http://127.0.0.1
+// if hostname is overrriden in tests by localhost HTTP testserver it returns http://127.0.0.1:PORT
 func ApiRoot(h string) string {
 	hostname := strings.ToLower(h)
-	if strings.Contains(hostname, "127.0.0.1") {
+	if localhostRegexp.MatchString(hostname) {
 		return fmt.Sprintf("http://%s", hostname)
 	}
+
 	return API
 }

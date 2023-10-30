@@ -457,3 +457,33 @@ type SleepSpy struct {
 func (spy *SleepSpy) Sleep(d time.Duration) {
 	spy.sleeps = append(spy.sleeps, d)
 }
+
+func TestApiRoot(t *testing.T) {
+	type testCase struct {
+		name     string
+		hostname string
+		wantAPI  string
+	}
+
+	run := func(t *testing.T, tc testCase) {
+		got := github.ApiRoot(tc.hostname)
+		assert.Equal(t, got, tc.wantAPI)
+	}
+
+	testCases := []testCase{
+		{
+			name:     "hostname is localhost from http testserver",
+			hostname: "127.0.0.1:5678",
+			wantAPI:  "http://127.0.0.1:5678",
+		},
+		{
+			name:     "default GitHub hostname",
+			hostname: github.GhDefaultHostname,
+			wantAPI:  github.API,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
+}

@@ -8,11 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/sets"
 )
+
+var hostnameRegexp = regexp.MustCompile(`^(?P<host>[a-zA-Z0-9.-]+)(?::(?P<port>\d+))?$`)
 
 // DummyVersion is the version always returned by the Cogito resource.
 // DO NOT REASSIGN!
@@ -260,7 +263,11 @@ func (src *Source) Validate() error {
 	//
 	// Validate optional fields.
 	//
-	// In this case, nothing to validate.
+	if src.GhHostname != "" {
+		if !hostnameRegexp.MatchString(src.GhHostname) {
+			return fmt.Errorf("source: invalid github_api_hostname: %s. Don't configure the schema or the path", src.GhHostname)
+		}
+	}
 
 	//
 	// Apply defaults.
