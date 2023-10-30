@@ -190,3 +190,11 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 		Details: fmt.Sprintf("Action: %s %s", http.MethodPost, url),
 	}
 }
+
+func ApiRoot(h string) string {
+	hostname := strings.ToLower(h)
+	if strings.Contains(hostname, "127.0.0.1") {
+		return fmt.Sprintf("http://%s", hostname)
+	}
+	return API
+}

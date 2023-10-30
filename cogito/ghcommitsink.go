@@ -1,9 +1,7 @@
 package cogito
 
 import (
-	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/hashicorp/go-hclog"
@@ -43,7 +41,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	context := ghMakeContext(sink.Request)
 
 	target := &github.Target{
-		Server: apiEndpoint(sink.Request.Source.GhHostname),
+		Server: github.ApiRoot(sink.Request.Source.GhHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
@@ -90,12 +88,4 @@ func ghMakeContext(request PutRequest) string {
 		context += request.Env.BuildJobName
 	}
 	return context
-}
-
-func apiEndpoint(h string) string {
-	hostname := strings.ToLower(h)
-	if strings.Contains(hostname, "127.0.0.1") {
-		return fmt.Sprintf("http://%s", hostname)
-	}
-	return github.API
 }
