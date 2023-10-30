@@ -64,9 +64,7 @@ func TestRunPutSuccess(t *testing.T) {
 	var ghUrl *url.URL
 	gitHubSpy := testhelp.SpyHttpServer(&ghReq, nil, &ghUrl, http.StatusCreated)
 	gitHubSpyURL, err := url.Parse(gitHubSpy.URL)
-	if err != nil {
-		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
-	}
+	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	var chatMsg googlechat.BasicMessage
 	chatReply := googlechat.MessageReply{}
 	var gchatUrl *url.URL

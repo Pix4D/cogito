@@ -247,18 +247,18 @@ func MakeGitRepoFromTestdata(
 }
 
 // SshRemote returns a GitHub SSH URL
-func SshRemote(domain, owner, repo string) string {
-	return fmt.Sprintf("git@%s:%s/%s.git", domain, owner, repo)
+func SshRemote(hostname, owner, repo string) string {
+	return fmt.Sprintf("git@%s:%s/%s.git", hostname, owner, repo)
 }
 
 // HttpsRemote returns a GitHub HTTPS URL
-func HttpsRemote(domain, owner, repo string) string {
-	return fmt.Sprintf("https://%s/%s/%s.git", domain, owner, repo)
+func HttpsRemote(hostname, owner, repo string) string {
+	return fmt.Sprintf("https://%s/%s/%s.git", hostname, owner, repo)
 }
 
 // HttpRemote returns a GitHub HTTP URL
-func HttpRemote(domain, owner, repo string) string {
-	return fmt.Sprintf("http://%s/%s/%s.git", domain, owner, repo)
+func HttpRemote(hostname, owner, repo string) string {
+	return fmt.Sprintf("http://%s/%s/%s.git", hostname, owner, repo)
 }
 
 // ToJSON returns the JSON encoding of thing.

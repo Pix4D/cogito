@@ -31,10 +31,10 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
 
-// Default GitHub hostname
+// GhDefaultHostname is the default GitHub hostname (used for git but not for the API)
 const GhDefaultHostname = "github.com"
 
-// API is the GitHub API endpoint.
+// API is the default GitHub API hostname.
 const API = "https://api.github.com"
 
 type Target struct {

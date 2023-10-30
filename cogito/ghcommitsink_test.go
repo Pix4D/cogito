@@ -24,9 +24,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	var URL *url.URL
 	ts := testhelp.SpyHttpServer(&ghReq, nil, &URL, http.StatusCreated)
 	gitHubSpyURL, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
-	}
+	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
 		GitRef: wantGitRef,
@@ -52,9 +50,7 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 			w.WriteHeader(http.StatusTeapot)
 		}))
 	gitHubSpyURL, err := url.Parse(ts.URL)
-	if err != nil {
-		t.Fatalf("error parsing SpyHttpServer URL: %s", err)
-	}
+	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	defer ts.Close()
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    hclog.NewNullLogger(),
