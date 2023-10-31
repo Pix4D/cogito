@@ -263,11 +263,7 @@ func (src *Source) Validate() error {
 	//
 	// Validate optional fields.
 	//
-	if src.GhHostname != "" {
-		if !hostnameRegexp.MatchString(src.GhHostname) {
-			return fmt.Errorf("source: invalid github_api_hostname: %s. Don't configure the schema or the path", src.GhHostname)
-		}
-	}
+	// In this case, nothing to validate.
 
 	//
 	// Apply defaults.
@@ -281,6 +277,11 @@ func (src *Source) Validate() error {
 	if src.GhHostname == "" {
 		src.GhHostname = github.GhDefaultHostname
 	}
+	// Validate src.GhHostname
+	if !hostnameRegexp.MatchString(src.GhHostname) {
+		return fmt.Errorf("source: invalid github_api_hostname: %s. Don't configure the schema or the path", src.GhHostname)
+	}
+
 	return nil
 }
 

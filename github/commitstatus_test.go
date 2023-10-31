@@ -337,7 +337,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 		log = hclog.Default()
 	}
 	target := &github.Target{
-		Server: github.API,
+		Server: github.ApiRoot(github.GhDefaultHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
@@ -390,7 +390,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		}
 
 		target := &github.Target{
-			Server: github.API,
+			Server: github.ApiRoot(github.GhDefaultHostname),
 			Retry: retry.Retry{
 				FirstDelay:   retryFirstDelay,
 				BackoffLimit: retryBackoffLimit,
@@ -479,7 +479,7 @@ func TestApiRoot(t *testing.T) {
 		{
 			name:     "default GitHub hostname",
 			hostname: github.GhDefaultHostname,
-			wantAPI:  github.API,
+			wantAPI:  "https://api.github.com",
 		},
 		{
 			name:     "Github Enterprise hostname",

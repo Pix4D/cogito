@@ -35,9 +35,6 @@ func (e *StatusError) Error() string {
 // GhDefaultHostname is the default GitHub hostname (used for git but not for the API)
 const GhDefaultHostname = "github.com"
 
-// API is the default GitHub API root URL.
-const API = "https://api.github.com"
-
 var localhostRegexp = regexp.MustCompile(`^127.0.0.1:[0-9]+$`)
 
 type Target struct {
@@ -203,7 +200,7 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 func ApiRoot(h string) string {
 	hostname := strings.ToLower(h)
 	if hostname == GhDefaultHostname {
-		return API
+		return "https://api.github.com"
 	}
 	if localhostRegexp.MatchString(hostname) {
 		return fmt.Sprintf("http://%s", hostname)
