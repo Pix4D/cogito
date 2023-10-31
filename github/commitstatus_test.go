@@ -481,6 +481,11 @@ func TestApiRoot(t *testing.T) {
 			hostname: github.GhDefaultHostname,
 			wantAPI:  github.API,
 		},
+		{
+			name:     "Github Enterprise hostname",
+			hostname: "github.mycompany.org",
+			wantAPI:  "https://github.mycompany.org/api/v3",
+		},
 	}
 
 	for _, tc := range testCases {

@@ -196,13 +196,17 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 
 // ApiRoot constructs the root part of the GitHub API URL for a given hostname.
 // Example:
-// if hostname is: github.com it returns https://api.github.com
-// if hostname is overrriden in tests by localhost HTTP testserver it returns http://127.0.0.1:PORT
+// if hostname is github.com it returns https://api.github.com
+// if hostname looks like a httptest server, it returns http://127.0.0.1:PORT
+// otherwise, hostname is assumed to be of a Github Enterprise instance.
+// For example, github.mycompany.org returns https://github.mycompany.org/api/v3
 func ApiRoot(h string) string {
 	hostname := strings.ToLower(h)
+	if hostname == GhDefaultHostname {
+		return API
+	}
 	if localhostRegexp.MatchString(hostname) {
 		return fmt.Sprintf("http://%s", hostname)
 	}
-
-	return API
+	return fmt.Sprintf("https://%s/api/v3", hostname)
 }
