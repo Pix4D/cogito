@@ -8,10 +8,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/sets"
 )
+
+var hostnameRegexp = regexp.MustCompile(`^(?P<host>[a-zA-Z0-9.-]+)(?::(?P<port>\d+))?$`)
 
 // DummyVersion is the version always returned by the Cogito resource.
 // DO NOT REASSIGN!
@@ -164,6 +168,7 @@ type Source struct {
 	//
 	// Optional
 	//
+	GhHostname         string       `json:"github_hostname"`
 	GChatWebHook       string       `json:"gchat_webhook"` // SENSITIVE
 	LogLevel           string       `json:"log_level"`
 	LogUrl             string       `json:"log_url"` // DEPRECATED
@@ -179,6 +184,7 @@ func (src Source) String() string {
 
 	fmt.Fprintf(&bld, "owner:                 %s\n", src.Owner)
 	fmt.Fprintf(&bld, "repo:                  %s\n", src.Repo)
+	fmt.Fprintf(&bld, "github_hostname:       %s\n", src.GhHostname)
 	fmt.Fprintf(&bld, "access_token:          %s\n", redact(src.AccessToken))
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
@@ -267,6 +273,13 @@ func (src *Source) Validate() error {
 	}
 	if len(src.ChatNotifyOnStates) == 0 {
 		src.ChatNotifyOnStates = defaultNotifyStates
+	}
+	if src.GhHostname == "" {
+		src.GhHostname = github.GhDefaultHostname
+	}
+	// Validate src.GhHostname
+	if !hostnameRegexp.MatchString(src.GhHostname) {
+		return fmt.Errorf("source: invalid github_api_hostname: %s. Don't configure the schema or the path", src.GhHostname)
 	}
 
 	return nil

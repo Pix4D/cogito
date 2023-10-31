@@ -27,7 +27,6 @@ const (
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
 type GitHubCommitStatusSink struct {
 	Log     hclog.Logger
-	GhAPI   string
 	GitRef  string
 	Request PutRequest
 }
@@ -42,7 +41,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	context := ghMakeContext(sink.Request)
 
 	target := &github.Target{
-		Server: sink.GhAPI,
+		Server: github.ApiRoot(sink.Request.Source.GhHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,

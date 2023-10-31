@@ -63,6 +63,8 @@ func TestRunPutSuccess(t *testing.T) {
 	var ghReq github.AddRequest
 	var ghUrl *url.URL
 	gitHubSpy := testhelp.SpyHttpServer(&ghReq, nil, &ghUrl, http.StatusCreated)
+	gitHubSpyURL, err := url.Parse(gitHubSpy.URL)
+	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	var chatMsg googlechat.BasicMessage
 	chatReply := googlechat.MessageReply{}
 	var gchatUrl *url.URL
@@ -72,6 +74,7 @@ func TestRunPutSuccess(t *testing.T) {
 			Owner:        "the-owner",
 			Repo:         "the-repo",
 			AccessToken:  "the-secret",
+			GhHostname:   gitHubSpyURL.Host,
 			GChatWebHook: googleChatSpy.URL,
 			LogLevel:     "debug",
 		},
@@ -80,10 +83,9 @@ func TestRunPutSuccess(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote("the-owner", "the-repo"), "dummySHA", wantGitRef)
-	t.Setenv("COGITO_GITHUB_API", gitHubSpy.URL)
+		testhelp.HttpsRemote(gitHubSpyURL.Host, "the-owner", "the-repo"), "dummySHA", wantGitRef)
 
-	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
+	err = mainErr(in, &out, &logOut, []string{"out", inputDir})
 
 	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
 	//
@@ -115,7 +117,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	var out bytes.Buffer
 	var logOut bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
-		testhelp.HttpsRemote(gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
+		testhelp.HttpsRemote(github.GhDefaultHostname, gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
 		"ref: refs/heads/a-branch-FIXME")
 	t.Setenv("BUILD_JOB_NAME", "TestRunPutSuccessIntegration")
 	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")

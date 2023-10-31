@@ -12,6 +12,7 @@ import (
 	"io"
 	"net/http"
 	"path"
+	"regexp"
 	"strings"
 	"time"
 
@@ -31,12 +32,13 @@ func (e *StatusError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
 
-// API is the GitHub API endpoint.
-const API = "https://api.github.com"
+// GhDefaultHostname is the default GitHub hostname (used for git but not for the API)
+const GhDefaultHostname = "github.com"
+
+var localhostRegexp = regexp.MustCompile(`^127.0.0.1:[0-9]+$`)
 
 type Target struct {
 	// Server is the GitHub API server.
-	// Currently, hardcoded to https://api.github.com
 	Server string
 	// Retry controls the retry logic.
 	Retry retry.Retry
@@ -187,4 +189,21 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 		What:    fmt.Sprintf("%s: %s", commonWhat, err),
 		Details: fmt.Sprintf("Action: %s %s", http.MethodPost, url),
 	}
+}
+
+// ApiRoot constructs the root part of the GitHub API URL for a given hostname.
+// Example:
+// if hostname is github.com it returns https://api.github.com
+// if hostname looks like a httptest server, it returns http://127.0.0.1:PORT
+// otherwise, hostname is assumed to be of a Github Enterprise instance.
+// For example, github.mycompany.org returns https://github.mycompany.org/api/v3
+func ApiRoot(h string) string {
+	hostname := strings.ToLower(h)
+	if hostname == GhDefaultHostname {
+		return "https://api.github.com"
+	}
+	if localhostRegexp.MatchString(hostname) {
+		return fmt.Sprintf("http://%s", hostname)
+	}
+	return fmt.Sprintf("https://%s/api/v3", hostname)
 }

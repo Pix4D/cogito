@@ -337,7 +337,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 		log = hclog.Default()
 	}
 	target := &github.Target{
-		Server: github.API,
+		Server: github.ApiRoot(github.GhDefaultHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
@@ -390,7 +390,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		}
 
 		target := &github.Target{
-			Server: github.API,
+			Server: github.ApiRoot(github.GhDefaultHostname),
 			Retry: retry.Retry{
 				FirstDelay:   retryFirstDelay,
 				BackoffLimit: retryBackoffLimit,
@@ -456,4 +456,39 @@ type SleepSpy struct {
 
 func (spy *SleepSpy) Sleep(d time.Duration) {
 	spy.sleeps = append(spy.sleeps, d)
+}
+
+func TestApiRoot(t *testing.T) {
+	type testCase struct {
+		name     string
+		hostname string
+		wantAPI  string
+	}
+
+	run := func(t *testing.T, tc testCase) {
+		got := github.ApiRoot(tc.hostname)
+		assert.Equal(t, got, tc.wantAPI)
+	}
+
+	testCases := []testCase{
+		{
+			name:     "hostname is localhost from http testserver",
+			hostname: "127.0.0.1:5678",
+			wantAPI:  "http://127.0.0.1:5678",
+		},
+		{
+			name:     "default GitHub hostname",
+			hostname: github.GhDefaultHostname,
+			wantAPI:  "https://api.github.com",
+		},
+		{
+			name:     "Github Enterprise hostname",
+			hostname: "github.mycompany.org",
+			wantAPI:  "https://github.mycompany.org/api/v3",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
 }

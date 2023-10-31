@@ -46,6 +46,22 @@ func TestSourceValidationSuccess(t *testing.T) {
 				return source
 			},
 		},
+		{
+			name: "git source: github_hostname: httptest server hostname",
+			mkSource: func() cogito.Source {
+				source := baseGithubSource
+				source.GhHostname = "127.0.0.1:1234"
+				return source
+			},
+		},
+		{
+			name: "git source: github_hostname: github.foo.com",
+			mkSource: func() cogito.Source {
+				source := baseGithubSource
+				source.GhHostname = "github.foo.com"
+				return source
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -101,6 +117,16 @@ func TestSourceValidationFailure(t *testing.T) {
 				AccessToken:  "the-token",
 			},
 			wantErr: "source: invalid sink(s): [closed coffee shop]",
+		},
+		{
+			name: "invalid github_hostname: configured with schema, the path or both",
+			source: cogito.Source{
+				GhHostname:  "https://github.foo.com/api/v3/",
+				Owner:       "the-owner",
+				Repo:        "the-repo",
+				AccessToken: "the-token",
+			},
+			wantErr: "source: invalid github_api_hostname: https://github.foo.com/api/v3/. Don't configure the schema or the path",
 		},
 	}
 
@@ -175,6 +201,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	source := cogito.Source{
 		Owner:              "the-owner",
 		Repo:               "the-repo",
+		GhHostname:         "github.com",
 		AccessToken:        "sensitive-the-access-token",
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
@@ -186,6 +213,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 	t.Run("fmt.Print redacts fields", func(t *testing.T) {
 		want := `owner:                 the-owner
 repo:                  the-repo
+github_hostname:       github.com
 access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
@@ -205,6 +233,7 @@ sinks: []`
 		}
 		want := `owner:                 the-owner
 repo:                  
+github_hostname:       
 access_token:          
 gchat_webhook:         
 log_level:             
