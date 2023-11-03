@@ -199,7 +199,7 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   Default: `info`.
 
 - `github_hostname`:\
-  GitHub hostname. This allows to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. For example: github.mycompany.org will be expanded by cogito to https://github.mycompany.org/api/v3.\
+  GitHub hostname. This allows to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. For example: github.mycompany.org will be expanded by cogito to https://github.mycompany.org/api/v3 \
   Default: `github.com`
 
 - `log_url`. **DEPRECATED, no-op, will be removed**\
