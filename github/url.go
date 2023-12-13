@@ -8,9 +8,10 @@ import (
 )
 
 type GitURL struct {
-	URL   *url.URL
-	Owner string
-	Repo  string
+	URL      *url.URL
+	Owner    string
+	Repo     string
+	FullName string
 }
 
 // safeUrlParse wraps [url.Parse] and returns only the error and not the URL to avoid leaking
@@ -76,11 +77,14 @@ func ParseGitPseudoURL(rawURL string) (GitURL, error) {
 				want, have, tokens)
 	}
 
+	owner := tokens[1]
+	repo := strings.TrimSuffix(tokens[2], ".git")
 	// All OK. Fill our gitURL struct
 	gu := GitURL{
-		URL:   anyUrl,
-		Owner: tokens[1],
-		Repo:  strings.TrimSuffix(tokens[2], ".git"),
+		URL:      anyUrl,
+		Owner:    owner,
+		Repo:     repo,
+		FullName: owner + "/" + repo,
 	}
 	return gu, nil
 }
