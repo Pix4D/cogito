@@ -345,13 +345,19 @@ func TestConcourseBuildURL(t *testing.T) {
 			name: "instanced vars 1",
 			env: testhelp.MergeStructs(baseEnv,
 				Environment{BuildPipelineInstanceVars: `{"branch":"stable"}`}),
-			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars.branch=%22stable%22",
 		},
 		{
 			name: "instanced vars 2",
 			env: testhelp.MergeStructs(baseEnv,
 				Environment{BuildPipelineInstanceVars: `{"branch":"stable","foo":"bar"}`}),
-			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars.branch=%22stable%22&vars.foo=%22bar%22",
+		},
+		{
+			name: "instanced vars 3",
+			env: testhelp.MergeStructs(baseEnv,
+				Environment{BuildPipelineInstanceVars: `{"branch":"stable", "variable":"has spaces in it"}`}),
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars.branch=%22stable%22&vars.variable=%22has spaces in it%22",
 		},
 	}
 

@@ -336,7 +336,20 @@ func concourseBuildURL(env Environment) string {
 	// BUILD_PIPELINE_INSTANCE_VARS: {"branch":"stable"}
 	// https://ci.example.com/teams/main/pipelines/cogito/jobs/autocat/builds/3?vars=%7B%22branch%22%3A%22stable%22%7D
 	if env.BuildPipelineInstanceVars != "" {
-		buildURL += fmt.Sprintf("?vars=%s", url.QueryEscape(env.BuildPipelineInstanceVars))
+		//convert the JSON instance vars into URL parameters
+		var instanceVars map[string]interface{}
+		if err := json.Unmarshal([]byte(env.BuildPipelineInstanceVars), &instanceVars); err != nil {
+			panic(err)
+		}
+		params := url.Values{}
+		for key, value := range instanceVars {
+			valueStr := fmt.Sprintf("\"%v\"", value)
+			params.Add("vars."+key, valueStr)
+		}
+		encodedString := params.Encode()
+		//concourse wants spaces not + if you have them in a variable
+		paramsString := strings.ReplaceAll(encodedString, "+", " ")
+		buildURL += fmt.Sprintf("?%s", paramsString)
 	}
 
 	return buildURL
