@@ -13,7 +13,7 @@ import (
 	"testing"
 	"text/template"
 
-	"github.com/imdario/mergo"
+	"dario.cat/mergo"
 	"gotest.tools/v3/assert"
 )
 
