@@ -14,7 +14,7 @@ In case of doubts about how to tackle testing something, feel free to ask.
 
 ## Required
 
-* Go, version >= 1.21
+* Go, version >= 1.22
 * Docker, version >= 20
 * [Task], version >= 3.27
 
