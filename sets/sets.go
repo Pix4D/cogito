@@ -79,10 +79,3 @@ func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 	}
 	return result
 }
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
-}
