@@ -1,0 +1,39 @@
+resource_types:
+- name: cogito
+  type: registry-image
+  source:
+    repository: pix4d/cogito
+    tag: latest
+
+resources:
+- name: gh-status
+  type: cogito
+  check_every: never
+  source:
+    log_level: debug
+    owner: pix4d
+    repo: cogito
+    access_token: ((github_repo_status_token))
+
+- name: repo.git
+  type: git
+  source:
+    uri: https://github.com/pix4d/cogito.git
+    branch: ((branch))
+
+jobs:
+  - name: autocat
+    plan:
+    - get: repo.git
+      trigger: true
+    - put: gh-status
+      inputs: [repo.git]
+      params: {state: success}
+    - task: will-fail
+      config:
+        platform: linux
+        image_resource:
+          type: registry-image
+          source: { repository: alpine }
+        run:
+          path: /bin/false
