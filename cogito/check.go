@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/hashicorp/go-hclog"
+	"log/slog"
 )
 
 // Check implements the "check" step (the "check" executable).
@@ -17,10 +16,8 @@ import (
 // It is given the configured source and current version on stdin, and must print the
 // array of new versions, in chronological order (oldest first), to stdout, including
 // the requested version if it is still valid.
-func Check(log hclog.Logger, input []byte, out io.Writer, args []string) error {
-	log = log.Named("check")
-	log.Debug("started")
-	defer log.Debug("finished")
+func Check(log *slog.Logger, input []byte, out io.Writer, args []string) error {
+	log = log.With("name", "cogito.check")
 
 	request, err := NewCheckRequest(input)
 	if err != nil {

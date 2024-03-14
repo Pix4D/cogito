@@ -3,9 +3,8 @@ package cogito
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"strings"
-
-	"github.com/hashicorp/go-hclog"
 )
 
 // Putter represents the put step of a Concourse resource.
@@ -40,7 +39,7 @@ type Sinker interface {
 // Additionally, the script may emit metadata as a list of key-value pairs. This data is
 // intended for public consumption and will make it upstream, intended to be shown on the
 // build's page.
-func Put(log hclog.Logger, input []byte, out io.Writer, args []string, putter Putter) error {
+func Put(log *slog.Logger, input []byte, out io.Writer, args []string, putter Putter) error {
 	if err := putter.LoadConfiguration(input, args); err != nil {
 		return fmt.Errorf("put: %s", err)
 	}

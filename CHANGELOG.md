@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Update to Go 1.22
 
+### Removed
+
+- Replaced module github.com/hashicorp/go-hclog with stdlib log/slog.
+
 ## [v0.12.0] - 2023-11-03
 
 ### Added

@@ -10,13 +10,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"path"
 	"regexp"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/go-hclog"
 
 	"github.com/Pix4D/cogito/retry"
 )
@@ -56,7 +55,7 @@ type CommitStatus struct {
 	repo    string
 	context string
 
-	log hclog.Logger
+	log *slog.Logger
 }
 
 // NewCommitStatus returns a CommitStatus object associated to a specific GitHub owner
@@ -70,7 +69,7 @@ type CommitStatus struct {
 //
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
-func NewCommitStatus(target *Target, token, owner, repo, context string, log hclog.Logger) CommitStatus {
+func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger) CommitStatus {
 	return CommitStatus{
 		target:  target,
 		token:   token,

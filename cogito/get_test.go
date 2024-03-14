@@ -5,7 +5,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
@@ -22,7 +21,7 @@ func TestGetSuccess(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		in := testhelp.ToJSON(t, tc.request)
 		var out bytes.Buffer
-		log := hclog.NewNullLogger()
+		log := testhelp.MakeTestLog()
 
 		err := cogito.Get(log, in, &out, []string{"dummy-dir"})
 
@@ -73,7 +72,7 @@ func TestGetFailure(t *testing.T) {
 				Source:  tc.source,
 				Version: tc.version,
 			})
-		log := hclog.NewNullLogger()
+		log := testhelp.MakeTestLog()
 
 		err := cogito.Get(log, in, tc.writer, tc.args)
 
@@ -144,7 +143,7 @@ func TestGetNonEmptyParamsFailure(t *testing.T) {
 }`)
 	wantErr := `get: parsing request: json: unknown field "params"`
 
-	err := cogito.Get(hclog.NewNullLogger(), in, io.Discard, []string{})
+	err := cogito.Get(testhelp.MakeTestLog(), in, io.Discard, []string{})
 
 	assert.Error(t, err, wantErr)
 }

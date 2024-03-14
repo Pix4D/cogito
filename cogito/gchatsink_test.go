@@ -7,7 +7,6 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 
@@ -38,7 +37,7 @@ func TestSinkGoogleChatSendSuccess(t *testing.T) {
 		tc.setWebHook(&request, ts.URL)
 		assert.NilError(t, request.Source.Validate())
 		sink := cogito.GoogleChatSink{
-			Log:     hclog.NewNullLogger(),
+			Log:     testhelp.MakeTestLog(),
 			GitRef:  wantGitRef,
 			Request: request,
 		}
@@ -80,7 +79,7 @@ func TestSinkGoogleChatDecidesNotToSendSuccess(t *testing.T) {
 
 	test := func(t *testing.T, tc testCase) {
 		sink := cogito.GoogleChatSink{
-			Log:     hclog.NewNullLogger(),
+			Log:     testhelp.MakeTestLog(),
 			Request: tc.request,
 		}
 
@@ -120,7 +119,7 @@ func TestSinkGoogleChatSendBackendFailure(t *testing.T) {
 	request.Source.GChatWebHook = ts.URL
 	assert.NilError(t, request.Source.Validate())
 	sink := cogito.GoogleChatSink{
-		Log:     hclog.NewNullLogger(),
+		Log:     testhelp.MakeTestLog(),
 		Request: request,
 	}
 
@@ -136,7 +135,7 @@ func TestSinkGoogleChatSendInputFailure(t *testing.T) {
 	request.Source.GChatWebHook = "dummy-url"
 	assert.NilError(t, request.Source.Validate())
 	sink := cogito.GoogleChatSink{
-		Log:      hclog.NewNullLogger(),
+		Log:      testhelp.MakeTestLog(),
 		InputDir: fstest.MapFS{"bar/msg.txt": {Data: []byte("from-custom-file")}},
 		Request:  request,
 	}

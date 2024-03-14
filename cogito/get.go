@@ -4,8 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
-	"github.com/hashicorp/go-hclog"
+	"log/slog"
 )
 
 // Get implements the "get" step (the "in" executable).
@@ -24,10 +23,8 @@ import (
 // The program must emit a JSON object containing the fetched version, and may emit
 // metadata as a list of key-value pairs.
 // This data is intended for public consumption and will be shown on the build page.
-func Get(log hclog.Logger, input []byte, out io.Writer, args []string) error {
-	log = log.Named("get")
-	log.Debug("started")
-	defer log.Debug("finished")
+func Get(log *slog.Logger, input []byte, out io.Writer, args []string) error {
+	log = log.With("name", "cogito.get")
 
 	request, err := NewGetRequest(input)
 	if err != nil {

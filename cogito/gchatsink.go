@@ -4,17 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"strings"
 	"time"
-
-	"github.com/hashicorp/go-hclog"
 
 	"github.com/Pix4D/cogito/googlechat"
 )
 
 // GoogleChatSink is an implementation of [Sinker] for the Cogito resource.
 type GoogleChatSink struct {
-	Log      hclog.Logger
+	Log      *slog.Logger
 	InputDir fs.FS
 	GitRef   string
 	Request  PutRequest
