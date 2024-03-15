@@ -195,8 +195,8 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   See also: the optional `context` in the [put step](#the-put-step).
 
 - `log_level`:\
-  The log level (one of `debug`, `info`, `warn`, `error`, `silent`).\
-  Default: `info`.
+  The log level (one of `debug`, `info`, `warn`, `error`).\
+  Default: `info`, recommended for normal operation.
 
 - `github_hostname`:\
   GitHub hostname. This allows to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. For example: github.mycompany.org will be expanded by cogito to https://github.mycompany.org/api/v3 \
