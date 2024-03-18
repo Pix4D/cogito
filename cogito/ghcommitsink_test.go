@@ -7,7 +7,6 @@ import (
 	"path"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
@@ -26,7 +25,7 @@ func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
 	gitHubSpyURL, err := url.Parse(ts.URL)
 	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	sink := cogito.GitHubCommitStatusSink{
-		Log:    hclog.NewNullLogger(),
+		Log:    testhelp.MakeTestLog(),
 		GitRef: wantGitRef,
 		Request: cogito.PutRequest{
 			Source: cogito.Source{GhHostname: gitHubSpyURL.Host},
@@ -53,7 +52,7 @@ func TestSinkGitHubCommitStatusSendFailure(t *testing.T) {
 	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 	defer ts.Close()
 	sink := cogito.GitHubCommitStatusSink{
-		Log:    hclog.NewNullLogger(),
+		Log:    testhelp.MakeTestLog(),
 		GitRef: "deadbeefdeadbeef",
 		Request: cogito.PutRequest{
 			Source: cogito.Source{GhHostname: gitHubSpyURL.Host},

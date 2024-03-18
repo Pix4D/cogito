@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/hashicorp/go-hclog"
 	"github.com/sasbury/mini"
 
 	"github.com/Pix4D/cogito/github"
@@ -23,22 +23,18 @@ type ProdPutter struct {
 	Request  PutRequest
 	InputDir string
 	// Cogito specific fields.
-	log    hclog.Logger
+	log    *slog.Logger
 	gitRef string
 }
 
 // NewPutter returns a Cogito ProdPutter.
-func NewPutter(log hclog.Logger) *ProdPutter {
+func NewPutter(log *slog.Logger) *ProdPutter {
 	return &ProdPutter{
-		log: log,
+		log: log.With("name", "cogito.put"),
 	}
 }
 
 func (putter *ProdPutter) LoadConfiguration(input []byte, args []string) error {
-	putter.log = putter.log.Named("put")
-	putter.log.Debug("started")
-	defer putter.log.Debug("finished")
-
 	request, err := NewPutRequest(input)
 	if err != nil {
 		return err
@@ -152,12 +148,12 @@ func (putter *ProdPutter) ProcessInputDir() error {
 func (putter *ProdPutter) Sinks() []Sinker {
 	supportedSinkers := map[string]Sinker{
 		"github": GitHubCommitStatusSink{
-			Log:     putter.log.Named("ghCommitStatus"),
+			Log:     putter.log.With("name", "ghCommitStatus"),
 			GitRef:  putter.gitRef,
 			Request: putter.Request,
 		},
 		"gchat": GoogleChatSink{
-			Log: putter.log.Named("gChat"),
+			Log: putter.log.With("name", "gChat"),
 			// TODO putter.InputDir itself should be of type fs.FS.
 			InputDir: os.DirFS(putter.InputDir),
 			GitRef:   putter.gitRef,

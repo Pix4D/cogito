@@ -5,7 +5,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
@@ -22,7 +21,7 @@ func TestCheckSuccess(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		in := testhelp.ToJSON(t, tc.request)
 		var out bytes.Buffer
-		log := hclog.NewNullLogger()
+		log := testhelp.MakeTestLog()
 
 		err := cogito.Check(log, in, &out, nil)
 
@@ -74,7 +73,7 @@ func TestCheckFailure(t *testing.T) {
 	test := func(t *testing.T, tc testCase) {
 		assert.Assert(t, tc.wantErr != "")
 		in := testhelp.ToJSON(t, cogito.CheckRequest{Source: tc.source})
-		log := hclog.NewNullLogger()
+		log := testhelp.MakeTestLog()
 
 		err := cogito.Check(log, in, tc.writer, nil)
 
@@ -126,7 +125,7 @@ func TestCheckFailure(t *testing.T) {
 }
 
 func TestCheckInputFailure(t *testing.T) {
-	log := hclog.NewNullLogger()
+	log := testhelp.MakeTestLog()
 
 	err := cogito.Check(log, nil, io.Discard, nil)
 

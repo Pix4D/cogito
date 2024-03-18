@@ -6,10 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"path"
-
-	"github.com/hashicorp/go-hclog"
 
 	"github.com/Pix4D/cogito/cogito"
 	"github.com/Pix4D/cogito/sets"
@@ -37,16 +36,27 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 	if err != nil {
 		return fmt.Errorf("reading stdin: %s", err)
 	}
+
 	logLevel, err := peekLogLevel(input)
 	if err != nil {
 		return err
 	}
-	log := hclog.New(&hclog.LoggerOptions{
-		Name:        "cogito",
-		Level:       hclog.LevelFromString(logLevel),
-		Output:      logOut,
-		DisableTime: true,
-	})
+	var level slog.Level
+	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
+		return fmt.Errorf("%s. (valid: debug, info, warn, error)", err)
+	}
+	removeTime := func(groups []string, a slog.Attr) slog.Attr {
+		if a.Key == slog.TimeKey {
+			return slog.Attr{}
+		}
+		return a
+	}
+	log := slog.New(slog.NewTextHandler(
+		logOut,
+		&slog.HandlerOptions{
+			Level:       level,
+			ReplaceAttr: removeTime,
+		}))
 	log.Info(cogito.BuildInfo())
 
 	switch cmd {

@@ -4,14 +4,15 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"testing"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/assert/cmp"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 func TestSourceValidationSuccess(t *testing.T) {
@@ -247,15 +248,16 @@ sinks: []`
 		assert.Equal(t, have, want)
 	})
 
-	t.Run("hclog redacts fields", func(t *testing.T) {
+	t.Run("slog redacts fields", func(t *testing.T) {
 		var logBuf bytes.Buffer
-		log := hclog.New(&hclog.LoggerOptions{Output: &logBuf})
+		log := slog.New(slog.NewTextHandler(&logBuf,
+			&slog.HandlerOptions{ReplaceAttr: testhelp.RemoveTime}))
 
 		log.Info("log test", "source", source)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "| access_token:          ***REDACTED***"))
-		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:         ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "access_token:          ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "gchat_webhook:         ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }
@@ -302,14 +304,15 @@ sinks:               []`
 		assert.Equal(t, have, want)
 	})
 
-	t.Run("hclog redacts fields", func(t *testing.T) {
+	t.Run("slog redacts fields", func(t *testing.T) {
 		var logBuf bytes.Buffer
-		log := hclog.New(&hclog.LoggerOptions{Output: &logBuf})
+		log := slog.New(slog.NewTextHandler(&logBuf,
+			&slog.HandlerOptions{ReplaceAttr: testhelp.RemoveTime}))
 
 		log.Info("log test", "params", params)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "| gchat_webhook:       ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "gchat_webhook:       ***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }

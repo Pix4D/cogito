@@ -129,9 +129,9 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 
 	assert.NilError(t, err, "\nout:\n%s\nlogOut:\n%s", out.String(), logOut.String())
 	assert.Assert(t, cmp.Contains(logOut.String(),
-		"cogito.put.ghCommitStatus: commit status posted successfully"))
+		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 	assert.Assert(t, cmp.Contains(logOut.String(),
-		"cogito.put.gChat: state posted successfully to chat"))
+		`level=INFO msg="state posted successfully to chat" name=cogito.put name=gChat state=error`))
 }
 
 func TestRunFailure(t *testing.T) {
@@ -199,11 +199,12 @@ func TestRunPrintsBuildInformation(t *testing.T) {
   } 
 }`)
 	var logBuf bytes.Buffer
-	wantLog := "cogito: This is the Cogito GitHub status resource. unknown"
+	wantLog := "This is the Cogito GitHub status resource. unknown"
 
 	err := mainErr(in, io.Discard, &logBuf, []string{"check"})
 	assert.NilError(t, err)
 	haveLog := logBuf.String()
 
-	assert.Assert(t, strings.Contains(haveLog, wantLog), haveLog)
+	assert.Assert(t, strings.Contains(haveLog, wantLog),
+		"\nhave: %s\nwant: %s", haveLog, wantLog)
 }

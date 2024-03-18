@@ -3,18 +3,15 @@ package github_test
 import (
 	"errors"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/internal/hclogslog"
 	"github.com/Pix4D/cogito/retry"
 	"github.com/Pix4D/cogito/testhelp"
 )
@@ -77,10 +74,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
-		log := hclog.NewNullLogger()
-		if testing.Verbose() {
-			log = hclog.Default()
-		}
+		log := testhelp.MakeTestLog()
 		sleepSpy := SleepSpy{}
 		target := &github.Target{
 			Server: ts.URL,
@@ -89,7 +83,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				BackoffLimit: retryBackoffLimit,
 				UpTo:         retryUpTo,
 				SleepFn:      sleepSpy.Sleep,
-				Log:          slog.New(hclogslog.Adapt(log)),
+				Log:          log,
 			},
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
@@ -220,10 +214,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		ts := httptest.NewServer(http.HandlerFunc(handler))
 		defer ts.Close()
 		wantErr := fmt.Sprintf(tc.wantErr, ts.URL)
-		log := hclog.NewNullLogger()
-		if testing.Verbose() {
-			log = hclog.Default()
-		}
+		log := testhelp.MakeTestLog()
 		sleepSpy := SleepSpy{}
 		target := &github.Target{
 			Server: ts.URL,
@@ -232,7 +223,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 				BackoffLimit: retryBackoffLimit,
 				UpTo:         upTo,
 				SleepFn:      sleepSpy.Sleep,
-				Log:          slog.New(hclogslog.Adapt(log)),
+				Log:          log,
 			},
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
@@ -332,20 +323,17 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
-	log := hclog.NewNullLogger()
-	if testing.Verbose() {
-		log = hclog.Default()
-	}
+	log := testhelp.MakeTestLog()
 	target := &github.Target{
 		Server: github.ApiRoot(github.GhDefaultHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
 			UpTo:         retryUpTo,
-			Log:          slog.New(hclogslog.Adapt(log)),
+			Log:          log,
 		},
 	}
-	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, hclog.NewNullLogger())
+	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
@@ -369,10 +357,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 
 	cfg := testhelp.GitHubSecretsOrFail(t)
 	state := "success"
-	log := hclog.NewNullLogger()
-	if testing.Verbose() {
-		log = hclog.Default()
-	}
+	log := testhelp.MakeTestLog()
 
 	run := func(t *testing.T, tc testCase) {
 		// zero values are defaults
@@ -395,10 +380,10 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 				FirstDelay:   retryFirstDelay,
 				BackoffLimit: retryBackoffLimit,
 				UpTo:         retryUpTo,
-				Log:          slog.New(hclogslog.Adapt(log)),
+				Log:          log,
 			},
 		}
-		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", hclog.NewNullLogger())
+		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", log)
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 		assert.Error(t, err, tc.wantErr)

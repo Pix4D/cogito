@@ -4,10 +4,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
-
 	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/internal/hclogslog"
 	"github.com/Pix4D/cogito/retry"
 )
 
@@ -26,7 +23,7 @@ const (
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
 type GitHubCommitStatusSink struct {
-	Log     hclog.Logger
+	Log     *slog.Logger
 	GitRef  string
 	Request PutRequest
 }
@@ -46,7 +43,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
 			UpTo:         retryUpTo,
-			Log:          slog.New(hclogslog.Adapt(sink.Log)),
+			Log:          sink.Log,
 		},
 	}
 	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
