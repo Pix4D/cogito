@@ -348,10 +348,22 @@ func TestConcourseBuildURL(t *testing.T) {
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
 		},
 		{
+			name: "single instance variable with spaces",
+			env: testhelp.MergeStructs(baseEnv,
+				Environment{BuildPipelineInstanceVars: `{"branch":"foo bar"}`}),
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22foo%20bar%22%7D",
+		},
+		{
 			name: "multiple instance variables",
 			env: testhelp.MergeStructs(baseEnv,
 				Environment{BuildPipelineInstanceVars: `{"branch":"stable","foo":"bar"}`}),
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
+		},
+		{
+			name: "multiple instance variables: nested json with spaces",
+			env: testhelp.MergeStructs(baseEnv,
+				Environment{BuildPipelineInstanceVars: `{"branch":"foo bar","version":{"from":1.0,"to":2.0}}`}),
+			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22foo%20bar%22%2C%22version%22%3A%7B%22from%22%3A1.0%2C%22to%22%3A2.0%7D%7D",
 		},
 	}
 
