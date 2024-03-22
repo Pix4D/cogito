@@ -342,13 +342,13 @@ func TestConcourseBuildURL(t *testing.T) {
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42",
 		},
 		{
-			name: "instanced vars 1",
+			name: "single instance variable",
 			env: testhelp.MergeStructs(baseEnv,
 				Environment{BuildPipelineInstanceVars: `{"branch":"stable"}`}),
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%7D",
 		},
 		{
-			name: "instanced vars 2",
+			name: "multiple instance variables",
 			env: testhelp.MergeStructs(baseEnv,
 				Environment{BuildPipelineInstanceVars: `{"branch":"stable","foo":"bar"}`}),
 			want: "https://ci.example.com/teams/devs/pipelines/magritte/jobs/paint/builds/42?vars=%7B%22branch%22%3A%22stable%22%2C%22foo%22%3A%22bar%22%7D",
