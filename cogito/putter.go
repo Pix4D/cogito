@@ -333,6 +333,12 @@ func concourseBuildURL(env Environment) string {
 	// https://ci.example.com/teams/main/pipelines/cogito/jobs/autocat/builds/3?vars=%7B%22branch%22%3A%22stable%22%7D
 	if env.BuildPipelineInstanceVars != "" {
 		buildURL += fmt.Sprintf("?vars=%s", url.QueryEscape(env.BuildPipelineInstanceVars))
+		// Concourse requires that the space characters
+		// are encoded as %20 instead of +. On the other hand
+		// golangs url.QueryEscape as well as url.Values.Encode()
+		// both encode the space as a + character.
+		// See: https://github.com/golang/go/issues/4013
+		buildURL = strings.ReplaceAll(buildURL, "+", "%20")
 	}
 
 	return buildURL
