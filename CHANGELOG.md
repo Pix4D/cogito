@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.12.1] - UNRELEASED
+## [v0.12.1] - 2024-04-03
 
 ### Minor breaking change
 
@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - The README was wrongly still mentioning `silent` as a way to silent the logging. Actually `silent` was remapped to `info` since [v0.8.2](#v082---2022-11-18).
   - Starting from this version, levels `silent` and `off` will cause an error. 
   - The only supported log levels are `debug`, `info`, `warn`, `error`. The default level, `info`, is recommended for normal operation.
+
+### Fixed
+
+- Properly encode space characters in build links for instanced pipelines.
 
 ### Changed
 
