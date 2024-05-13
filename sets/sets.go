@@ -72,9 +72,29 @@ func (s *Set[T]) Remove(item T) bool {
 // Difference returns a set containing the elements of s that are not in x.
 func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 	result := New[T](max(0, s.Size()-x.Size()))
-	for i := range s.items {
-		if !x.Contains(i) {
-			result.items[i] = struct{}{}
+	for item := range s.items {
+		if !x.Contains(item) {
+			result.items[item] = struct{}{}
+		}
+	}
+	return result
+}
+
+// Intersection returns a set containing the elements that are both in s and x.
+func (s *Set[T]) Intersection(x *Set[T]) *Set[T] {
+	result := New[T](0)
+	// loop over the smaller set (thanks to https://github.com/deckarep/golang-set)
+	if s.Size() < x.Size() {
+		for item := range s.items {
+			if x.Contains(item) {
+				result.items[item] = struct{}{}
+			}
+		}
+	} else {
+		for item := range x.items {
+			if s.Contains(item) {
+				result.items[item] = struct{}{}
+			}
 		}
 	}
 	return result
