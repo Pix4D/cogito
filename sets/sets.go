@@ -84,17 +84,14 @@ func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 func (s *Set[T]) Intersection(x *Set[T]) *Set[T] {
 	result := New[T](0)
 	// loop over the smaller set (thanks to https://github.com/deckarep/golang-set)
-	if s.Size() < x.Size() {
-		for item := range s.items {
-			if x.Contains(item) {
-				result.items[item] = struct{}{}
-			}
-		}
-	} else {
-		for item := range x.items {
-			if s.Contains(item) {
-				result.items[item] = struct{}{}
-			}
+	smaller := s
+	bigger := x
+	if smaller.Size() > bigger.Size() {
+		smaller, bigger = bigger, smaller
+	}
+	for item := range smaller.items {
+		if bigger.Contains(item) {
+			result.items[item] = struct{}{}
 		}
 	}
 	return result
