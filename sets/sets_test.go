@@ -142,6 +142,65 @@ func TestDifference(t *testing.T) {
 	}
 }
 
+func TestIntersection(t *testing.T) {
+	type testCase struct {
+		name     string
+		s        *sets.Set[int]
+		x        *sets.Set[int]
+		wantList []int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		result := tc.s.Intersection(tc.x)
+		sorted := result.OrderedList()
+
+		assert.DeepEqual(t, sorted, tc.wantList)
+	}
+
+	testCases := []testCase{
+		{
+			name:     "both empty",
+			s:        sets.From[int](),
+			x:        sets.From[int](),
+			wantList: []int{},
+		},
+		{
+			name:     "empty x returns empty",
+			s:        sets.From(1, 2, 3),
+			x:        sets.From[int](),
+			wantList: []int{},
+		},
+		{
+			name:     "nothing in common returns empty",
+			s:        sets.From(1, 2, 3),
+			x:        sets.From(4, 5),
+			wantList: []int{},
+		},
+		{
+			name:     "one in common",
+			s:        sets.From(1, 2, 3),
+			x:        sets.From(4, 2),
+			wantList: []int{2},
+		},
+		{
+			name:     "s subset of x returns s",
+			s:        sets.From(1, 2, 3),
+			x:        sets.From(1, 2, 3, 12),
+			wantList: []int{1, 2, 3},
+		},
+		{
+			name:     "x subset of s returns x",
+			s:        sets.From(1, 2, 3, 12),
+			x:        sets.From(1, 2, 3),
+			wantList: []int{1, 2, 3},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
 func TestRemoveFound(t *testing.T) {
 	type testCase struct {
 		name     string
