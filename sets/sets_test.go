@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"gotest.tools/v3/assert"
+	"github.com/go-quicktest/qt"
 
 	"github.com/Pix4D/cogito/sets"
 )
@@ -22,9 +22,9 @@ func TestFromInt(t *testing.T) {
 		s := sets.From(tc.items...)
 		sorted := s.OrderedList()
 
-		assert.Equal(t, s.Size(), tc.wantSize)
-		assert.DeepEqual(t, sorted, tc.wantList)
-		assert.Equal(t, fmt.Sprint(s), tc.wantString)
+		qt.Assert(t, qt.Equals(s.Size(), tc.wantSize))
+		qt.Assert(t, qt.DeepEquals(sorted, tc.wantList))
+		qt.Assert(t, qt.Equals(fmt.Sprint(s), tc.wantString))
 	}
 
 	testCases := []testCase{
@@ -69,9 +69,9 @@ func TestFromString(t *testing.T) {
 		s := sets.From(tc.items...)
 		sorted := s.OrderedList()
 
-		assert.Equal(t, s.Size(), tc.wantSize)
-		assert.DeepEqual(t, sorted, tc.wantList)
-		assert.Equal(t, fmt.Sprint(s), tc.wantString)
+		qt.Assert(t, qt.Equals(s.Size(), tc.wantSize))
+		qt.Assert(t, qt.DeepEquals(sorted, tc.wantList))
+		qt.Assert(t, qt.Equals(fmt.Sprint(s), tc.wantString))
 	}
 
 	testCases := []testCase{
@@ -101,7 +101,7 @@ func TestDifference(t *testing.T) {
 		result := tc.s.Difference(tc.x)
 		sorted := result.OrderedList()
 
-		assert.DeepEqual(t, sorted, tc.wantList)
+		qt.Assert(t, qt.DeepEquals(sorted, tc.wantList))
 	}
 
 	testCases := []testCase{
@@ -154,7 +154,7 @@ func TestIntersection(t *testing.T) {
 		result := tc.s.Intersection(tc.x)
 		sorted := result.OrderedList()
 
-		assert.DeepEqual(t, sorted, tc.wantList)
+		qt.Assert(t, qt.DeepEquals(sorted, tc.wantList))
 	}
 
 	testCases := []testCase{
@@ -214,8 +214,8 @@ func TestRemoveFound(t *testing.T) {
 
 		found := s.Remove(tc.remove)
 
-		assert.DeepEqual(t, s.OrderedList(), tc.wantList)
-		assert.Assert(t, found)
+		qt.Assert(t, qt.DeepEquals(s.OrderedList(), tc.wantList))
+		qt.Assert(t, qt.IsTrue(found))
 	}
 
 	testCases := []testCase{
@@ -250,8 +250,8 @@ func TestRemoveNotFound(t *testing.T) {
 
 		found := s.Remove(tc.remove)
 
-		assert.DeepEqual(t, s.OrderedList(), tc.items)
-		assert.Assert(t, !found)
+		qt.Assert(t, qt.DeepEquals(s.OrderedList(), tc.items))
+		qt.Assert(t, qt.IsFalse(found))
 	}
 
 	testCases := []testCase{
@@ -264,6 +264,44 @@ func TestRemoveNotFound(t *testing.T) {
 			name:   "non empty set",
 			items:  []int{10, 50},
 			remove: 42,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
+func TestAdd(t *testing.T) {
+	type testCase struct {
+		name     string
+		items    []int
+		wantList []int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		s := sets.New[int](5)
+		for _, item := range tc.items {
+			s.Add(item)
+		}
+		qt.Assert(t, qt.DeepEquals(s.OrderedList(), tc.wantList))
+	}
+
+	testCases := []testCase{
+		{
+			name:     "one item",
+			items:    []int{3},
+			wantList: []int{3},
+		},
+		{
+			name:     "multiple items",
+			items:    []int{3, 0, 42},
+			wantList: []int{0, 3, 42},
+		},
+		{
+			name:     "duplicates",
+			items:    []int{10, 5, 5, 10, 1},
+			wantList: []int{1, 5, 10},
 		},
 	}
 

@@ -60,6 +60,15 @@ func (s *Set[T]) Contains(item T) bool {
 	return found
 }
 
+// Add inserts item into s. Returns true if the item was present.
+func (s *Set[T]) Add(item T) bool {
+	if s.Contains(item) {
+		return true
+	}
+	s.items[item] = struct{}{}
+	return false
+}
+
 // Remove deletes item from s. Returns true if the item was present.
 func (s *Set[T]) Remove(item T) bool {
 	if !s.Contains(item) {
