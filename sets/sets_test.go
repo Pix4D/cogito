@@ -271,3 +271,41 @@ func TestRemoveNotFound(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
 	}
 }
+
+func TestAdd(t *testing.T) {
+	type testCase struct {
+		name     string
+		items    []int
+		wantList []int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		s := sets.New[int](5)
+		for _, item := range tc.items {
+			s.Add(item)
+		}
+		qt.Assert(t, qt.DeepEquals(s.OrderedList(), tc.wantList))
+	}
+
+	testCases := []testCase{
+		{
+			name:     "one item",
+			items:    []int{3},
+			wantList: []int{3},
+		},
+		{
+			name:     "multiple items",
+			items:    []int{3, 0, 42},
+			wantList: []int{0, 3, 42},
+		},
+		{
+			name:     "duplicates",
+			items:    []int{10, 5, 5, 10, 1},
+			wantList: []int{1, 5, 10},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
