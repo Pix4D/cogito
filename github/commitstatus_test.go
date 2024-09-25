@@ -386,7 +386,9 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", log)
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
-		assert.Error(t, err, tc.wantErr)
+		assert.Assert(t, err != nil)
+		haveErr := err.Error()
+		assert.Equal(t, haveErr, tc.wantErr)
 		var ghError *github.StatusError
 		if !errors.As(err, &ghError) {
 			t.Fatalf("\nhave: %s\nwant: type github.StatusError", err)
