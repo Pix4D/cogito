@@ -232,7 +232,7 @@ See also the next section.
 
 These suggestions apply to the development of any Concourse resource.
 
-### Building a new image and ensuring that the pipeline picks it up 
+### Building a new image and ensuring that the pipeline picks it up
 
 After the local tests are passing, the quickest way to test in a pipeline the freshly pushed version of the Docker image used to be the `fly check-resource-type` command. Unfortunately somewhere in the Concourse 7.6.x series this broke (details: [registry-image-resource #316](https://github.com/concourse/registry-image-resource/issues/316)).
 
@@ -248,7 +248,7 @@ You can follow two steps:
 1. `fly set-pipeline` with a check_interval for the resource type of 1m instead of the recommended 24h.
 2. `fly clear-version`.
 
-For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `motormouse` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)), 
+For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `motormouse` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)).
 
 Step 1:
 
@@ -268,7 +268,7 @@ Step 2 (the sleep is fundamental to let check_every expire):
 ```
 $ task test:all docker:build docker:smoke docker:push &&
   fly -t cogito clear-versions --resource-type=cogito-test/cogito &&
-  echo "sleeping and hoping :-(" && 
+  echo "sleeping and hoping :-(" &&
   sleep 70 &&
   fly -t cogito trigger-job -j cogito-test/motormouse -w
 ```
@@ -336,7 +336,7 @@ Update the expired secrets as follows.
 ## Regenerate your GitHub personal access token (PAT)
 
 1. Go to [Settings | Tokens](https://github.com/settings/tokens) for your account.
-2. Create or regenerate a token with name `test-cogito`, with scope "repo:status". Set an expiration of 90 days.
+2. Create or regenerate a token with name `test-cogito`, with scope `repo:status`. Set an expiration of 90 days.
 3. Copy the token.
 
 ## Regenerate a Google Chat hook
