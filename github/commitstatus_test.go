@@ -401,7 +401,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			name:  "bad token: Unauthorized",
 			token: "bad-token",
 			wantErr: `failed to add state "success" for commit 751affd: 401 Unauthorized
-Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest"}
+Body: {"message":"Bad credentials","documentation_url":"https://docs.github.com/rest","status":"401"}
 Hint: Either wrong credentials or PAT expired (check your email for expiration notice)
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/751affd155db7a00d936ee6e9f483deee69c5922
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
@@ -411,7 +411,7 @@ OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: `,
 			name: "non existing repo: Not Found",
 			repo: "non-existing-really",
 			wantErr: `failed to add state "success" for commit 751affd: 404 Not Found
-Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
+Body: {"message":"Not Found","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status","status":"404"}
 Hint: one of the following happened:
     1. The repo https://github.com/pix4d/non-existing-really doesn't exist
     2. The user who issued the token doesn't have write access to the repo
@@ -424,7 +424,7 @@ OAuth: X-Accepted-Oauth-Scopes: repo, X-Oauth-Scopes: repo:status`,
 			name: "non existing SHA: Unprocessable Entity",
 			sha:  "e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822",
 			wantErr: `failed to add state "success" for commit e576e3a: 422 Unprocessable Entity
-Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status"}
+Body: {"message":"No commit found for SHA: e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822","documentation_url":"https://docs.github.com/rest/commits/statuses#create-a-commit-status","status":"422"}
 Hint: none
 Action: POST https://api.github.com/repos/pix4d/cogito-test-read-write/statuses/e576e3aa7aaaa048b396e2f34fa24c9cf4d1e822
 OAuth: X-Accepted-Oauth-Scopes: , X-Oauth-Scopes: repo:status`,
