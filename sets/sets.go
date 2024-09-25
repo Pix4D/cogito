@@ -105,3 +105,15 @@ func (s *Set[T]) Intersection(x *Set[T]) *Set[T] {
 	}
 	return result
 }
+
+// Union returns a set containing all the elements of s and x.
+func (s *Set[T]) Union(x *Set[T]) *Set[T] {
+	result := New[T](max(s.Size(), x.Size()))
+	for item := range s.items {
+		result.items[item] = struct{}{}
+	}
+	for item := range x.items {
+		result.items[item] = struct{}{}
+	}
+	return result
+}

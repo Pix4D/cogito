@@ -201,6 +201,65 @@ func TestIntersection(t *testing.T) {
 	}
 }
 
+func TestUnion(t *testing.T) {
+	type testCase struct {
+		name     string
+		s        *sets.Set[int]
+		x        *sets.Set[int]
+		wantList []int
+	}
+
+	test := func(t *testing.T, tc testCase) {
+		result := tc.s.Union(tc.x)
+		sorted := result.OrderedList()
+
+		qt.Assert(t, qt.DeepEquals(sorted, tc.wantList))
+	}
+
+	testCases := []testCase{
+		{
+			name:     "both empty",
+			s:        sets.From[int](),
+			x:        sets.From[int](),
+			wantList: []int{},
+		},
+		{
+			name:     "empty x",
+			s:        sets.From(1, 2),
+			x:        sets.From[int](),
+			wantList: []int{1, 2},
+		},
+		{
+			name:     "empty s",
+			s:        sets.From[int](),
+			x:        sets.From(1, 2),
+			wantList: []int{1, 2},
+		},
+		{
+			name:     "identical",
+			s:        sets.From(1, 2),
+			x:        sets.From(1, 2),
+			wantList: []int{1, 2},
+		},
+		{
+			name:     "all different",
+			s:        sets.From(1, 3),
+			x:        sets.From(2, 4),
+			wantList: []int{1, 2, 3, 4},
+		},
+		{
+			name:     "partial overlap",
+			s:        sets.From(1, 3),
+			x:        sets.From(3, 5),
+			wantList: []int{1, 3, 5},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { test(t, tc) })
+	}
+}
+
 func TestRemoveFound(t *testing.T) {
 	type testCase struct {
 		name     string
