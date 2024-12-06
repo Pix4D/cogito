@@ -202,6 +202,10 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
   GitHub hostname. This allows to post commit statuses to repositories hosted by GitHub Enterprise (GHE) instances. For example: github.mycompany.org will be expanded by cogito to https://github.mycompany.org/api/v3 \
   Default: `github.com`
 
+- `omit_target_url`:\
+  If set to true, will omit the GitHub Commit status API `target_url` (the URL to the build on Concourse).\n
+  Default: `false`.
+
 - `log_url`. **DEPRECATED, no-op, will be removed**\
   A Google Hangout Chat webhook. Useful to obtain logging for the `check` step for Concourse < v7.x
 

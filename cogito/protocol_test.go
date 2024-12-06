@@ -219,6 +219,7 @@ access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
+omit_target_url:       false
 chat_append_summary:   true
 chat_notify_on_states: [success failure]
 sinks: []`
@@ -239,6 +240,7 @@ access_token:
 gchat_webhook:         
 log_level:             
 context_prefix:        
+omit_target_url:       false
 chat_append_summary:   false
 chat_notify_on_states: []
 sinks: []`

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional `source.omit_target_url`. If set to true, will omit the GitHub Commit status API `target_url` (see README).
 - pkg/sets: add Intersect() and Add() methods.
 
 ## [v0.12.1] - 2024-04-03
