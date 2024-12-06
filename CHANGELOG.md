@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `source.log_level`.
   - The README was wrongly still mentioning `silent` as a way to silent the logging. Actually `silent` was remapped to `info` since [v0.8.2](#v082---2022-11-18).
-  - Starting from this version, levels `silent` and `off` will cause an error. 
+  - Starting from this version, levels `silent` and `off` will cause an error.
   - The only supported log levels are `debug`, `info`, `warn`, `error`. The default level, `info`, is recommended for normal operation.
 
 ### Fixed
@@ -40,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [v0.11.0] - 2023-09-22
 
-### Added 
+### Added
 
 - Retry GitHub API HTTP request when rate limited or when transient server error:
   - New generic and customizable `retry` package, usable with any API (not GitHub specific).
@@ -107,7 +107,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Minor breaking change
 
 - `source.log_level`. If you were previously silencing the logging with level `silent`, it will now be interpreted as invalid and automatically remapped to `info`. If you really want no logging, the log level to use is `off`.
-  Note that there is no reason to disable logging, since it is not visible in the build log in the UI, and the default of `info` helps to, for example, know which version of cogito is being used. 
+  Note that there is no reason to disable logging, since it is not visible in the build log in the UI, and the default of `info` helps to, for example, know which version of cogito is being used.
 
 ## [v0.8.1] - 2022-09-07
 

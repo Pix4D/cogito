@@ -15,24 +15,25 @@ import (
 )
 
 func main() {
-	// The "Concourse resource protocol" expects:
-	// - stdin, stdout and command-line arguments for the protocol itself
-	// - stderr for logging
-	// See: https://concourse-ci.org/implementing-resource-types.html
 	if err := mainErr(os.Stdin, os.Stdout, os.Stderr, os.Args); err != nil {
 		fmt.Fprintf(os.Stderr, "cogito: error: %s\n", err)
 		os.Exit(1)
 	}
 }
 
-func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error {
+// The "Concourse resource protocol" expects:
+//   - stdin, stdout and command-line arguments for the protocol itself
+//   - stderr for logging
+//
+// See: https://concourse-ci.org/implementing-resource-types.html
+func mainErr(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string) error {
 	cmd := path.Base(args[0])
 	validCmds := sets.From("check", "in", "out")
 	if !validCmds.Contains(cmd) {
 		return fmt.Errorf("invoked as '%s'; want: one of %v", cmd, validCmds)
 	}
 
-	input, err := io.ReadAll(in)
+	input, err := io.ReadAll(stdin)
 	if err != nil {
 		return fmt.Errorf("reading stdin: %s", err)
 	}
@@ -52,7 +53,7 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 		return a
 	}
 	log := slog.New(slog.NewTextHandler(
-		logOut,
+		stderr,
 		&slog.HandlerOptions{
 			Level:       level,
 			ReplaceAttr: removeTime,
@@ -61,12 +62,12 @@ func mainErr(in io.Reader, out io.Writer, logOut io.Writer, args []string) error
 
 	switch cmd {
 	case "check":
-		return cogito.Check(log, input, out, args[1:])
+		return cogito.Check(log, input, stdout, args[1:])
 	case "in":
-		return cogito.Get(log, input, out, args[1:])
+		return cogito.Get(log, input, stdout, args[1:])
 	case "out":
 		putter := cogito.NewPutter(log)
-		return cogito.Put(log, input, out, args[1:], putter)
+		return cogito.Put(log, input, stdout, args[1:], putter)
 	default:
 		return fmt.Errorf("cli wiring error; please report")
 	}

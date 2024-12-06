@@ -21,7 +21,7 @@ import (
 )
 
 func TestRunCheckSuccess(t *testing.T) {
-	in := strings.NewReader(`
+	stdin := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
@@ -30,16 +30,16 @@ func TestRunCheckSuccess(t *testing.T) {
     "log_level": "debug"
   }
 }`)
-	var out bytes.Buffer
-	var logOut bytes.Buffer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	err := mainErr(in, &out, &logOut, []string{"check"})
+	err := mainErr(stdin, &stdout, &stderr, []string{"check"})
 
-	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+	assert.NilError(t, err, "\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
 }
 
 func TestRunGetSuccess(t *testing.T) {
-	in := strings.NewReader(`
+	stdin := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
@@ -49,12 +49,12 @@ func TestRunGetSuccess(t *testing.T) {
   },
   "version": {"ref": "pizza"}
 }`)
-	var out bytes.Buffer
-	var logOut bytes.Buffer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 
-	err := mainErr(in, &out, &logOut, []string{"in", "dummy-dir"})
+	err := mainErr(stdin, &stdout, &stderr, []string{"in", "dummy-dir"})
 
-	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+	assert.NilError(t, err, "\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
 }
 
 func TestRunPutSuccess(t *testing.T) {
@@ -69,7 +69,7 @@ func TestRunPutSuccess(t *testing.T) {
 	chatReply := googlechat.MessageReply{}
 	var gchatUrl *url.URL
 	googleChatSpy := testhelp.SpyHttpServer(&chatMsg, chatReply, &gchatUrl, http.StatusOK)
-	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
+	stdin := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
 			Owner:        "the-owner",
 			Repo:         "the-repo",
@@ -80,14 +80,14 @@ func TestRunPutSuccess(t *testing.T) {
 		},
 		Params: cogito.PutParams{State: wantState},
 	}))
-	var out bytes.Buffer
-	var logOut bytes.Buffer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote(gitHubSpyURL.Host, "the-owner", "the-repo"), "dummySHA", wantGitRef)
 
-	err = mainErr(in, &out, &logOut, []string{"out", inputDir})
+	err = mainErr(stdin, &stdout, &stderr, []string{"out", inputDir})
 
-	assert.NilError(t, err, "\nout: %s\nlogOut: %s", out.String(), logOut.String())
+	assert.NilError(t, err, "\nstdout: %s\nstderr: %s", stdout.String(), stderr.String())
 	//
 	gitHubSpy.Close() // Avoid races before the following asserts.
 	assert.Equal(t, ghReq.State, string(wantState))
@@ -104,7 +104,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 
 	gitHubCfg := testhelp.GitHubSecretsOrFail(t)
 	googleChatCfg := testhelp.GoogleChatSecretsOrFail(t)
-	in := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
+	stdin := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{
 			Owner:        gitHubCfg.Owner,
 			Repo:         gitHubCfg.Repo,
@@ -114,8 +114,8 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 		},
 		Params: cogito.PutParams{State: cogito.StateError},
 	}))
-	var out bytes.Buffer
-	var logOut bytes.Buffer
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
 	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
 		testhelp.HttpsRemote(github.GhDefaultHostname, gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
 		"ref: refs/heads/a-branch-FIXME")
@@ -125,12 +125,12 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
 	t.Setenv("BUILD_NAME", "42")
 
-	err := mainErr(in, &out, &logOut, []string{"out", inputDir})
+	err := mainErr(stdin, &stdout, &stderr, []string{"out", inputDir})
 
-	assert.NilError(t, err, "\nout:\n%s\nlogOut:\n%s", out.String(), logOut.String())
-	assert.Assert(t, cmp.Contains(logOut.String(),
+	assert.NilError(t, err, "\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+	assert.Assert(t, cmp.Contains(stderr.String(),
 		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
-	assert.Assert(t, cmp.Contains(logOut.String(),
+	assert.Assert(t, cmp.Contains(stderr.String(),
 		`level=INFO msg="state posted successfully to chat" name=cogito.put name=gChat state=error`))
 }
 
@@ -138,14 +138,14 @@ func TestRunFailure(t *testing.T) {
 	type testCase struct {
 		name    string
 		args    []string
-		in      string
+		stdin   string
 		wantErr string
 	}
 
 	test := func(t *testing.T, tc testCase) {
-		in := strings.NewReader(tc.in)
+		stdin := strings.NewReader(tc.stdin)
 
-		err := mainErr(in, nil, io.Discard, tc.args)
+		err := mainErr(stdin, nil, io.Discard, tc.args)
 
 		assert.ErrorContains(t, err, tc.wantErr)
 	}
@@ -159,16 +159,16 @@ func TestRunFailure(t *testing.T) {
 		{
 			name: "check, wrong stdin",
 			args: []string{"check"},
-			in: `
+			stdin: `
 {
-  "fruit": "banana" 
+  "fruit": "banana"
 }`,
 			wantErr: `check: parsing request: json: unknown field "fruit"`,
 		},
 		{
 			name:    "peeking for log_level",
 			args:    []string{"check"},
-			in:      "",
+			stdin:   "",
 			wantErr: "peeking into JSON for log_level: unexpected end of JSON input",
 		},
 	}
@@ -182,28 +182,28 @@ func TestRunFailure(t *testing.T) {
 }
 
 func TestRunSystemFailure(t *testing.T) {
-	in := iotest.ErrReader(errors.New("test read error"))
+	stdin := iotest.ErrReader(errors.New("test read error"))
 
-	err := mainErr(in, nil, io.Discard, []string{"check"})
+	err := mainErr(stdin, nil, io.Discard, []string{"check"})
 
 	assert.ErrorContains(t, err, "test read error")
 }
 
 func TestRunPrintsBuildInformation(t *testing.T) {
-	in := strings.NewReader(`
+	stdin := strings.NewReader(`
 {
   "source": {
     "owner": "the-owner",
     "repo": "the-repo",
     "access_token": "the-secret"
-  } 
+  }
 }`)
-	var logBuf bytes.Buffer
+	var stderr bytes.Buffer
 	wantLog := "This is the Cogito GitHub status resource. unknown"
 
-	err := mainErr(in, io.Discard, &logBuf, []string{"check"})
+	err := mainErr(stdin, io.Discard, &stderr, []string{"check"})
 	assert.NilError(t, err)
-	haveLog := logBuf.String()
+	haveLog := stderr.String()
 
 	assert.Assert(t, strings.Contains(haveLog, wantLog),
 		"\nhave: %s\nwant: %s", haveLog, wantLog)
