@@ -13,13 +13,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
           go-version: ${{ env.go-version }}
       - name: Install Task
         run: go install github.com/go-task/task/v3/cmd/task@${{ env.task-version }}
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           # By default, actions/checkout will persist the GITHUB_TOKEN, so that further
           # steps in the job can perform authenticated git commands (that is: WRITE to
