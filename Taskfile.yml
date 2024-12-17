@@ -27,8 +27,8 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.54.2
-  GOTESTSUM_VERSION: v1.10.1
+  GOLANGCI_VERSION: v1.62.2
+  GOTESTSUM_VERSION: v1.12.0
 
 tasks:
 
@@ -44,7 +44,9 @@ tasks:
       - golangci-lint run ./...
 
   test:env:
-    desc: "Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests. Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
+    desc: |
+      Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests.
+      Example: task test:env -- go test -count=1 -run 'TestFooIntegration' ./pkg/update"
     cmds:
       - '{{ .CLI_ARGS }}'
     env: &test-env

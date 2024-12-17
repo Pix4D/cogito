@@ -173,6 +173,7 @@ type Source struct {
 	LogLevel           string       `json:"log_level"`
 	LogUrl             string       `json:"log_url"` // DEPRECATED
 	ContextPrefix      string       `json:"context_prefix"`
+	OmitTargetURL      bool         `json:"omit_target_url"`
 	ChatAppendSummary  bool         `json:"chat_append_summary"`
 	ChatNotifyOnStates []BuildState `json:"chat_notify_on_states"`
 	Sinks              []string     `json:"sinks"`
@@ -189,6 +190,7 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
+	fmt.Fprintf(&bld, "omit_target_url:       %t\n", src.OmitTargetURL)
 	fmt.Fprintf(&bld, "chat_append_summary:   %t\n", src.ChatAppendSummary)
 	fmt.Fprintf(&bld, "chat_notify_on_states: %s\n", src.ChatNotifyOnStates)
 	// Last one: no newline.
@@ -253,7 +255,6 @@ func (src *Source) Validate() error {
 		if src.GChatWebHook == "" {
 			mandatory = append(mandatory, "gchat_webhook")
 		}
-
 	}
 
 	if len(mandatory) > 0 {
