@@ -164,8 +164,17 @@ type Source struct {
 	//
 	Owner       string `json:"owner"`
 	Repo        string `json:"repo"`
+
+	// Mandatory if not using github app auth
 	AccessToken string `json:"access_token"` // SENSITIVE
-	//
+
+	//Mandtory if using github app auth
+
+	UseGithubAppAuth bool `json:"use_github_app_auth"`
+	ApplicationId int64 `json:"application_id"`
+	InstallationId int64 `json:"installation_id"`
+	PrivateKey string `json:"private_key"` // SENSITIVE
+
 	// Optional
 	//
 	GhHostname         string       `json:"github_hostname"`

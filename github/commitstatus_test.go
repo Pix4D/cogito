@@ -86,7 +86,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 				Log:          log,
 			},
 		}
-		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log, false, cfg.PrivateKey, cfg.ApplicationId, cfg.InstallationId)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -226,7 +226,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 				Log:          log,
 			},
 		}
-		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
+		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log, false, cfg.PrivateKey, cfg.ApplicationId, cfg.InstallationId)
 
 		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
 
@@ -318,7 +318,8 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 		t.Skip("Skipping integration test (reason: -short)")
 	}
 
-	cfg := testhelp.GitHubSecretsOrFail(t)
+	useGithubApp := false
+	cfg := testhelp.GitHubSecretsOrFail(t, useGithubApp)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
 	desc := time.Now().Format("15:04:05")
@@ -333,7 +334,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 			Log:          log,
 		},
 	}
-	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
+	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log, cfg.UseGithubApp, cfg.PrivateKey, cfg.ApplicationId, cfg.InstallationId)
 
 	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
 
@@ -355,7 +356,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		wantStatus int
 	}
 
-	cfg := testhelp.GitHubSecretsOrFail(t)
+	cfg := testhelp.GitHubSecretsOrFail(t, false)
 	state := "success"
 	log := testhelp.MakeTestLog()
 
@@ -383,7 +384,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 				Log:          log,
 			},
 		}
-		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", log)
+		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", log, false, "", int64(1), int64(1))
 		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
 
 		assert.Assert(t, err != nil)
@@ -478,4 +479,31 @@ func TestApiRoot(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
 	}
+}
+
+func TestGithubAppAuthSuccess(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test (reason: -short)")
+	}
+
+	cfg := testhelp.GitHubSecretsOrFail(t, true)
+	context := "cogito/test"
+	targetURL := "https://cogito.invalid/builds/job/42"
+	desc := time.Now().Format("15:04:05")
+	state := "success"
+	log := testhelp.MakeTestLog()
+	target := &github.Target{
+		Server: github.ApiRoot(github.GhDefaultHostname),
+		Retry: retry.Retry{
+			FirstDelay:   retryFirstDelay,
+			BackoffLimit: retryBackoffLimit,
+			UpTo:         retryUpTo,
+			Log:          log,
+		},
+	}
+	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log, cfg.UseGithubApp, cfg.PrivateKey, cfg.ApplicationId, cfg.InstallationId)
+
+	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+
+	assert.NilError(t, err)
 }

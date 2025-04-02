@@ -102,7 +102,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 		t.Skip("Skipping integration test (reason: -short)")
 	}
 
-	gitHubCfg := testhelp.GitHubSecretsOrFail(t)
+	gitHubCfg := testhelp.GitHubSecretsOrFail(t, false)
 	googleChatCfg := testhelp.GoogleChatSecretsOrFail(t)
 	stdin := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
 		Source: cogito.Source{

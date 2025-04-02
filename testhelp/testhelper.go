@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"text/template"
@@ -145,10 +146,14 @@ func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 // GhTestCfg contains the secrets needed to run integration tests against the
 // GitHub Commit Status API.
 type GhTestCfg struct {
-	Token string
-	Owner string
-	Repo  string
-	SHA   string
+	Token              string
+	Owner              string
+	Repo               string
+	SHA                string
+	UseGithubApp       bool
+	PrivateKey         string
+	ApplicationId      int64
+	InstallationId     int64
 }
 
 // FakeTestCfg is a fake test configuration that can be used in some tests that need
@@ -162,15 +167,32 @@ var FakeTestCfg = GhTestCfg{
 
 // GitHubSecretsOrFail returns the secrets needed to run integration tests against the
 // GitHub Commit Status API. If the secrets are missing, GitHubSecretsOrFail fails the test.
-func GitHubSecretsOrFail(t *testing.T) GhTestCfg {
+func GitHubSecretsOrFail(t *testing.T, useGithubApp bool) GhTestCfg {
 	t.Helper()
 
-	return GhTestCfg{
-		Token: getEnvOrFail(t, "COGITO_TEST_OAUTH_TOKEN"),
-		Owner: getEnvOrFail(t, "COGITO_TEST_REPO_OWNER"),
-		Repo:  getEnvOrFail(t, "COGITO_TEST_REPO_NAME"),
-		SHA:   getEnvOrFail(t, "COGITO_TEST_COMMIT_SHA"),
+	ghTestConfig := GhTestCfg{
+		Owner:        getEnvOrFail(t, "COGITO_TEST_REPO_OWNER"),
+		Repo:         getEnvOrFail(t, "COGITO_TEST_REPO_NAME"),
+		SHA:          getEnvOrFail(t, "COGITO_TEST_COMMIT_SHA"),
+		UseGithubApp: useGithubApp,
 	}
+	if useGithubApp {
+		applicationId, err := strconv.ParseInt(getEnvOrFail(t, "COGITO_TEST_APPLICATION_ID"), 10, 64)
+		if err != nil {
+			t.Fatalf("COGITO_TEST_APPLICATION_ID must be an int64")
+		}
+
+		installationId, err := strconv.ParseInt(getEnvOrFail(t, "COGITO_TEST_INSTALLATION_ID"), 10, 64)
+		if err != nil {
+			t.Fatalf("COGITO_TEST_INSTALLATION_ID must be an int64")
+		}
+		ghTestConfig.ApplicationId = applicationId
+		ghTestConfig.InstallationId = installationId
+		ghTestConfig.PrivateKey = getEnvOrFail(t, "COGITO_TEST_PRIVATE_KEY")
+	} else {
+		ghTestConfig.Token = getEnvOrFail(t, "COGITO_TEST_OAUTH_TOKEN")
+	}
+	return ghTestConfig
 }
 
 // GChatTestCfg contains the secrets needed to run integration tests against the

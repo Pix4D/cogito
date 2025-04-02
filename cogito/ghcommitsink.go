@@ -46,8 +46,17 @@ func (sink GitHubCommitStatusSink) Send() error {
 			Log:          sink.Log,
 		},
 	}
-	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
-		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)
+	commitStatus := github.NewCommitStatus(target,
+		sink.Request.Source.AccessToken,
+		sink.Request.Source.Owner,
+		sink.Request.Source.Repo,
+		context,
+		sink.Log,
+		sink.Request.Source.UseGithubAppAuth,
+		sink.Request.Source.PrivateKey,
+		sink.Request.Source.ApplicationId,
+		sink.Request.Source.InstallationId,
+	)
 	description := "Build " + sink.Request.Env.BuildName
 
 	sink.Log.Debug("posting to GitHub Commit Status API",

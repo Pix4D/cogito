@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/Pix4D/cogito/retry"
+	"github.com/bradleyfalzon/ghinstallation"
 )
 
 // StatusError is one of the possible errors returned by the github package.
@@ -49,11 +50,15 @@ type Target struct {
 // - NewCommitStatus
 // - https://docs.github.com/en/rest/commits/statuses
 type CommitStatus struct {
-	target  *Target
-	token   string
-	owner   string
-	repo    string
-	context string
+	target             *Target
+	token              string
+	owner              string
+	repo               string
+	context            string
+	useGithubAppAuth   bool
+	privateKey         string
+	installationId     int64
+	applicationId      int64
 
 	log *slog.Logger
 }
@@ -69,14 +74,18 @@ type CommitStatus struct {
 //
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
-func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger) CommitStatus {
+func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger, useGithubAppAuth bool, privateKey string,applicationId, installationId int64) CommitStatus {
 	return CommitStatus{
-		target:  target,
-		token:   token,
-		owner:   owner,
-		repo:    repo,
-		context: context,
-		log:     log,
+		target:             target,
+		token:              token,
+		owner:              owner,
+		repo:               repo,
+		context:            context,
+		log:                log,
+		useGithubAppAuth:   useGithubAppAuth,
+		privateKey:         privateKey,
+		installationId:     installationId,
+		applicationId:      applicationId,
 	}
 }
 
@@ -121,7 +130,9 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
 	}
-	req.Header.Set("Authorization", "token "+cs.token)
+	if !cs.useGithubAppAuth {
+		req.Header.Set("Authorization", "token "+cs.token)
+	}
 	req.Header.Set("Accept", "application/vnd.github.v3+json")
 	req.Header.Set("Content-Type", "application/json")
 
@@ -129,6 +140,20 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 	workFn := func() error {
 		// By default, there is no timeout, so the call could hang forever.
 		client := &http.Client{Timeout: time.Second * 30}
+		if cs.useGithubAppAuth {
+			fmt.Println("Using github app auth")
+			// We need a transport that we can update if using GitHub App authentication
+			transport := http.DefaultTransport.(*http.Transport).Clone()
+			var ghAppInstallationTransport *ghinstallation.Transport
+			ghAppInstallationTransport, err = ghinstallation.New(transport, cs.applicationId, cs.installationId, []byte(cs.privateKey))
+			if err != nil {
+				return fmt.Errorf("failed to generate application installation access token using private key: %s", err)
+			}
+
+			// Client using ghinstallation transport
+			client.Transport = ghAppInstallationTransport
+		}
+
 		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("http client Do: %w", err)
