@@ -143,7 +143,7 @@ The absolute minimum is setting keys `gchat_webhook` and `sinks` in the `source`
 
 ## Build states mapping
 
-There is only a partial matching between Concourse and GitHub Commit status API, so we map as good as we can according to this table: 
+There is only a partial matching between Concourse and GitHub Commit status API, so we map as good as we can according to this table:
 
 | Concourse<br/> State | Color and meaning                                                                                         | GitHub<br/> Commit status API | Chat notification |
 |----------------------|-----------------------------------------------------------------------------------------------------------|-------------------------------|-------------------|
@@ -183,9 +183,31 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 - `repo`\
   The GitHub repository name.
 
+
+###  Authentication keys
+
+Keys must be provided for one of the following authentication methods:
+1. [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+1. [GitHub app](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
+
+#### Personal Access Token keys
+
 - `access_token`\
   The OAuth access token.\
   See also: section [GitHub OAuth token](#github-oauth-token).
+
+#### GitHub app keys
+
+- `private_key` \
+  The private key generated for the GitHub application
+
+- `application_id`
+  The application id of the GitHub application
+
+- `installation_id`
+  The installation id of the GitHub application
+
+See also: section [GitHub app auth](#github-app-auth).
 
 ### Optional keys
 
@@ -298,7 +320,7 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
 
 - `gchat_webhook`\
   If present, overrides `source.gchat_webhook`. This allows to use the same Cogito resource for multiple chat spaces.\
-  Default: `source.gchat_webhook`. 
+  Default: `source.gchat_webhook`.
 
 - `chat_message`\
   Custom chat message; overrides the build summary. Its presence is enough for the chat message to be sent, overriding `source.chat_notify_on_states`.\
@@ -309,7 +331,7 @@ If the `source` block has the optional key `gchat_webhook`, then it will also se
   Default: empty.
 
 - `chat_append_summary`\
-  Overrides `source.chat_append_summary`.  
+  Overrides `source.chat_append_summary`.
   Default: `source.chat_append_summary`.
 
 ## Note on the put inputs
@@ -373,6 +395,17 @@ Follow the instructions at [GitHub personal access token] to create a personal a
 Give to it the absolute minimum permissions to get the job done. This resource only needs the `repo:status` scope, as explained at [GitHub Commit status API].
 
 NOTE: The token is security-sensitive. Treat it as you would treat a password. Do not encode it in the pipeline YAML and do not store it in a YAML file. Use one of the Concourse-supported credentials managers, see [Concourse credential managers].
+
+See also the section [Integration tests](./CONTRIBUTING.md#integration-tests) for how to securely store the token to run the end-to-end tests.
+
+# GitHub App auth
+
+To create a github app:
+1. Create a test repo https://github.com/new
+1. Create a new github app  https://github.com/settings/apps/new
+1. Mark webhook as inactive)
+1. Add repository permission: Commit Statuses: Read/write
+1. Generate a private key and download a copy
 
 See also the section [Integration tests](./CONTRIBUTING.md#integration-tests) for how to securely store the token to run the end-to-end tests.
 
