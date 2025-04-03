@@ -254,8 +254,20 @@ func (src *Source) Validate() error {
 		if src.Repo == "" {
 			mandatory = append(mandatory, "repo")
 		}
-		if src.AccessToken == "" {
-			mandatory = append(mandatory, "access_token")
+		if src.UseGithubAppAuth {
+			if src.InstallationId == 0 {
+				mandatory = append(mandatory, "installation_id")
+			}
+			if src.ApplicationId == 0 {
+				mandatory = append(mandatory, "application_id")
+			}
+			if src.PrivateKey == "" {
+				mandatory = append(mandatory, "private_key")
+			}
+		} else {
+			if src.AccessToken == "" {
+				mandatory = append(mandatory, "access_token")
+			}
 		}
 	}
 
