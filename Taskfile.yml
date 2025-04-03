@@ -50,14 +50,22 @@ tasks:
     cmds:
       - '{{ .CLI_ARGS }}'
     env: &test-env
-      COGITO_TEST_COMMIT_SHA: '{{default "751affd155db7a00d936ee6e9f483deee69c5922" .COGITO_TEST_COMMIT_SHA}}'
+      COGITO_TEST_COMMIT_SHA:
+        sh: 'echo {{default "$(gopass show cogito/test_commit_sha)" .COGITO_TEST_COMMIT_SHA}}'
       COGITO_TEST_OAUTH_TOKEN:
         sh: 'echo {{default "$(gopass show cogito/test_oauth_token)" .COGITO_TEST_OAUTH_TOKEN}}'
-      COGITO_TEST_REPO_NAME: '{{default "cogito-test-read-write" .COGITO_TEST_REPO_NAME}}'
-      COGITO_TEST_REPO_OWNER: '{{default "pix4d" .COGITO_TEST_REPO_OWNER}}'
+      COGITO_TEST_PRIVATE_KEY:
+        sh: 'gopass show cogito/test_private_key || echo "{{ .COGITO_TEST_PRIVATE_KEY }}"'
+      COGITO_TEST_APPLICATION_ID:
+        sh: 'echo {{default "$(gopass show cogito/test_application_id)" .COGITO_TEST_APPLICATION_ID}}'
+      COGITO_TEST_INSTALLATION_ID:
+        sh: 'echo {{default "$(gopass show cogito/test_installation_id)" .COGITO_TEST_INSTALLATION_ID}}'
+      COGITO_TEST_REPO_NAME:
+        sh: 'echo {{default "$(gopass show cogito/tests_repo_name)" .COGITO_TEST_REPO_NAME}}'
+      COGITO_TEST_REPO_OWNER:
+        sh: 'echo {{default "$(gopass show cogito/tests_repo_owner)" .COGITO_TEST_REPO_OWNER}}'
       COGITO_TEST_GCHAT_HOOK:
         sh: 'echo {{default "$(gopass show cogito/test_gchat_webhook)" .COGITO_TEST_GCHAT_HOOK}}'
-
   test:unit:
     desc: Run the unit tests.
     cmds:
@@ -94,7 +102,7 @@ tasks:
       - rm -rf /tmp/cogito-test
       - mkdir -p /tmp/cogito-test
       - >
-        ./bin/templatedir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot 
+        ./bin/templatedir cogito/testdata/one-repo/a-repo /tmp/cogito-test --dot
         --template repo_url=https://github.com/foo/bar head=dummyHead
         branch_name=dummyBranch commit_sha=dummySha
       - echo '{{.PUT_INPUT}}' | ./bin/out /tmp/cogito-test

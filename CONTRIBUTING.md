@@ -81,6 +81,28 @@ The integration tests (tests that interact with GitHub) are disabled by default 
 $ gopass insert cogito/test_oauth_token
 ```
 
+### Add github app auth credentials
+
+You can either generate an app for your individual account, or create a GitHub organization and assign that as the application owner
+
+1. Create a test repo
+https://github.com/new
+2. Create a new github app
+https://github.com/settings/apps/new
+* Mark webhook as inactive)
+* Add repoistory permission: Commit Statuses: Read/write
+3. Generate a private key and download a copy
+
+```bash
+COGITO_TEST_INSTALLATION_ID="<installation id>"
+COGITO_TEST_APPLICATION_ID="<application id>"
+COGITO_TEST_PRIVATE_KEY=$(cat "<private key path>")
+
+echo $COGITO_TEST_INSTALLATION_ID | gopass insert -f cogito/test_installation_id
+echo $COGITO_TEST_APPLICATION_ID | gopass insert -f cogito/test_application_id
+printf "%s\n" "$COGITO_TEST_PRIVATE_KEY" | base64 | gopass insert -f cogito/test_private_key
+```
+
 ### Prepare the test repository
 
 1. In your GitHub account, create a test repository, say for example `cogito-test`.
@@ -147,6 +169,12 @@ cogito/
 ├── test_repo_name
 └── test_repo_owner
 ```
+
+## Install test dependencies
+
+```
+$ task install:deps
+````
 
 ## Running the integration tests
 
