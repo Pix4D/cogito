@@ -22,6 +22,32 @@ In case of doubts about how to tackle testing something, feel free to ask.
 
 * [gopass] to securely store secrets for integration tests.
 
+You can use this script to bootstrap secrets into gopass
+
+```bash
+#!/bin/bash
+# This is script adds env vars required to run tests directly using go test
+# as well as writing those values into gopass for use in a taskfile
+set -eou pipefail
+COGITO_TEST_INSTALLATION_ID="<installation id>"
+COGITO_TEST_APPLICATION_ID="<application id>"
+COGITO_TEST_REPO_NAME="<repo name>"
+COGITO_TEST_REPO_OWNER="<repo owner>"
+COGITO_TEST_COMMIT_SHA="<sha>"
+COGITO_TEST_PRIVATE_KEY=$(cat "<private key path>")
+COGITO_TEST_OAUTH_TOKEN=$(cat "<oauth token path>")
+
+echo $COGITO_TEST_INSTALLATION_ID | gopass insert -f cogito/test_installation_id
+echo $COGITO_TEST_APPLICATION_ID | gopass insert -f cogito/test_application_id
+echo $COGITO_TEST_COMMIT_SHA | gopass insert -f cogito/test_commit_sha
+echo $COGITO_TEST_REPO_NAME | gopass insert -f cogito/test_repo_name
+echo $COGITO_TEST_REPO_OWNER | gopass insert -f cogito/test_repo_owner
+echo $COGITO_TEST_OAUTH_TOKEN | gopass insert -f cogito/test_oauth_token
+
+# Using printf because echo removes newlines in my testing on osx, results may vary
+printf "%s\n" "$COGITO_TEST_PRIVATE_KEY" | base64 | gopass insert -f cogito/test_private_key
+```
+
 # Using Task (replacement of make)
 
 Have a look at the [task documentation][Task], then run:
