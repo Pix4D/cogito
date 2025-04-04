@@ -42,7 +42,6 @@ tasks:
     desc: Lint the code.
     cmds:
       - golangci-lint run ./...
-
   test:env:
     desc: |
       Run what is passed on the command-line with a shell environment containing the secrets needed for the integration tests.
@@ -55,15 +54,15 @@ tasks:
       COGITO_TEST_OAUTH_TOKEN:
         sh: 'echo {{default "$(gopass show cogito/test_oauth_token)" .COGITO_TEST_OAUTH_TOKEN}}'
       COGITO_TEST_PRIVATE_KEY:
-        sh: 'gopass show cogito/test_private_key || echo "{{ .COGITO_TEST_PRIVATE_KEY }}"'
+        sh: gopass show cogito/test_private_key | base64 --decode
       COGITO_TEST_APPLICATION_ID:
         sh: 'echo {{default "$(gopass show cogito/test_application_id)" .COGITO_TEST_APPLICATION_ID}}'
       COGITO_TEST_INSTALLATION_ID:
         sh: 'echo {{default "$(gopass show cogito/test_installation_id)" .COGITO_TEST_INSTALLATION_ID}}'
       COGITO_TEST_REPO_NAME:
-        sh: 'echo {{default "$(gopass show cogito/tests_repo_name)" .COGITO_TEST_REPO_NAME}}'
+        sh: 'echo {{default "$(gopass show cogito/test_repo_name)" .COGITO_TEST_REPO_NAME}}'
       COGITO_TEST_REPO_OWNER:
-        sh: 'echo {{default "$(gopass show cogito/tests_repo_owner)" .COGITO_TEST_REPO_OWNER}}'
+        sh: 'echo {{default "$(gopass show cogito/test_repo_owner)" .COGITO_TEST_REPO_OWNER}}'
       COGITO_TEST_GCHAT_HOOK:
         sh: 'echo {{default "$(gopass show cogito/test_gchat_webhook)" .COGITO_TEST_GCHAT_HOOK}}'
   test:unit:
