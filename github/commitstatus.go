@@ -50,15 +50,15 @@ type Target struct {
 // - NewCommitStatus
 // - https://docs.github.com/en/rest/commits/statuses
 type CommitStatus struct {
-	target             *Target
-	token              string
-	owner              string
-	repo               string
-	context            string
-	useGithubAppAuth   bool
-	privateKey         string
-	installationId     int64
-	applicationId      int64
+	target           *Target
+	token            string
+	owner            string
+	repo             string
+	context          string
+	useGithubAppAuth bool
+	privateKey       string
+	installationId   int64
+	applicationId    int64
 
 	log *slog.Logger
 }
@@ -74,18 +74,18 @@ type CommitStatus struct {
 //
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
-func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger, useGithubAppAuth bool, privateKey string,applicationId, installationId int64) CommitStatus {
+func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger, useGithubAppAuth bool, privateKey string, applicationId, installationId int64) CommitStatus {
 	return CommitStatus{
-		target:             target,
-		token:              token,
-		owner:              owner,
-		repo:               repo,
-		context:            context,
-		log:                log,
-		useGithubAppAuth:   useGithubAppAuth,
-		privateKey:         privateKey,
-		installationId:     installationId,
-		applicationId:      applicationId,
+		target:           target,
+		token:            token,
+		owner:            owner,
+		repo:             repo,
+		context:          context,
+		log:              log,
+		useGithubAppAuth: useGithubAppAuth,
+		privateKey:       privateKey,
+		installationId:   installationId,
+		applicationId:    applicationId,
 	}
 }
 
@@ -141,7 +141,6 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 		// By default, there is no timeout, so the call could hang forever.
 		client := &http.Client{Timeout: time.Second * 30}
 		if cs.useGithubAppAuth {
-			fmt.Println("Using github app auth")
 			// We need a transport that we can update if using GitHub App authentication
 			transport := http.DefaultTransport.(*http.Transport).Clone()
 			var ghAppInstallationTransport *ghinstallation.Transport
@@ -164,7 +163,10 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 			return nil
 		}
 
-		body, _ := io.ReadAll(resp.Body)
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return fmt.Errorf("error reading response body from github status: %w", err)
+		}
 		return NewGitHubError(resp, errors.New(strings.TrimSpace(string(body))))
 	}
 
