@@ -116,7 +116,7 @@ https://github.com/new
 2. Create a new github app
 https://github.com/settings/apps/new
 * Mark webhook as inactive)
-* Add repoistory permission: Commit Statuses: Read/write
+* Add repository permission: Commit Statuses: Read/write
 3. Generate a private key and download a copy
 
 ```bash
