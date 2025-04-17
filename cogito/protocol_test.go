@@ -12,6 +12,7 @@ import (
 	"gotest.tools/v3/assert/cmp"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 )
 
@@ -63,6 +64,20 @@ func TestSourceValidationSuccess(t *testing.T) {
 				return source
 			},
 		},
+		{
+			name: "git source: github app",
+			mkSource: func() cogito.Source {
+				return cogito.Source{
+					Owner: "the-owner",
+					Repo:  "the-repo",
+					GitHubApp: github.GitHubApp{
+						ClientId:       "client-id-key",
+						InstallationId: 12345,
+						PrivateKey:     "private-ssh-key",
+					},
+				}
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -92,6 +107,29 @@ func TestSourceValidationFailure(t *testing.T) {
 			name:    "missing mandatory git source keys",
 			source:  cogito.Source{},
 			wantErr: "source: missing keys: owner, repo, access_token",
+		},
+		{
+			name: "missing mandatory git source keys for github app: client-id",
+			source: cogito.Source{
+				Owner: "the-owner",
+				Repo:  "the-repo",
+				GitHubApp: github.GitHubApp{
+					InstallationId: 1234,
+					PrivateKey:     "private-rsa-key",
+				},
+			},
+			wantErr: "source: missing keys: github_app.client_id",
+		},
+		{
+			name: "missing mandatory git source keys for github app: private key",
+			source: cogito.Source{
+				Owner: "the-owner",
+				Repo:  "the-repo",
+				GitHubApp: github.GitHubApp{
+					ClientId: "client-id",
+				},
+			},
+			wantErr: "source: missing keys: github_app.installation_id, github_app.private_key",
 		},
 		{
 			name:    "missing mandatory gchat source key",
@@ -204,6 +242,7 @@ func TestSourcePrintLogRedaction(t *testing.T) {
 		Repo:               "the-repo",
 		GhHostname:         "github.com",
 		AccessToken:        "sensitive-the-access-token",
+		GitHubApp:          github.GitHubApp{ClientId: "client-id", InstallationId: 1234, PrivateKey: "sensitive-private-rsa-key"},
 		GChatWebHook:       "sensitive-gchat-webhook",
 		LogLevel:           "debug",
 		ContextPrefix:      "the-prefix",
@@ -217,6 +256,9 @@ repo:                  the-repo
 github_hostname:       github.com
 access_token:          ***REDACTED***
 gchat_webhook:         ***REDACTED***
+github_app.client_id:        client-id
+github_app.installation_id:  1234
+github_app.private_key:      ***REDACTED***
 log_level:             debug
 context_prefix:        the-prefix
 omit_target_url:       false
@@ -238,6 +280,9 @@ repo:
 github_hostname:       
 access_token:          
 gchat_webhook:         
+github_app.client_id:        
+github_app.installation_id:  0
+github_app.private_key:      
 log_level:             
 context_prefix:        
 omit_target_url:       false

@@ -43,10 +43,20 @@ func (sink GitHubCommitStatusSink) Send() error {
 	ghState := ghAdaptState(sink.Request.Params.State)
 	buildURL := concourseBuildURL(sink.Request.Env)
 	context := ghMakeContext(sink.Request)
+	server := github.ApiRoot(sink.Request.Source.GhHostname)
+
+	token := sink.Request.Source.AccessToken
+	if token == "" {
+		installationToken, err := github.GenerateInstallationToken(server, sink.Request.Source.GitHubApp)
+		if err != nil {
+			return err
+		}
+		token = installationToken
+	}
 
 	target := &github.Target{
 		Client: httpClient,
-		Server: github.ApiRoot(sink.Request.Source.GhHostname),
+		Server: server,
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
 			BackoffLimit: retryBackoffLimit,
@@ -54,7 +64,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 			Log:          sink.Log,
 		},
 	}
-	commitStatus := github.NewCommitStatus(target, sink.Request.Source.AccessToken,
+	commitStatus := github.NewCommitStatus(target, token,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)
 	description := "Build " + sink.Request.Env.BuildName
 

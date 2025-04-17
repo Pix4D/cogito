@@ -162,9 +162,14 @@ type Source struct {
 	//
 	// Mandatory
 	//
-	Owner       string `json:"owner"`
-	Repo        string `json:"repo"`
+	Owner string `json:"owner"`
+	Repo  string `json:"repo"`
+	// Mandatory if not using github app auth
 	AccessToken string `json:"access_token"` // SENSITIVE
+
+	// Mandatory if using github app auth
+	GitHubApp github.GitHubApp `json:"github_app,omitempty"`
+
 	//
 	// Optional
 	//
@@ -188,6 +193,9 @@ func (src Source) String() string {
 	fmt.Fprintf(&bld, "github_hostname:       %s\n", src.GhHostname)
 	fmt.Fprintf(&bld, "access_token:          %s\n", redact(src.AccessToken))
 	fmt.Fprintf(&bld, "gchat_webhook:         %s\n", redact(src.GChatWebHook))
+	fmt.Fprintf(&bld, "github_app.client_id:        %s\n", src.GitHubApp.ClientId)
+	fmt.Fprintf(&bld, "github_app.installation_id:  %d\n", src.GitHubApp.InstallationId)
+	fmt.Fprintf(&bld, "github_app.private_key:      %s\n", redact(src.GitHubApp.PrivateKey))
 	fmt.Fprintf(&bld, "log_level:             %s\n", src.LogLevel)
 	fmt.Fprintf(&bld, "context_prefix:        %s\n", src.ContextPrefix)
 	fmt.Fprintf(&bld, "omit_target_url:       %t\n", src.OmitTargetURL)
@@ -245,7 +253,18 @@ func (src *Source) Validate() error {
 		if src.Repo == "" {
 			mandatory = append(mandatory, "repo")
 		}
-		if src.AccessToken == "" {
+
+		if src.GitHubApp != (github.GitHubApp{}) {
+			if src.GitHubApp.ClientId == "" {
+				mandatory = append(mandatory, "github_app.client_id")
+			}
+			if src.GitHubApp.InstallationId == 0 {
+				mandatory = append(mandatory, "github_app.installation_id")
+			}
+			if src.GitHubApp.PrivateKey == "" {
+				mandatory = append(mandatory, "github_app.private_key")
+			}
+		} else if src.AccessToken == "" {
 			mandatory = append(mandatory, "access_token")
 		}
 	}
