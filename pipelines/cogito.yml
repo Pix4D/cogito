@@ -10,36 +10,44 @@ meta:
     on_success:
       put: gh-status-1
       inputs: [repo.git]
+      no_get: true
       params: {state: success}
     on_failure:
       put: gh-status-1
       inputs: [repo.git]
+      no_get: true
       params: {state: failure}
     on_error:
       put: gh-status-1
       inputs: [repo.git]
+      no_get: true
       params: {state: error}
     on_abort:
       put: gh-status-1
       inputs: [repo.git]
+      no_get: true
       params: {state: abort}
 
   gh-status-2-handlers: &gh-status-2-handlers
     on_success:
       put: gh-status-2
       inputs: [repo.git]
+      no_get: true
       params: {state: success}
     on_failure:
       put: gh-status-2
       inputs: [repo.git]
+      no_get: true
       params: {state: failure}
     on_error:
       put: gh-status-2
       inputs: [repo.git]
+      no_get: true
       params: {state: error}
     on_abort:
       put: gh-status-2
       inputs: [repo.git]
+      no_get: true
       params: {state: abort}
 
 resource_types:
@@ -85,6 +93,7 @@ resources:
 
 - name: repo.git
   type: git
+  check_every: 24h
   source:
     # If repo is public:
     uri: https://github.com/((github-owner))/((repo-name)).git
@@ -96,12 +105,14 @@ resources:
 jobs:
 
   - name: autocat
+    max_in_flight: 1
     <<: *gh-status-1-handlers
     plan:
       - get: repo.git
         trigger: true
       - put: gh-status-1
         inputs: [repo.git]
+        no_get: true
         params: {state: pending}
       - task: will-fail
         config:
@@ -113,12 +124,14 @@ jobs:
             path: /bin/false
 
   - name: motormouse
+    max_in_flight: 1
     <<: *gh-status-1-handlers
     plan:
       - get: repo.git
         trigger: true
       - put: gh-status-1
         inputs: [repo.git]
+        no_get: true
         params: {state: pending}
       - task: will-succeed
         config:
@@ -130,12 +143,14 @@ jobs:
             path: /bin/true
 
   - name: kitty-jo
+    max_in_flight: 1
     <<: *gh-status-2-handlers
     plan:
       - get: repo.git
         trigger: true
       - put: gh-status-2
         inputs: [repo.git]
+        no_get: true
         params:
           state: pending
           gchat_webhook: ((gchat_webhook_2))
@@ -149,6 +164,7 @@ jobs:
             path: /bin/true
       - put: gh-status-2
         inputs: [repo.git]
+        no_get: true
         params:
           # FIXME Here the state doesn't really make sense, because we are in the middle
           #  of a job and there are further tasks: the state could change...
@@ -165,6 +181,7 @@ jobs:
             path: /bin/true
       - put: gh-status-2
         inputs: [repo.git]
+        no_get: true
         params:
           state: success
           # Append the default build summary to the custom message.
