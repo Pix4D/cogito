@@ -59,12 +59,14 @@ resources:
 
   - name: target-repo.git
     type: git
+    check_every: 24h
     source:
       uri: https://github.com/((github-owner))/((repo-name)).git
       branch: ((target-branch))
 
   - name: cogito-repo.git
     type: git
+    check_every: 24h
     source:
       uri: https://github.com/Pix4D/cogito.git
       branch: ((cogito-branch))
@@ -74,33 +76,40 @@ resources:
 jobs:
 
   - name: chat-only-summary
+    max_in_flight: 1
     plan:
       - get: target-repo.git
       - put: cogito-notify-always
         inputs: [target-repo.git]
+        no_get: true
         params:
           state: success
 
   - name: chat-message-default
+    max_in_flight: 1
     plan:
       - get: target-repo.git
       - put: cogito
         inputs: [target-repo.git]
+        no_get: true
         params:
           state: success
           chat_message: "This is the custom chat message. Below, the default build summary:"
 
   - name: chat-message-no-summary
+    max_in_flight: 1
     plan:
       - get: target-repo.git
       - put: cogito
         inputs: [target-repo.git]
+        no_get: true
         params:
           state: success
           chat_message: "This is the custom chat message. No summary below."
           chat_append_summary: false
 
   - name: chat-message-file-default
+    max_in_flight: 1
     plan:
       - get: cogito-repo.git
       - get: target-repo.git
@@ -108,40 +117,49 @@ jobs:
         file: cogito-repo.git/pipelines/tasks/generate-message-file.yml
       - put: cogito
         inputs: [target-repo.git, messagedir]
+        no_get: true
         params:
           state: success
           chat_message_file: "messagedir/message.txt"
 
   - name: chat-message-only-simplest-possible
+    max_in_flight: 1
     plan:
       - put: cogito-chat-only
         inputs: []
+        no_get: true
         params:
           chat_message: "This is the custom chat message."
 
   - name: chat-message-only-sinks-override
+    max_in_flight: 1
     plan:
       - put: cogito
         inputs: []
+        no_get: true
         params:
           sinks:
             - gchat
           chat_message: "This is the custom chat message."
 
   - name: chat-message-only-file
+    max_in_flight: 1
     plan:
       - get: cogito-repo.git
       - task: generate-message-file
         file: cogito-repo.git/pipelines/tasks/generate-message-file.yml
       - put: cogito-chat-only
         inputs: [messagedir]
+        no_get: true
         params:
           chat_message_file: "messagedir/message.txt"
 
   - name: default-log
+    max_in_flight: 1
     plan:
       - get: target-repo.git
       - put: cogito-default-log
         inputs: [target-repo.git]
+        no_get: true
         params:
           state: success
