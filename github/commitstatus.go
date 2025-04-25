@@ -129,11 +129,18 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 	workFn := func() error {
 		// By default, there is no timeout, so the call could hang forever.
 		client := &http.Client{Timeout: time.Second * 30}
+		start := time.Now()
 		resp, err := client.Do(req)
 		if err != nil {
 			return fmt.Errorf("http client Do: %w", err)
 		}
 		defer resp.Body.Close()
+
+		elapsed := time.Since(start)
+		remaining := resp.Header.Get("X-RateLimit-Remaining")
+		limit := resp.Header.Get("X-RateLimit-Limit")
+		reset := resp.Header.Get("X-RateLimit-Reset")
+		cs.log.Debug("http-request", "method", req.Method, "url", req.URL, "status", resp.StatusCode, "duration", elapsed, "rate-limit", limit, "rate-limit-remaining", remaining, "rate-limit-reset", reset)
 
 		if resp.StatusCode == http.StatusCreated {
 			return nil
