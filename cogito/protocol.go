@@ -168,7 +168,7 @@ type Source struct {
 	AccessToken string `json:"access_token"` // SENSITIVE
 
 	// Mandatory if using github app auth
-	GitHubApp github.GitHubApp `json:"github_app,omitempty"`
+	GitHubApp github.GitHubApp `json:"github_app"`
 
 	//
 	// Optional
@@ -247,6 +247,15 @@ func (src *Source) Validate() error {
 	sinks := sets.From(src.Sinks...)
 	if sinks.Size() == 0 || sinks.Contains("github") {
 		// Cogito commit Github status mandatory fields.
+		if !src.GitHubApp.IsZero() && src.AccessToken != "" {
+			return fmt.Errorf("source: cannot specify both github_app and access_token")
+		}
+
+		// either access_token or github_app must be specified
+		if src.AccessToken == "" && src.GitHubApp.IsZero() {
+			return fmt.Errorf("source: one of access_token or github_app must be specified")
+		}
+
 		if src.Owner == "" {
 			mandatory = append(mandatory, "owner")
 		}
@@ -254,7 +263,7 @@ func (src *Source) Validate() error {
 			mandatory = append(mandatory, "repo")
 		}
 
-		if src.GitHubApp != (github.GitHubApp{}) {
+		if !src.GitHubApp.IsZero() {
 			if src.GitHubApp.ClientId == "" {
 				mandatory = append(mandatory, "github_app.client_id")
 			}
@@ -264,8 +273,6 @@ func (src *Source) Validate() error {
 			if src.GitHubApp.PrivateKey == "" {
 				mandatory = append(mandatory, "github_app.private_key")
 			}
-		} else if src.AccessToken == "" {
-			mandatory = append(mandatory, "access_token")
 		}
 	}
 

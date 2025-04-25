@@ -19,7 +19,7 @@ import (
 	"text/template"
 
 	"dario.cat/mergo"
-	"github.com/golang-jwt/jwt/v4"
+	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 )
 

@@ -141,7 +141,7 @@ func TestRunPutGhAppSuccessIntegration(t *testing.T) {
 	}
 
 	gitHubCfg := testhelp.GitHubSecretsOrFail(t)
-	ghAppInstallationID, err := strconv.ParseInt(gitHubCfg.GhAppInstallationID, 10, 64)
+	ghAppInstallationID, err := strconv.ParseInt(gitHubCfg.GhAppInstallationID, 10, 32)
 	assert.NilError(t, err)
 
 	stdin := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
@@ -150,7 +150,7 @@ func TestRunPutGhAppSuccessIntegration(t *testing.T) {
 			Repo:  gitHubCfg.Repo,
 			GitHubApp: github.GitHubApp{
 				ClientId:       gitHubCfg.GhAppClientID,
-				InstallationId: ghAppInstallationID,
+				InstallationId: int(ghAppInstallationID),
 				PrivateKey:     gitHubCfg.GhAppPrivateKey,
 			},
 			LogLevel: "debug",

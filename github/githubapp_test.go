@@ -1,10 +1,12 @@
 package github_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
@@ -13,10 +15,13 @@ import (
 
 func TestGenerateInstallationToken(t *testing.T) {
 	clientID := "abcd1234"
-	var installationID int64 = 12345
+	installationID := 12345
 
 	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
 	assert.NilError(t, err)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
 	handler := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -39,6 +44,8 @@ func TestGenerateInstallationToken(t *testing.T) {
 	defer ts.Close()
 
 	gotToken, err := github.GenerateInstallationToken(
+		ctx,
+		ts.Client(),
 		ts.URL,
 		github.GitHubApp{
 			ClientId:       clientID,
@@ -49,4 +56,43 @@ func TestGenerateInstallationToken(t *testing.T) {
 
 	assert.NilError(t, err)
 	assert.Equal(t, "dummy_installation_token", gotToken)
+}
+
+func TestGitHubAppIsZero(t *testing.T) {
+	type testCase struct {
+		name string
+		app  github.GitHubApp
+		want bool
+	}
+
+	run := func(t *testing.T, tc testCase) {
+		got := tc.app.IsZero()
+		assert.Equal(t, got, tc.want)
+	}
+
+	testCases := []testCase{
+		{
+			name: "empty app",
+			app:  github.GitHubApp{},
+			want: true,
+		},
+		{
+			name: "one field set: client-id",
+			app:  github.GitHubApp{ClientId: "client-id"},
+			want: false,
+		},
+		{
+			name: "all fields set",
+			app: github.GitHubApp{
+				ClientId:       "client-id",
+				InstallationId: 12345,
+				PrivateKey:     "dummy-private-key",
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
 }

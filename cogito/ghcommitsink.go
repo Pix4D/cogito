@@ -46,8 +46,10 @@ func (sink GitHubCommitStatusSink) Send() error {
 	server := github.ApiRoot(sink.Request.Source.GhHostname)
 
 	token := sink.Request.Source.AccessToken
+	// if access token is not configured, we are using github_app
+	// so we must generate the installation token
 	if token == "" {
-		installationToken, err := github.GenerateInstallationToken(server, sink.Request.Source.GitHubApp)
+		installationToken, err := github.GenerateInstallationToken(ctx, httpClient, server, sink.Request.Source.GitHubApp)
 		if err != nil {
 			return err
 		}

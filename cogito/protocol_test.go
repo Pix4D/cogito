@@ -104,9 +104,22 @@ func TestSourceValidationFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "missing mandatory git source keys",
+			name:    "access_token and github_app both missing",
 			source:  cogito.Source{},
-			wantErr: "source: missing keys: owner, repo, access_token",
+			wantErr: "source: one of access_token or github_app must be specified",
+		},
+		{
+			name: "both access_key and github_app are set",
+			source: cogito.Source{
+				AccessToken: "dummy-token",
+				GitHubApp:   github.GitHubApp{ClientId: "client-id"},
+			},
+			wantErr: "source: cannot specify both github_app and access_token",
+		},
+		{
+			name:    "missing mandatory git source keys",
+			source:  cogito.Source{AccessToken: "dummy-token"},
+			wantErr: "source: missing keys: owner, repo",
 		},
 		{
 			name: "missing mandatory git source keys for github app: client-id",
