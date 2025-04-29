@@ -12,9 +12,11 @@ import (
 	"gotest.tools/v3/assert/cmp"
 
 	"github.com/Pix4D/cogito/googlechat"
+	"github.com/Pix4D/cogito/testhelp"
 )
 
 func TestTextMessageIntegration(t *testing.T) {
+	log := testhelp.MakeTestLog()
 	gchatUrl := os.Getenv("COGITO_TEST_GCHAT_HOOK")
 	if len(gchatUrl) == 0 {
 		t.Skip("Skipping integration test. See CONTRIBUTING for how to enable.")
@@ -30,7 +32,7 @@ func TestTextMessageIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	reply, err := googlechat.TextMessage(ctx, gchatUrl, threadKey, text)
+	reply, err := googlechat.TextMessage(ctx, log, gchatUrl, threadKey, text)
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Contains(reply.Text, text))

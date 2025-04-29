@@ -50,7 +50,7 @@ func (sink GoogleChatSink) Send() error {
 	threadKey := fmt.Sprintf("%s %s", sink.Request.Env.BuildPipelineName, sink.GitRef)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
-	reply, err := googlechat.TextMessage(ctx, webHook, threadKey, text)
+	reply, err := googlechat.TextMessage(ctx, sink.Log, webHook, threadKey, text)
 	if err != nil {
 		return fmt.Errorf("GoogleChatSink: %s", err)
 	}
