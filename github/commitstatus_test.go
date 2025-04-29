@@ -1,6 +1,7 @@
 package github_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -53,6 +54,9 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		wantSleeps []time.Duration
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
@@ -77,6 +81,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		log := testhelp.MakeTestLog()
 		sleepSpy := SleepSpy{}
 		target := &github.Target{
+			Client: ts.Client(),
 			Server: ts.URL,
 			Retry: retry.Retry{
 				FirstDelay:   retryFirstDelay,
@@ -88,7 +93,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
-		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
+		err := ghStatus.Add(ctx, cfg.SHA, "success", targetURL, desc)
 
 		assert.NilError(t, err)
 		assert.DeepEqual(t, sleepSpy.sleeps, tc.wantSleeps)
@@ -188,6 +193,9 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		wantErr    string
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
@@ -217,6 +225,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		log := testhelp.MakeTestLog()
 		sleepSpy := SleepSpy{}
 		target := &github.Target{
+			Client: ts.Client(),
 			Server: ts.URL,
 			Retry: retry.Retry{
 				FirstDelay:   retryFirstDelay,
@@ -228,7 +237,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 		}
 		ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
-		err := ghStatus.Add(cfg.SHA, "success", targetURL, desc)
+		err := ghStatus.Add(ctx, cfg.SHA, "success", targetURL, desc)
 
 		assert.Error(t, err, wantErr)
 		var ghError *github.StatusError
@@ -318,6 +327,9 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 		t.Skip("Skipping integration test (reason: -short)")
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
 	cfg := testhelp.GitHubSecretsOrFail(t)
 	context := "cogito/test"
 	targetURL := "https://cogito.invalid/builds/job/42"
@@ -325,6 +337,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	state := "success"
 	log := testhelp.MakeTestLog()
 	target := &github.Target{
+		Client: &http.Client{},
 		Server: github.ApiRoot(github.GhDefaultHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
@@ -335,7 +348,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 	}
 	ghStatus := github.NewCommitStatus(target, cfg.Token, cfg.Owner, cfg.Repo, context, log)
 
-	err := ghStatus.Add(cfg.SHA, state, targetURL, desc)
+	err := ghStatus.Add(ctx, cfg.SHA, state, targetURL, desc)
 
 	assert.NilError(t, err)
 }
@@ -354,6 +367,9 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		wantErr    string
 		wantStatus int
 	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
 
 	cfg := testhelp.GitHubSecretsOrFail(t)
 	state := "success"
@@ -375,6 +391,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 		}
 
 		target := &github.Target{
+			Client: &http.Client{},
 			Server: github.ApiRoot(github.GhDefaultHostname),
 			Retry: retry.Retry{
 				FirstDelay:   retryFirstDelay,
@@ -384,7 +401,7 @@ func TestGitHubStatusFailureIntegration(t *testing.T) {
 			},
 		}
 		ghStatus := github.NewCommitStatus(target, tc.token, tc.owner, tc.repo, "dummy-context", log)
-		err := ghStatus.Add(tc.sha, state, "dummy-url", "dummy-desc")
+		err := ghStatus.Add(ctx, tc.sha, state, "dummy-url", "dummy-desc")
 
 		assert.Assert(t, err != nil)
 		haveErr := err.Error()

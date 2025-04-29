@@ -6,6 +6,7 @@ package github
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -37,6 +38,8 @@ const GhDefaultHostname = "github.com"
 var localhostRegexp = regexp.MustCompile(`^127.0.0.1:[0-9]+$`)
 
 type Target struct {
+	// Client is the http client
+	Client *http.Client
 	// Server is the GitHub API server.
 	Server string
 	// Retry controls the retry logic.
@@ -105,7 +108,7 @@ type AddRequest struct {
 // The returned error contains some diagnostic information to help troubleshooting.
 //
 // See also: https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
-func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
+func (cs CommitStatus) Add(ctx context.Context, sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
 	url := cs.target.Server + path.Join("/repos", cs.owner, cs.repo, "statuses", sha)
 
@@ -121,7 +124,7 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 		return fmt.Errorf("JSON encode: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, url, bytes.NewBuffer(reqBodyJSON))
 	if err != nil {
 		return fmt.Errorf("create http request: %w", err)
 	}
@@ -131,10 +134,8 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 
 	// The retryable unit of work.
 	workFn := func() error {
-		// By default, there is no timeout, so the call could hang forever.
-		client := &http.Client{Timeout: time.Second * 30}
 		start := time.Now()
-		resp, err := client.Do(req)
+		resp, err := cs.target.Client.Do(req)
 		if err != nil {
 			return fmt.Errorf("http client Do: %w", err)
 		}
