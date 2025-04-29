@@ -71,7 +71,11 @@ type MessageSpace struct {
 // webhooks: https://developers.google.com/chat/how-tos/webhooks
 // payload: https://developers.google.com/chat/api/guides/message-formats/basic
 // threadKey: https://developers.google.com/chat/reference/rest/v1/spaces.messages/create
-func TextMessage(ctx context.Context, log *slog.Logger, theURL, threadKey, text string) (MessageReply, error) {
+func TextMessage(
+	ctx context.Context,
+	log *slog.Logger,
+	theURL, threadKey, text string,
+) (MessageReply, error) {
 	body, err := json.Marshal(BasicMessage{Text: text})
 	if err != nil {
 		return MessageReply{}, fmt.Errorf("TextMessage: %s", err)
@@ -100,7 +104,13 @@ func TextMessage(ctx context.Context, log *slog.Logger, theURL, threadKey, text 
 	}
 	defer resp.Body.Close()
 	elapsed := time.Since(start)
-	log.Debug("http-request", "method", req.Method, "url", req.URL, "status", resp.StatusCode, "duration", elapsed)
+	log.Debug(
+		"http-request",
+		"method", req.Method,
+		"url", req.URL,
+		"status", resp.StatusCode,
+		"duration", elapsed,
+	)
 
 	if resp.StatusCode != http.StatusOK {
 		respBody, _ := io.ReadAll(resp.Body)

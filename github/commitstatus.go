@@ -69,7 +69,11 @@ type CommitStatus struct {
 //
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
-func NewCommitStatus(target *Target, token, owner, repo, context string, log *slog.Logger) CommitStatus {
+func NewCommitStatus(
+	target *Target,
+	token, owner, repo, context string,
+	log *slog.Logger,
+) CommitStatus {
 	return CommitStatus{
 		target:  target,
 		token:   token,
@@ -140,7 +144,16 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 		remaining := resp.Header.Get("X-RateLimit-Remaining")
 		limit := resp.Header.Get("X-RateLimit-Limit")
 		reset := resp.Header.Get("X-RateLimit-Reset")
-		cs.log.Debug("http-request", "method", req.Method, "url", req.URL, "status", resp.StatusCode, "duration", elapsed, "rate-limit", limit, "rate-limit-remaining", remaining, "rate-limit-reset", reset)
+		cs.log.Debug(
+			"http-request",
+			"method", req.Method,
+			"url", req.URL,
+			"status", resp.StatusCode,
+			"duration", elapsed,
+			"rate-limit", limit,
+			"rate-limit-remaining", remaining,
+			"rate-limit-reset", reset,
+		)
 
 		if resp.StatusCode == http.StatusCreated {
 			return nil
@@ -162,7 +175,11 @@ func (cs CommitStatus) Add(sha, state, targetURL, description string) error {
 // and used by other tools, so we must not merge hints specific to the
 // Commit Status API.
 func (cs CommitStatus) explainError(err error, state, sha, url string) error {
-	commonWhat := fmt.Sprintf("failed to add state %q for commit %s", state, sha[0:min(len(sha), 7)])
+	commonWhat := fmt.Sprintf(
+		"failed to add state %q for commit %s",
+		state,
+		sha[0:min(len(sha), 7)],
+	)
 	var ghErr GitHubError
 	if errors.As(err, &ghErr) {
 		hint := "none"
@@ -179,7 +196,10 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 			hint = "Either wrong credentials or PAT expired (check your email for expiration notice)"
 		case http.StatusForbidden:
 			if ghErr.RateLimitRemaining == 0 {
-				hint = fmt.Sprintf("Rate limited but the wait time to reset would be longer than %v (Retry.UpTo)", cs.target.Retry.UpTo)
+				hint = fmt.Sprintf(
+					"Rate limited but the wait time to reset would be longer than %v (Retry.UpTo)",
+					cs.target.Retry.UpTo,
+				)
 			}
 		}
 		return &StatusError{
