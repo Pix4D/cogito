@@ -1,7 +1,9 @@
 package cogito
 
 import (
+	"context"
 	"log/slog"
+	"net/http"
 	"time"
 
 	"github.com/Pix4D/cogito/github"
@@ -33,11 +35,17 @@ func (sink GitHubCommitStatusSink) Send() error {
 	sink.Log.Debug("send: started")
 	defer sink.Log.Debug("send: finished")
 
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	httpClient := &http.Client{}
+
 	ghState := ghAdaptState(sink.Request.Params.State)
 	buildURL := concourseBuildURL(sink.Request.Env)
 	context := ghMakeContext(sink.Request)
 
 	target := &github.Target{
+		Client: httpClient,
 		Server: github.ApiRoot(sink.Request.Source.GhHostname),
 		Retry: retry.Retry{
 			FirstDelay:   retryFirstDelay,
@@ -57,7 +65,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	if sink.Request.Source.OmitTargetURL {
 		buildURL = ""
 	}
-	if err := commitStatus.Add(sink.GitRef, ghState, buildURL, description); err != nil {
+	if err := commitStatus.Add(ctx, sink.GitRef, ghState, buildURL, description); err != nil {
 		return err
 	}
 	sink.Log.Info("commit status posted successfully",
