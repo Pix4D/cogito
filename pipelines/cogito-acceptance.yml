@@ -28,6 +28,18 @@ resources:
       access_token: ((oauth-personal-access-token))
       gchat_webhook: ((gchat_webhook))
 
+  - name: cogito-gh-app
+    type: cogito
+    check_every: never
+    source:
+      log_level: debug
+      owner: ((github-owner))
+      repo: ((repo-name))
+      github_app:
+        client_id: ((github_app_client_id))
+        installation_id: ((github_app_installation_id))
+        private_key: ((github_app_private_key))
+
   - name: cogito-default-log
     type: cogito
     check_every: never
@@ -159,6 +171,16 @@ jobs:
     plan:
       - get: target-repo.git
       - put: cogito-default-log
+        inputs: [target-repo.git]
+        no_get: true
+        params:
+          state: success
+
+  - name: cogito-gh-app-status
+    max_in_flight: 1
+    plan:
+      - get: target-repo.git
+      - put: cogito-gh-app
         inputs: [target-repo.git]
         no_get: true
         params:
