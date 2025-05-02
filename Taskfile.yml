@@ -143,6 +143,9 @@ tasks:
         -y oauth-personal-access-token=$(gopass show cogito/test_oauth_token)
         -y cogito-tag={{.BRANCH}}
         -y gchat_webhook=$(gopass show cogito/test_gchat_webhook)
+        -y github_app_client_id=$(gopass show cogito/github_app_client_id)
+        -y github_app_installation_id=$(gopass show cogito/github_app_installation_id)
+        -v github_app_private_key="$(gopass show cogito/github_app_private_key)"
       - fly -t cogito unpause-pipeline -p {{.PIPELINE}}
     vars:
       PIPELINE: cogito-acceptance---{{.BRANCH}}

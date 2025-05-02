@@ -183,9 +183,38 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 - `repo`\
   The GitHub repository name.
 
+###  Authentication keys
+
+Keys must be provided for one of the following authentication methods:
+1. [Personal Access Token](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens)
+2. [GitHub app](https://docs.github.com/en/apps/creating-github-apps/about-creating-github-apps/about-creating-github-apps)
+
+#### Personal Access Token keys
+
 - `access_token`\
   The OAuth access token.\
   See also: section [GitHub OAuth token](#github-oauth-token).
+
+#### GitHub app keys
+
+- `github_app`\
+  Github Application object with the required key-value pairs:
+  - `client_id` \
+    The client id of the GitHub application
+
+  - `installation_id` \
+    The installation id of the GitHub application. To find out the value go to the application url e.g. https://github.com/settings/apps/<APP_NAME>/installations and then click the gear icon. The installation id can be found in the URL itself: https://github.com/settings/installations/<INSTALLATION_ID>
+
+  - `private_key` \
+    The private key generated for the GitHub application
+
+See also: section [GitHub app auth](#github-app-auth).
+
+### Which authentication method to choose?
+
+The advantage of using a Personal Access Token is that it is simpler to setup,
+while the advantage of a GitHub App is that it has a more generous rate limit.
+See section [#Caveat: GitHub rate limiting] for details.
 
 ### Optional keys
 
@@ -376,6 +405,14 @@ NOTE: The token is security-sensitive. Treat it as you would treat a password. D
 
 See also the section [Integration tests](./CONTRIBUTING.md#integration-tests) for how to securely store the token to run the end-to-end tests.
 
+# GitHub App auth
+
+1. Create a new GitHub App  https://github.com/settings/apps/new
+2. Mark webhook as inactive
+3. Add repository permission: Commit Statuses: `Read/write`
+4. Generate a private key and download a copy
+5. Install the app in selected repositories
+
 # Caveat: GitHub rate limiting
 
 From [GitHub REST API]:
@@ -389,6 +426,18 @@ From [GitHub REST API]:
 > For unauthenticated requests, the rate limit allows for up to 60 requests per hour.
 > Unauthenticated requests are associated with the originating IP address, and not the
 > user making requests.
+
+> GitHub Apps authenticating with an installation access token use the installation's
+> minimum rate limit of 5,000 requests per hour. If the installation is on a GitHub
+> Enterprise Cloud organization, the installation has a rate limit of 15,000 requests per
+> hour.
+
+> For installations that are not on a GitHub Enterprise Cloud organization, the rate
+> limit for the installation will scale with the number of users and repositories.
+> Installations that have more than 20 repositories receive another 50 requests per hour
+> for each repository. Installations that are on an organization that have more than 20
+> users receive another 50 requests per hour for each user. The rate limit cannot
+> increase beyond 12,500 requests per hour.
 
 GitHub resets the limit once per hour (no sliding window). If rate limited, cogito will wait up to 15 minutes for the limit to clear, or fail immediately if it would have to wait more. The error message in the output of the `put` step will mention the cause.
 

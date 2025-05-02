@@ -81,6 +81,14 @@ The integration tests (tests that interact with GitHub) are disabled by default 
 $ gopass insert cogito/test_oauth_token
 ```
 
+### Add the GitHub App configuration data
+
+```console
+$ gopass insert cogito/github_app_client_id
+$ gopass insert gopass show cogito/github_app_installation_id
+$ gopass insert --multiline cogito/github_app_private_key
+```
+
 ### Prepare the test repository
 
 1. In your GitHub account, create a test repository, say for example `cogito-test`.
@@ -146,6 +154,15 @@ cogito/
 ├── test_oauth_token
 ├── test_repo_name
 └── test_repo_owner
+└── github_app_client_id
+└── github_app_installation_id
+└── github_app_private_key
+```
+
+## Install test dependencies
+
+```
+$ task install:deps
 ```
 
 ## Running the integration tests
