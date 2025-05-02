@@ -121,7 +121,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 		testhelp.HttpsRemote(github.GhDefaultHostname, gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
 		"ref: refs/heads/a-branch-FIXME")
 	t.Setenv("BUILD_JOB_NAME", "TestRunPutSuccessIntegration")
-	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
+	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.example")
 	t.Setenv("BUILD_PIPELINE_NAME", "the-test-pipeline")
 	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
 	t.Setenv("BUILD_NAME", "42")
@@ -163,7 +163,7 @@ func TestRunPutGhAppSuccessIntegration(t *testing.T) {
 		testhelp.HttpsRemote(github.GhDefaultHostname, gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
 		"ref: refs/heads/a-branch-FIXME")
 	t.Setenv("BUILD_JOB_NAME", "TestRunPutGhAppSuccessIntegration")
-	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
+	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.example")
 	t.Setenv("BUILD_PIPELINE_NAME", "the-test-pipeline")
 	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
 	t.Setenv("BUILD_NAME", "42")

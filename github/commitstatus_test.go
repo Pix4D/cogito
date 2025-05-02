@@ -59,7 +59,7 @@ func TestGitHubStatusSuccessMockAPI(t *testing.T) {
 
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
-	targetURL := "https://cogito.invalid/builds/job/42"
+	targetURL := "https://cogito.example/builds/job/42"
 	now := time.Now()
 	desc := now.Format("15:04:05")
 
@@ -198,7 +198,7 @@ func TestGitHubStatusFailureMockAPI(t *testing.T) {
 
 	cfg := testhelp.FakeTestCfg
 	context := "cogito/test"
-	targetURL := "https://cogito.invalid/builds/job/42"
+	targetURL := "https://cogito.example/builds/job/42"
 	now := time.Now()
 	desc := now.Format("15:04:05")
 	upTo := 5 * time.Minute
@@ -332,7 +332,7 @@ func TestGitHubStatusSuccessIntegration(t *testing.T) {
 
 	cfg := testhelp.GitHubSecretsOrFail(t)
 	context := "cogito/test"
-	targetURL := "https://cogito.invalid/builds/job/42"
+	targetURL := "https://cogito.example/builds/job/42"
 	desc := time.Now().Format("15:04:05")
 	state := "success"
 	log := testhelp.MakeTestLog()
