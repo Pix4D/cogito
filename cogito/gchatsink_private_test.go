@@ -220,7 +220,7 @@ func TestGChatBuildSummaryText(t *testing.T) {
 		BuildName:         "42",
 		BuildJobName:      "the-job",
 		BuildPipelineName: "the-pipeline",
-		AtcExternalUrl:    "https://cogito.invalid",
+		AtcExternalUrl:    "https://cogito.example",
 	}
 
 	have := gChatBuildSummaryText(commit, state, src, env)

@@ -99,7 +99,7 @@ func TestSinkGoogleChatDecidesNotToSendSuccess(t *testing.T) {
 		{
 			name: "state not in enabled states",
 			request: cogito.PutRequest{
-				Source: cogito.Source{GChatWebHook: "https://cogito.invalid"},
+				Source: cogito.Source{GChatWebHook: "https://cogito.example"},
 				Params: cogito.PutParams{State: cogito.StatePending}, // not sent by default
 			},
 		},
