@@ -2,10 +2,15 @@ package testhelp
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -14,6 +19,7 @@ import (
 	"text/template"
 
 	"dario.cat/mergo"
+	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 )
 
@@ -145,10 +151,13 @@ func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 // GhTestCfg contains the secrets needed to run integration tests against the
 // GitHub Commit Status API.
 type GhTestCfg struct {
-	Token string
-	Owner string
-	Repo  string
-	SHA   string
+	Token               string
+	GhAppClientID       string
+	GhAppInstallationID string
+	GhAppPrivateKey     string
+	Owner               string
+	Repo                string
+	SHA                 string
 }
 
 // FakeTestCfg is a fake test configuration that can be used in some tests that need
@@ -166,10 +175,13 @@ func GitHubSecretsOrFail(t *testing.T) GhTestCfg {
 	t.Helper()
 
 	return GhTestCfg{
-		Token: getEnvOrFail(t, "COGITO_TEST_OAUTH_TOKEN"),
-		Owner: getEnvOrFail(t, "COGITO_TEST_REPO_OWNER"),
-		Repo:  getEnvOrFail(t, "COGITO_TEST_REPO_NAME"),
-		SHA:   getEnvOrFail(t, "COGITO_TEST_COMMIT_SHA"),
+		Token:               getEnvOrFail(t, "COGITO_TEST_OAUTH_TOKEN"),
+		GhAppClientID:       getEnvOrFail(t, "COGITO_TEST_GH_APP_CLIENT_ID"),
+		GhAppInstallationID: getEnvOrFail(t, "COGITO_TEST_GH_APP_INSTALLATION_ID"),
+		GhAppPrivateKey:     getEnvOrFail(t, "COGITO_TEST_GH_APP_PRIVATE_KEY"),
+		Owner:               getEnvOrFail(t, "COGITO_TEST_REPO_OWNER"),
+		Repo:                getEnvOrFail(t, "COGITO_TEST_REPO_NAME"),
+		SHA:                 getEnvOrFail(t, "COGITO_TEST_COMMIT_SHA"),
 	}
 }
 
@@ -292,4 +304,47 @@ type FailingWriter struct{}
 
 func (t *FailingWriter) Write([]byte) (n int, err error) {
 	return 0, errors.New("test write error")
+}
+
+// GeneratePrivateKey creates a RSA Private Key of specified byte size
+func GeneratePrivateKey(t *testing.T, bitSize int) (*rsa.PrivateKey, error) {
+	// Private Key generation
+	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
+	assert.NilError(t, err)
+
+	// Validate Private Key
+	err = privateKey.Validate()
+	assert.NilError(t, err)
+
+	return privateKey, nil
+}
+
+// EncodePrivateKeyToPEM encodes Private Key from RSA to PEM format
+func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
+	// Get ASN.1 DER format
+	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
+
+	// pem.Block
+	privBlock := pem.Block{
+		Type:    "RSA PRIVATE KEY",
+		Headers: nil,
+		Bytes:   privDER,
+	}
+
+	return pem.EncodeToMemory(&privBlock)
+}
+
+// DecodeJWT decodes the HTTP request authorization header with the given RSA key
+// and returns the registered claims of the decoded token.
+func DecodeJWT(t *testing.T, r *http.Request, key *rsa.PrivateKey) *jwt.RegisteredClaims {
+	token := strings.Fields(r.Header.Get("Authorization"))[1]
+	tok, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
+		if t.Header["alg"] != "RS256" {
+			return nil, fmt.Errorf("unexpected signing method: %v, expected: %v", t.Header["alg"], "RS256")
+		}
+		return &key.PublicKey, nil
+	})
+	assert.NilError(t, err)
+
+	return tok.Claims.(*jwt.RegisteredClaims)
 }

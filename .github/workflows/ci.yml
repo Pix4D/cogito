@@ -33,6 +33,8 @@ jobs:
         env:
           COGITO_TEST_OAUTH_TOKEN: ${{ secrets.COGITO_TEST_OAUTH_TOKEN }}
           COGITO_TEST_GCHAT_HOOK: ${{ secrets.COGITO_TEST_GCHAT_HOOK }}
+          COGITO_TEST_GH_APP_PRIVATE_KEY: |
+            ${{ secrets.COGITO_TEST_GH_APP_PRIVATE_KEY }}
       - run: task docker:build
       - run: task docker:smoke
       - run: task docker:login

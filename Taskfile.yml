@@ -57,6 +57,10 @@ tasks:
       COGITO_TEST_REPO_OWNER: '{{default "pix4d" .COGITO_TEST_REPO_OWNER}}'
       COGITO_TEST_GCHAT_HOOK:
         sh: 'echo {{default "$(gopass show cogito/test_gchat_webhook)" .COGITO_TEST_GCHAT_HOOK}}'
+      COGITO_TEST_GH_APP_CLIENT_ID: '{{default "Iv23lir9pyQlqmweDPbz" .COGITO_TEST_GH_APP_CLIENT_ID}}'
+      COGITO_TEST_GH_APP_INSTALLATION_ID: '{{default "64650729" .COGITO_TEST_GH_APP_INSTALLATION_ID}}'
+      COGITO_TEST_GH_APP_PRIVATE_KEY:
+        sh: 'echo "{{default "$(gopass show cogito/test_gh_app_private_key)" .COGITO_TEST_GH_APP_PRIVATE_KEY}}"'
 
   test:unit:
     desc: Run the unit tests.

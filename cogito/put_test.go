@@ -172,9 +172,35 @@ func TestPutterLoadConfigurationFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:     "source: missing keys",
-			putInput: cogito.PutRequest{Source: cogito.Source{}, Params: baseParams},
-			wantErr:  "put: source: missing keys: owner, repo, access_token",
+			name: "source: both access_key and github_app are set",
+			putInput: cogito.PutRequest{
+				Source: cogito.Source{
+					AccessToken: "dummy-token",
+					GitHubApp: github.GitHubApp{
+						InstallationId: 1234,
+					},
+				},
+				Params: baseParams,
+			},
+			wantErr: "put: source: cannot specify both github_app and access_token",
+		},
+		{
+			name: "source: missing access token or github_app",
+			putInput: cogito.PutRequest{
+				Source: cogito.Source{},
+				Params: baseParams,
+			},
+			wantErr: "put: source: one of access_token or github_app must be specified",
+		},
+		{
+			name: "source: missing keys",
+			putInput: cogito.PutRequest{
+				Source: cogito.Source{
+					AccessToken: "dummy-token",
+				},
+				Params: baseParams,
+			},
+			wantErr: "put: source: missing keys: owner, repo",
 		},
 		{
 			name: "params: invalid",

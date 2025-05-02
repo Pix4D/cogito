@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"path"
+	"strconv"
 	"strings"
 	"testing"
 	"testing/iotest"
@@ -132,6 +133,46 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 	assert.Assert(t, cmp.Contains(stderr.String(),
 		`level=INFO msg="state posted successfully to chat" name=cogito.put name=gChat state=error`))
+}
+
+func TestRunPutGhAppSuccessIntegration(t *testing.T) {
+	if testing.Short() {
+		t.Skip("Skipping integration test (reason: -short)")
+	}
+
+	gitHubCfg := testhelp.GitHubSecretsOrFail(t)
+	ghAppInstallationID, err := strconv.ParseInt(gitHubCfg.GhAppInstallationID, 10, 32)
+	assert.NilError(t, err)
+
+	stdin := bytes.NewReader(testhelp.ToJSON(t, cogito.PutRequest{
+		Source: cogito.Source{
+			Owner: gitHubCfg.Owner,
+			Repo:  gitHubCfg.Repo,
+			GitHubApp: github.GitHubApp{
+				ClientId:       gitHubCfg.GhAppClientID,
+				InstallationId: int(ghAppInstallationID),
+				PrivateKey:     gitHubCfg.GhAppPrivateKey,
+			},
+			LogLevel: "debug",
+		},
+		Params: cogito.PutParams{State: cogito.StateError},
+	}))
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	inputDir := testhelp.MakeGitRepoFromTestdata(t, "../../cogito/testdata/one-repo/a-repo",
+		testhelp.HttpsRemote(github.GhDefaultHostname, gitHubCfg.Owner, gitHubCfg.Repo), gitHubCfg.SHA,
+		"ref: refs/heads/a-branch-FIXME")
+	t.Setenv("BUILD_JOB_NAME", "TestRunPutGhAppSuccessIntegration")
+	t.Setenv("ATC_EXTERNAL_URL", "https://cogito.invalid")
+	t.Setenv("BUILD_PIPELINE_NAME", "the-test-pipeline")
+	t.Setenv("BUILD_TEAM_NAME", "the-test-team")
+	t.Setenv("BUILD_NAME", "42")
+
+	err = mainErr(stdin, &stdout, &stderr, []string{"out", inputDir})
+
+	assert.NilError(t, err, "\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
+	assert.Assert(t, cmp.Contains(stderr.String(),
+		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 }
 
 func TestRunFailure(t *testing.T) {

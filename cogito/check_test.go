@@ -8,6 +8,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
+	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
 )
 
@@ -88,10 +89,25 @@ func TestCheckFailure(t *testing.T) {
 
 	testCases := []testCase{
 		{
-			name:    "validation failure: missing repo keys",
+			name:    "validation failure: missing access token or github_app",
 			source:  cogito.Source{},
 			writer:  io.Discard,
-			wantErr: "check: source: missing keys: owner, repo, access_token",
+			wantErr: "check: source: one of access_token or github_app must be specified",
+		},
+		{
+			name: "validation failure: both access_key and github_app are set",
+			source: cogito.Source{
+				AccessToken: "dummy-token",
+				GitHubApp:   github.GitHubApp{ClientId: "client-id"},
+			},
+			writer:  io.Discard,
+			wantErr: "check: source: cannot specify both github_app and access_token",
+		},
+		{
+			name:    "validation failure: missing repo keys",
+			source:  cogito.Source{AccessToken: "dummy-token"},
+			writer:  io.Discard,
+			wantErr: "check: source: missing keys: owner, repo",
 		},
 		{
 			name: "validation failure: missing gchat keys",
