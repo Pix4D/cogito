@@ -5,10 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [v0.12.2] - UNRELEASED
+## [v0.13.0] - 2025-05-05
 
 ### Added
 
+- Support for GitHub App authentication method. Authenticating as GitHub app installation may increase the rate limit up to 12500 requests per hour.
 - Optional `source.omit_target_url`. If set to true, will omit the GitHub Commit status API `target_url` (see README).
 - pkg/sets: add Intersect() and Add() methods.
 
@@ -316,3 +317,6 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.10.2]: https://github.com/Pix4D/cogito/releases/tag/v0.10.2
 [v0.10.3]: https://github.com/Pix4D/cogito/releases/tag/v0.10.3
 [v0.11.0]: https://github.com/Pix4D/cogito/releases/tag/v0.11.0
+[v0.12.0]: https://github.com/Pix4D/cogito/releases/tag/v0.12.0
+[v0.12.1]: https://github.com/Pix4D/cogito/releases/tag/v0.12.1
+[v0.13.0]: https://github.com/Pix4D/cogito/releases/tag/v0.13.0
