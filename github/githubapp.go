@@ -19,7 +19,20 @@ type GitHubApp struct {
 	ClientId       string `json:"client_id"`
 	InstallationId int    `json:"installation_id"`
 	PrivateKey     string `json:"private_key"` // SENSITIVE
-	parsedRSAKey   *rsa.PrivateKey
+	parsedRSAKey   rsa.PrivateKey
+}
+
+func (app *GitHubApp) IsZero() bool {
+	if app.ClientId != "" {
+		return false
+	}
+	if app.InstallationId != 0 {
+		return false
+	}
+	if app.PrivateKey != "" {
+		return false
+	}
+	return true
 }
 
 // Validate validates the GitHubApp configuration. Returns an error if
@@ -45,7 +58,7 @@ func (app *GitHubApp) Validate() error {
 	if err != nil {
 		return fmt.Errorf("github_app: could not parse private key: %w", err)
 	}
-	app.parsedRSAKey = key
+	app.parsedRSAKey = *key
 	return nil
 }
 
@@ -87,11 +100,7 @@ func GenerateInstallationToken(ctx context.Context, client *http.Client, server 
 	}
 	req.Header.Add("Accept", "application/vnd.github.v3+json")
 
-	if app.parsedRSAKey == nil {
-		return "", fmt.Errorf("misconfigured github_app: rsa key not configured. Call app.Validate() method first")
-	}
-
-	jwtToken, err := generateJWTtoken(app.ClientId, app.parsedRSAKey)
+	jwtToken, err := generateJWTtoken(app.ClientId, &app.parsedRSAKey)
 	if err != nil {
 		return "", err
 	}

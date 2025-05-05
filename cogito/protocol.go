@@ -247,12 +247,12 @@ func (src *Source) Validate() error {
 	sinks := sets.From(src.Sinks...)
 	if sinks.Size() == 0 || sinks.Contains("github") {
 		// Cogito commit Github status mandatory fields.
-		if (src.GitHubApp != github.GitHubApp{}) && src.AccessToken != "" {
+
+		if !src.GitHubApp.IsZero() && src.AccessToken != "" {
 			return fmt.Errorf("source: cannot specify both github_app and access_token")
 		}
 
-		// either access_token or github_app must be specified
-		if src.AccessToken == "" && (src.GitHubApp == github.GitHubApp{}) {
+		if src.AccessToken == "" && src.GitHubApp.IsZero() {
 			return fmt.Errorf("source: one of access_token or github_app must be specified")
 		}
 
@@ -262,8 +262,8 @@ func (src *Source) Validate() error {
 		if src.Repo == "" {
 			mandatory = append(mandatory, "repo")
 		}
-		// if access token is not set; we are using GitHub app. Validate it.
-		if src.AccessToken == "" {
+		// we are using GitHub app. Validate it.
+		if !src.GitHubApp.IsZero() {
 			if err := src.GitHubApp.Validate(); err != nil {
 				return fmt.Errorf("source: %s", err)
 			}

@@ -46,7 +46,7 @@ func TestGenerateInstallationToken(t *testing.T) {
 	app := github.GitHubApp{
 		ClientId:       clientID,
 		InstallationId: installationID,
-		PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
+		PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
 	}
 	err = app.Validate()
 	assert.NilError(t, err)
@@ -62,6 +62,45 @@ func TestGenerateInstallationToken(t *testing.T) {
 	assert.Equal(t, "dummy_installation_token", gotToken)
 }
 
+func TestGitHubAppIsZero(t *testing.T) {
+	type testCase struct {
+		name string
+		app  github.GitHubApp
+		want bool
+	}
+
+	run := func(t *testing.T, tc testCase) {
+		got := tc.app.IsZero()
+		assert.Equal(t, got, tc.want)
+	}
+
+	testCases := []testCase{
+		{
+			name: "empty app",
+			app:  github.GitHubApp{},
+			want: true,
+		},
+		{
+			name: "one field set: client-id",
+			app:  github.GitHubApp{ClientId: "client-id"},
+			want: false,
+		},
+		{
+			name: "all fields set",
+			app: github.GitHubApp{
+				ClientId:       "client-id",
+				InstallationId: 12345,
+				PrivateKey:     "dummy-private-key",
+			},
+			want: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
+}
+
 func TestGitHubAppValidateSuccess(t *testing.T) {
 	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
 	assert.NilError(t, err)
@@ -69,7 +108,7 @@ func TestGitHubAppValidateSuccess(t *testing.T) {
 	app := github.GitHubApp{
 		ClientId:       "client-id",
 		InstallationId: 12345,
-		PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
+		PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
 	}
 
 	err = app.Validate()

@@ -76,7 +76,7 @@ func TestSourceValidationSuccess(t *testing.T) {
 					GitHubApp: github.GitHubApp{
 						ClientId:       "client-id-key",
 						InstallationId: 12345,
-						PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
+						PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
 					},
 				}
 			},

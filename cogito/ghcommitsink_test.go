@@ -80,7 +80,7 @@ func TestSinkGitHubCommitStatusSendGhAppSuccess(t *testing.T) {
 	app := github.GitHubApp{
 		ClientId:       "client-id",
 		InstallationId: 12345,
-		PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
+		PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
 	}
 	err = app.Validate()
 	assert.NilError(t, err)

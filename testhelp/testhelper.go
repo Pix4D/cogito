@@ -320,7 +320,7 @@ func GeneratePrivateKey(t *testing.T, bitSize int) (*rsa.PrivateKey, error) {
 }
 
 // EncodePrivateKeyToPEM encodes Private Key from RSA to PEM format
-func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
+func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) string {
 	// Get ASN.1 DER format
 	privDER := x509.MarshalPKCS1PrivateKey(privateKey)
 
@@ -331,7 +331,7 @@ func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 		Bytes:   privDER,
 	}
 
-	return pem.EncodeToMemory(&privBlock)
+	return string(pem.EncodeToMemory(&privBlock))
 }
 
 // DecodeJWT decodes the HTTP request authorization header with the given RSA key
