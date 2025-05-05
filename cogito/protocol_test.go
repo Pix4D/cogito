@@ -35,6 +35,9 @@ func TestSourceValidationSuccess(t *testing.T) {
 		AccessToken: "the-token",
 	}
 
+	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
+	assert.NilError(t, err)
+
 	testCases := []testCase{
 		{
 			name:     "only mandatory keys",
@@ -73,7 +76,7 @@ func TestSourceValidationSuccess(t *testing.T) {
 					GitHubApp: github.GitHubApp{
 						ClientId:       "client-id-key",
 						InstallationId: 12345,
-						PrivateKey:     "private-ssh-key",
+						PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
 					},
 				}
 			},
@@ -131,18 +134,7 @@ func TestSourceValidationFailure(t *testing.T) {
 					PrivateKey:     "private-rsa-key",
 				},
 			},
-			wantErr: "source: missing keys: github_app.client_id",
-		},
-		{
-			name: "missing mandatory git source keys for github app: private key",
-			source: cogito.Source{
-				Owner: "the-owner",
-				Repo:  "the-repo",
-				GitHubApp: github.GitHubApp{
-					ClientId: "client-id",
-				},
-			},
-			wantErr: "source: missing keys: github_app.installation_id, github_app.private_key",
+			wantErr: "source: github_app: missing mandatory keys: github_app.client_id",
 		},
 		{
 			name:    "missing mandatory gchat source key",

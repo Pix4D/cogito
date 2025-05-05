@@ -43,15 +43,19 @@ func TestGenerateInstallationToken(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(handler))
 	defer ts.Close()
 
+	app := github.GitHubApp{
+		ClientId:       clientID,
+		InstallationId: installationID,
+		PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
+	}
+	err = app.Validate()
+	assert.NilError(t, err)
+
 	gotToken, err := github.GenerateInstallationToken(
 		ctx,
 		ts.Client(),
 		ts.URL,
-		github.GitHubApp{
-			ClientId:       clientID,
-			InstallationId: installationID,
-			PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
-		},
+		app,
 	)
 
 	assert.NilError(t, err)
@@ -89,6 +93,59 @@ func TestGitHubAppIsZero(t *testing.T) {
 				PrivateKey:     "dummy-private-key",
 			},
 			want: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) { run(t, tc) })
+	}
+}
+
+func TestGitHubAppValidateSuccess(t *testing.T) {
+	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
+	assert.NilError(t, err)
+
+	app := github.GitHubApp{
+		ClientId:       "client-id",
+		InstallationId: 12345,
+		PrivateKey:     testhelp.EncodePrivateKeyToPEM(privateKey),
+	}
+
+	err = app.Validate()
+	assert.NilError(t, err)
+}
+
+func TestGitHubAppValidateFailure(t *testing.T) {
+	type testCase struct {
+		name      string
+		app       github.GitHubApp
+		wantError string
+	}
+
+	run := func(t *testing.T, tc testCase) {
+		got := tc.app.Validate()
+		assert.ErrorContains(t, got, tc.wantError)
+	}
+
+	testCases := []testCase{
+		{
+			name:      "one field set: client-id",
+			app:       github.GitHubApp{ClientId: "client-id"},
+			wantError: "github_app: missing mandatory keys: github_app.installation_id, github_app.private_key",
+		},
+		{
+			name:      "missing single field set: private_key",
+			app:       github.GitHubApp{ClientId: "client-id", InstallationId: 12345},
+			wantError: "github_app: missing mandatory keys: github_app.private_key",
+		},
+		{
+			name: "all fields set: invalid pem key",
+			app: github.GitHubApp{
+				ClientId:       "client-id",
+				InstallationId: 12345,
+				PrivateKey:     "dummy-private-key",
+			},
+			wantError: "github_app: could not parse private key: invalid key: Key must be a PEM encoded PKCS1 or PKCS8 key",
 		},
 	}
 
