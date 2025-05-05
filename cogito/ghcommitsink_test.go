@@ -77,17 +77,21 @@ func TestSinkGitHubCommitStatusSendGhAppSuccess(t *testing.T) {
 	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
 	assert.NilError(t, err)
 
+	app := github.GitHubApp{
+		ClientId:       "client-id",
+		InstallationId: 12345,
+		PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
+	}
+	err = app.Validate()
+	assert.NilError(t, err)
+
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    testhelp.MakeTestLog(),
 		GitRef: wantGitRef,
 		Request: cogito.PutRequest{
 			Source: cogito.Source{
 				GhHostname: gitHubSpyURL.Host,
-				GitHubApp: github.GitHubApp{
-					ClientId:       "client-id",
-					InstallationId: 12345,
-					PrivateKey:     string(testhelp.EncodePrivateKeyToPEM(privateKey)),
-				},
+				GitHubApp:  app,
 			},
 			Params: cogito.PutParams{State: wantState},
 			Env:    cogito.Environment{BuildJobName: jobName},

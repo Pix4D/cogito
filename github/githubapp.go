@@ -2,12 +2,14 @@ package github
 
 import (
 	"context"
+	"crypto/rsa"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"path"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,18 +19,38 @@ type GitHubApp struct {
 	ClientId       string `json:"client_id"`
 	InstallationId int    `json:"installation_id"`
 	PrivateKey     string `json:"private_key"` // SENSITIVE
+	parsedRSAKey   *rsa.PrivateKey
 }
 
-func (app *GitHubApp) IsZero() bool {
-	return *app == GitHubApp{}
+// Validate validates the GitHubApp configuration. Returns an error if
+// GitHubApp is misconfigured.
+func (app *GitHubApp) Validate() error {
+	var mandatory []string
+
+	if app.ClientId == "" {
+		mandatory = append(mandatory, "github_app.client_id")
+	}
+	if app.InstallationId == 0 {
+		mandatory = append(mandatory, "github_app.installation_id")
+	}
+	if app.PrivateKey == "" {
+		mandatory = append(mandatory, "github_app.private_key")
+	}
+
+	if len(mandatory) > 0 {
+		return fmt.Errorf("github_app: missing mandatory keys: %s", strings.Join(mandatory, ", "))
+	}
+
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(app.PrivateKey))
+	if err != nil {
+		return fmt.Errorf("github_app: could not parse private key: %w", err)
+	}
+	app.parsedRSAKey = key
+	return nil
 }
 
 // generateJWTtoken returns a signed JWT token used to authenticate as GitHub App
-func generateJWTtoken(clientId, privateKey string) (string, error) {
-	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKey))
-	if err != nil {
-		return "", fmt.Errorf("could not parse private key: %w", err)
-	}
+func generateJWTtoken(clientId string, privateKey *rsa.PrivateKey) (string, error) {
 	// GitHub rejects expiresAt (exp) and issuedAt (iat) timestamps that are not an integer,
 	// while the jwt-go library serializes to fractional timestamps.
 	// Truncate them before passing to jwt-go.
@@ -46,7 +68,7 @@ func generateJWTtoken(clientId, privateKey string) (string, error) {
 	}
 
 	// GitHub JWT must be signed using the RS256 algorithm.
-	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(key)
+	token, err := jwt.NewWithClaims(jwt.SigningMethodRS256, claims).SignedString(privateKey)
 	if err != nil {
 		return "", fmt.Errorf("could not sign the JWT token: %w", err)
 	}
@@ -65,7 +87,11 @@ func GenerateInstallationToken(ctx context.Context, client *http.Client, server 
 	}
 	req.Header.Add("Accept", "application/vnd.github.v3+json")
 
-	jwtToken, err := generateJWTtoken(app.ClientId, app.PrivateKey)
+	if app.parsedRSAKey == nil {
+		return "", fmt.Errorf("misconfigured github_app: rsa key not configured. Call app.Validate() method first")
+	}
+
+	jwtToken, err := generateJWTtoken(app.ClientId, app.parsedRSAKey)
 	if err != nil {
 		return "", err
 	}
