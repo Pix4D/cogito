@@ -35,7 +35,7 @@ tasks:
   install:deps:
     desc: Install tool dependencies.
     cmds:
-      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
+      # - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
 
   lint:
