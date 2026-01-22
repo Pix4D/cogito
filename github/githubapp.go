@@ -13,12 +13,14 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type GitHubApp struct {
 	ClientId       string `json:"client_id"`
 	InstallationId int    `json:"installation_id"`
 	PrivateKey     string `json:"private_key"` // SENSITIVE
 }
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func (app *GitHubApp) IsZero() bool {
 	return *app == GitHubApp{}
 }
@@ -54,6 +56,8 @@ func generateJWTtoken(clientId, privateKey string) (string, error) {
 }
 
 // GenerateInstallationToken returns an installation token used to authenticate as GitHub App installation
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func GenerateInstallationToken(ctx context.Context, client *http.Client, server string, app GitHubApp) (string, error) {
 	// API: POST /app/installations/{installationId}/access_tokens
 	installationId := strconv.Itoa(app.InstallationId)

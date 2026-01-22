@@ -1,5 +1,6 @@
 // Package sets is a minimal implementation of a generic set data structure.
-
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 package sets
 
 import (
@@ -10,17 +11,23 @@ import (
 
 // Set is a minimal set that takes only ordered types: any type that supports the
 // operators < <= >= >.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 type Set[T cmp.Ordered] struct {
 	items map[T]struct{}
 }
 
 // New returns an empty set with capacity size. The capacity will grow and shrink as a
 // stdlib map.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func New[T cmp.Ordered](size int) *Set[T] {
 	return &Set[T]{items: make(map[T]struct{}, size)}
 }
 
 // From returns a set from elements.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func From[T cmp.Ordered](elements ...T) *Set[T] {
 	s := New[T](len(elements))
 	for _, i := range elements {
@@ -32,10 +39,13 @@ func From[T cmp.Ordered](elements ...T) *Set[T] {
 // String returns a string representation of s, ordered. This allows to simply pass a
 // sets.Set as parameter to a function that expects a fmt.Stringer interface and obtain
 // a comparable string.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) String() string {
 	return fmt.Sprint(s.OrderedList())
 }
 
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Size() int {
 	return len(s.items)
 }
@@ -43,6 +53,8 @@ func (s *Set[T]) Size() int {
 // OrderedList returns a slice of the elements of s, ordered.
 // TODO This can probably be replaced in Go 1.20 when a generics slice packages reaches
 // the stdlib.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) OrderedList() []T {
 	elements := make([]T, 0, len(s.items))
 	for e := range s.items {
@@ -55,12 +67,16 @@ func (s *Set[T]) OrderedList() []T {
 }
 
 // Contains returns true if s contains item.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Contains(item T) bool {
 	_, found := s.items[item]
 	return found
 }
 
 // Add inserts item into s. Returns true if the item was present.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Add(item T) bool {
 	if s.Contains(item) {
 		return true
@@ -70,6 +86,8 @@ func (s *Set[T]) Add(item T) bool {
 }
 
 // Remove deletes item from s. Returns true if the item was present.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Remove(item T) bool {
 	if !s.Contains(item) {
 		return false
@@ -79,6 +97,8 @@ func (s *Set[T]) Remove(item T) bool {
 }
 
 // Difference returns a set containing the elements of s that are not in x.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 	result := New[T](max(0, s.Size()-x.Size()))
 	for item := range s.items {
@@ -90,6 +110,8 @@ func (s *Set[T]) Difference(x *Set[T]) *Set[T] {
 }
 
 // Intersection returns a set containing the elements that are both in s and x.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Intersection(x *Set[T]) *Set[T] {
 	result := New[T](0)
 	// loop over the smaller set (thanks to https://github.com/deckarep/golang-set)
@@ -107,6 +129,8 @@ func (s *Set[T]) Intersection(x *Set[T]) *Set[T] {
 }
 
 // Union returns a set containing all the elements of s and x.
+//
+// Deprecated: Package sets is replaced by github.com/Pix4D/go-kit/sets.
 func (s *Set[T]) Union(x *Set[T]) *Set[T] {
 	result := New[T](max(s.Size(), x.Size()))
 	for item := range s.items {

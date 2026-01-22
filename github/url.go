@@ -7,6 +7,7 @@ import (
 	"strings"
 )
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type GitURL struct {
 	URL      *url.URL
 	Owner    string
@@ -42,6 +43,8 @@ func safeUrlParse(rawURL string) (*url.URL, error) {
 //   - https with u:p: 	https//username:password@github.com/Pix4D/cogito.git
 //   - http: 			http://github.com/Pix4D/cogito.git
 //   - http with u:p: 	http://username:password@github.com/Pix4D/cogito.git
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func ParseGitPseudoURL(rawURL string) (GitURL, error) {
 	workURL := rawURL
 	// If ssh pseudo URL, we need to massage the rawURL ourselves :-(

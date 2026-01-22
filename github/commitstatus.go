@@ -2,6 +2,8 @@
 //
 // See the README and CONTRIBUTING files for additional information, caveats about GitHub
 // API and imposed limits, and reference to official documentation.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 package github
 
 import (
@@ -22,12 +24,15 @@ import (
 )
 
 // StatusError is one of the possible errors returned by the github package.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type StatusError struct {
 	What       string
 	StatusCode int
 	Details    string
 }
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func (e *StatusError) Error() string {
 	return fmt.Sprintf("%s\n%s", e.What, e.Details)
 }
@@ -37,6 +42,7 @@ const GhDefaultHostname = "github.com"
 
 var localhostRegexp = regexp.MustCompile(`^127.0.0.1:[0-9]+$`)
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type Target struct {
 	// Client is the http client
 	Client *http.Client
@@ -51,6 +57,8 @@ type Target struct {
 // See also:
 // - NewCommitStatus
 // - https://docs.github.com/en/rest/commits/statuses
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type CommitStatus struct {
 	target  *Target
 	token   string
@@ -72,6 +80,8 @@ type CommitStatus struct {
 //
 // See also:
 // - https://docs.github.com/en/rest/commits/statuses
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func NewCommitStatus(
 	target *Target,
 	token, owner, repo, context string,
@@ -88,6 +98,8 @@ func NewCommitStatus(
 }
 
 // AddRequest is the JSON object sent to the API.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type AddRequest struct {
 	State       string `json:"state"`
 	TargetURL   string `json:"target_url"`
@@ -108,6 +120,8 @@ type AddRequest struct {
 // The returned error contains some diagnostic information to help troubleshooting.
 //
 // See also: https://docs.github.com/en/rest/commits/statuses#create-a-commit-status
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func (cs CommitStatus) Add(ctx context.Context, sha, state, targetURL, description string) error {
 	// API: POST /repos/{owner}/{repo}/statuses/{sha}
 	url := cs.target.Server + path.Join("/repos", cs.owner, cs.repo, "statuses", sha)
@@ -236,6 +250,8 @@ func (cs CommitStatus) explainError(err error, state, sha, url string) error {
 // if hostname looks like a httptest server, it returns http://127.0.0.1:PORT
 // otherwise, hostname is assumed to be of a Github Enterprise instance.
 // For example, github.mycompany.org returns https://github.mycompany.org/api/v3
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func ApiRoot(h string) string {
 	hostname := strings.ToLower(h)
 	if hostname == GhDefaultHostname {

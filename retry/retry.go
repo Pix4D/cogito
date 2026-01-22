@@ -2,6 +2,8 @@
 //
 // Took some inspiration from:
 // - https://github.com/eapache/go-resiliency/tree/main/retrier
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 package retry
 
 import (
@@ -11,6 +13,8 @@ import (
 )
 
 // Action is returned by a ClassifierFunc to indicate to Retry how to proceed.
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 type Action int
 
 const (
@@ -26,6 +30,8 @@ const (
 
 // Retry is the controller of the retry mechanism.
 // See the examples in file retry_example_test.go.
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 type Retry struct {
 	UpTo         time.Duration // Total maximum duration of the retries.
 	FirstDelay   time.Duration // Duration of the first backoff.
@@ -41,19 +47,27 @@ type Retry struct {
 // and return a custom delay; this can be used in special cases such as when
 // rate-limited with a fixed window; for an example see
 // [github.com/Pix4D/cogito/github.Backoff].
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 type BackoffFunc func(first bool, previous, limit time.Duration, err error) time.Duration
 
 // ClassifierFunc decides whether to proceed or not; called by [Retry.Do].
 // Parameter err allows to inspect the error; for an example see
 // [github.com/Pix4D/cogito/github.Classifier]
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 type ClassifierFunc func(err error) Action
 
 // WorkFunc does the unit of work that might fail and need to be retried; called
 // by [Retry.Do].
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 type WorkFunc func() error
 
 // Do is the loop of [Retry].
 // See the examples in file retry_example_test.go.
+//
+// Deprecated: Package retry is replaced by github.com/Pix4D/go-kit/retry.
 func (rtr Retry) Do(
 	backoffFn BackoffFunc,
 	classifierFn ClassifierFunc,
