@@ -85,7 +85,7 @@ $ gopass insert cogito/test_oauth_token
 
 ```console
 $ gopass insert cogito/github_app_client_id
-$ gopass insert gopass show cogito/github_app_installation_id
+$ gopass insert cogito/github_app_installation_id
 $ gopass insert --multiline cogito/github_app_private_key
 ```
 
