@@ -1,6 +1,6 @@
 module github.com/Pix4D/cogito
 
-go 1.23
+go 1.25
 
 require (
 	dario.cat/mergo v1.0.0
