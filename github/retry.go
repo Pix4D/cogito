@@ -1,4 +1,4 @@
-// Adapters and helpers to use the [cogito/retry] package for the GitHub API.
+// Adapters and helpers to use the [go-kit/retry] package for the GitHub API.
 
 package github
 
@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Pix4D/cogito/retry"
+	"github.com/Pix4D/go-kit/retry"
 )
 
 // Classifier implements [retry.ClassifierFunc] for GitHub.

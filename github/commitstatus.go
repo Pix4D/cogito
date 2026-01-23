@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Pix4D/cogito/retry"
+	"github.com/Pix4D/go-kit/retry"
 )
 
 // StatusError is one of the possible errors returned by the github package.
