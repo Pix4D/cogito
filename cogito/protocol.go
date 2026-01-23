@@ -11,7 +11,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/Pix4D/cogito/github"
+	"github.com/Pix4D/go-kit/github"
 	"github.com/Pix4D/go-kit/sets"
 )
 

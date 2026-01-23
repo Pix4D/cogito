@@ -12,8 +12,8 @@ import (
 	"gotest.tools/v3/assert/cmp"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
+	"github.com/Pix4D/go-kit/github"
 )
 
 func TestSourceValidationSuccess(t *testing.T) {

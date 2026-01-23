@@ -7,9 +7,11 @@ require (
 	github.com/Pix4D/go-kit v0.2.0
 	github.com/alexflint/go-arg v1.4.3
 	github.com/golang-jwt/jwt/v5 v5.3.0
-	github.com/google/go-cmp v0.7.0
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
 	gotest.tools/v3 v3.5.1
 )
 
-require github.com/alexflint/go-scalar v1.2.0 // indirect
+require (
+	github.com/alexflint/go-scalar v1.2.0 // indirect
+	github.com/google/go-cmp v0.7.0 // indirect
+)
