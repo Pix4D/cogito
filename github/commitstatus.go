@@ -145,6 +145,7 @@ func (cs CommitStatus) Add(ctx context.Context, sha, state, targetURL, descripti
 		remaining := resp.Header.Get("X-RateLimit-Remaining")
 		limit := resp.Header.Get("X-RateLimit-Limit")
 		reset := resp.Header.Get("X-RateLimit-Reset")
+		contentType := resp.Header.Get("Content-Type")
 		cs.log.Debug(
 			"http-request",
 			"method", req.Method,
@@ -161,7 +162,18 @@ func (cs CommitStatus) Add(ctx context.Context, sha, state, targetURL, descripti
 		}
 
 		body, _ := io.ReadAll(resp.Body)
-		return NewGitHubError(resp, errors.New(strings.TrimSpace(string(body))))
+		buffer := body
+		if strings.Contains(strings.ToLower(contentType), "application/json") {
+			var foo map[string]any
+			if err := json.Unmarshal(body, &foo); err != nil {
+				return fmt.Errorf("normalizing JSON: unmarshal: %s", err)
+			}
+			buffer, err = json.Marshal(foo)
+			if err != nil {
+				return fmt.Errorf("normalizing JSON: marshal: %s", err)
+			}
+		}
+		return NewGitHubError(resp, errors.New(strings.TrimSpace(string(buffer))))
 	}
 
 	if err := cs.target.Retry.Do(Backoff, Classifier, workFn); err != nil {
