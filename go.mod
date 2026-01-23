@@ -4,10 +4,11 @@ go 1.25
 
 require (
 	dario.cat/mergo v1.0.0
+	github.com/Pix4D/go-kit v0.2.0
 	github.com/alexflint/go-arg v1.4.3
 	github.com/go-quicktest/qt v1.101.1-0.20240301121107-c6c8733fa1e6
-	github.com/golang-jwt/jwt/v5 v5.2.2
-	github.com/google/go-cmp v0.6.0
+	github.com/golang-jwt/jwt/v5 v5.3.0
+	github.com/google/go-cmp v0.7.0
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
 	gotest.tools/v3 v3.5.1
 )

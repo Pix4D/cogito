@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/sets"
+	"github.com/Pix4D/go-kit/sets"
 )
 
 var hostnameRegexp = regexp.MustCompile(`^(?P<host>[a-zA-Z0-9.-]+)(?::(?P<port>\d+))?$`)
