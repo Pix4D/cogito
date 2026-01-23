@@ -74,8 +74,7 @@ func TestSinkGitHubCommitStatusSendGhAppSuccess(t *testing.T) {
 	gitHubSpyURL, err := url.Parse(ts.URL)
 	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 
-	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
-	assert.NilError(t, err)
+	privateKey := testhelp.GeneratePrivateKey(t, 2048)
 
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    testhelp.MakeTestLog(),

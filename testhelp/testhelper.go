@@ -73,7 +73,7 @@ func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateDa
 
 	renamedDir := dirRenamer(filepath.Base(src))
 	tgtDir := filepath.Join(dst, renamedDir)
-	if err := os.MkdirAll(tgtDir, 0770); err != nil {
+	if err := os.MkdirAll(tgtDir, 0o770); err != nil {
 		return fmt.Errorf("making src dir: %w", err)
 	}
 
@@ -123,7 +123,7 @@ func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
 	defer srcFile.Close()
 
 	// We want an error if the file already exists
-	dstFile, err := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0660)
+	dstFile, err := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o660)
 	if err != nil {
 		return fmt.Errorf("creating dst file: %w", err)
 	}
@@ -307,16 +307,22 @@ func (t *FailingWriter) Write([]byte) (n int, err error) {
 }
 
 // GeneratePrivateKey creates a RSA Private Key of specified byte size
-func GeneratePrivateKey(t *testing.T, bitSize int) (*rsa.PrivateKey, error) {
+func GeneratePrivateKey(t *testing.T, bitSize int) *rsa.PrivateKey {
+	t.Helper()
+
 	// Private Key generation
 	privateKey, err := rsa.GenerateKey(rand.Reader, bitSize)
-	assert.NilError(t, err)
+	if err != nil {
+		t.Fatal("generating private key:", err)
+	}
 
 	// Validate Private Key
 	err = privateKey.Validate()
-	assert.NilError(t, err)
+	if err != nil {
+		t.Fatal("validating private key:", err)
+	}
 
-	return privateKey, nil
+	return privateKey
 }
 
 // EncodePrivateKeyToPEM encodes Private Key from RSA to PEM format
@@ -338,7 +344,7 @@ func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 // and returns the registered claims of the decoded token.
 func DecodeJWT(t *testing.T, r *http.Request, key *rsa.PrivateKey) *jwt.RegisteredClaims {
 	token := strings.Fields(r.Header.Get("Authorization"))[1]
-	tok, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(t *jwt.Token) (interface{}, error) {
+	tok, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
 		if t.Header["alg"] != "RS256" {
 			return nil, fmt.Errorf("unexpected signing method: %v, expected: %v", t.Header["alg"], "RS256")
 		}
