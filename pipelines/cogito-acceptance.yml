@@ -12,7 +12,7 @@ resource_types:
     check_every: 24h
     source:
       repository: pix4d/cogito
-      tag: ((cogito-tag))
+      tag: "((cogito-tag))"
 
 ###########################################################
 
@@ -75,6 +75,7 @@ resources:
     source:
       uri: https://github.com/((github-owner))/((repo-name)).git
       branch: ((target-branch))
+      disable_ci_skip: true # This is required on Pix4D CI only
 
   - name: cogito-repo.git
     type: git
@@ -82,6 +83,7 @@ resources:
     source:
       uri: https://github.com/Pix4D/cogito.git
       branch: ((cogito-branch))
+      disable_ci_skip: true # This is required on Pix4D CI only
 
 ###########################################################
 
