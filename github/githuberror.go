@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 type GitHubError struct {
 	StatusCode         int
 	OauthInfo          string
@@ -16,6 +17,7 @@ type GitHubError struct {
 	innerErr           error
 }
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func NewGitHubError(httpResp *http.Response, innerErr error) error {
 	ghErr := GitHubError{
 		innerErr:   innerErr,
@@ -73,10 +75,12 @@ func NewGitHubError(httpResp *http.Response, innerErr error) error {
 	return ghErr
 }
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func (ghe GitHubError) Error() string {
 	return ghe.innerErr.Error()
 }
 
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func (ghe GitHubError) Unwrap() error {
 	return ghe.innerErr
 }

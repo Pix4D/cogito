@@ -11,6 +11,8 @@ import (
 )
 
 // Classifier implements [retry.ClassifierFunc] for GitHub.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func Classifier(err error) retry.Action {
 	if err == nil {
 		return retry.Success
@@ -31,6 +33,8 @@ func Classifier(err error) retry.Action {
 }
 
 // Backoff implements [retry.BackoffFunc] for GitHub.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func Backoff(first bool, previous, limit time.Duration, err error) time.Duration {
 	// Optimization: Are we rate limited?
 	// This allows to immediately terminate the retry loop if it would take too
@@ -62,12 +66,16 @@ func Backoff(first bool, previous, limit time.Duration, err error) time.Duration
 
 // RateLimited returns true if the http.Response in err reports being rate limited.
 // See https://docs.github.com/en/rest/overview/resources-in-the-rest-api?apiVersion=2022-11-28#exceeding-the-rate-limit
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func RateLimited(err GitHubError) bool {
 	return err.StatusCode == http.StatusForbidden && err.RateLimitRemaining == 0
 }
 
 // TransientError returns true if the http.Response in err has a status code
 // that can be retried.
+//
+// Deprecated: Package github is replaced by github.com/Pix4D/go-kit/github.
 func TransientError(statusCode int) bool {
 	switch statusCode {
 	case
