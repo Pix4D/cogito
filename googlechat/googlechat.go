@@ -102,7 +102,11 @@ func TextMessage(
 	if err != nil {
 		return MessageReply{}, fmt.Errorf("TextMessage: send: %s", RedactErrorURL(err))
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			log.Info("closing-response-body", "error", err)
+		}
+	}()
 	elapsed := time.Since(start)
 	log.Debug(
 		"http-request",
