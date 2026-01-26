@@ -10,7 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,7 +18,6 @@ import (
 	"text/template"
 
 	"dario.cat/mergo"
-	"github.com/golang-jwt/jwt/v5"
 	"gotest.tools/v3/assert"
 )
 
@@ -338,19 +336,4 @@ func EncodePrivateKeyToPEM(privateKey *rsa.PrivateKey) []byte {
 	}
 
 	return pem.EncodeToMemory(&privBlock)
-}
-
-// DecodeJWT decodes the HTTP request authorization header with the given RSA key
-// and returns the registered claims of the decoded token.
-func DecodeJWT(t *testing.T, r *http.Request, key *rsa.PrivateKey) *jwt.RegisteredClaims {
-	token := strings.Fields(r.Header.Get("Authorization"))[1]
-	tok, err := jwt.ParseWithClaims(token, &jwt.RegisteredClaims{}, func(t *jwt.Token) (any, error) {
-		if t.Header["alg"] != "RS256" {
-			return nil, fmt.Errorf("unexpected signing method: %v, expected: %v", t.Header["alg"], "RS256")
-		}
-		return &key.PublicKey, nil
-	})
-	assert.NilError(t, err)
-
-	return tok.Claims.(*jwt.RegisteredClaims)
 }
