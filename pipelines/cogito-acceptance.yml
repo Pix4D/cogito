@@ -178,7 +178,7 @@ jobs:
         params:
           state: success
 
-  - name: cogito-gh-app-status
+  - name: gh-app-status
     max_in_flight: 1
     plan:
       - get: target-repo.git
