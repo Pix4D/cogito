@@ -6,6 +6,8 @@ name: ci
 
 env:
   go-version: 1.25.x
+  golangci-version: v2.8.0
+  gotestsum-version: v1.13.0
   task-version: v3.40.0
 
 jobs:
@@ -13,22 +15,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Install Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version: ${{ env.go-version }}
       - name: Install Task
         run: go install github.com/go-task/task/v3/cmd/task@${{ env.task-version }}
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           # By default, actions/checkout will persist the GITHUB_TOKEN, so that further
           # steps in the job can perform authenticated git commands (that is: WRITE to
           # the repo). Following the Principle of least privilege, we disable this as long
           # as we don't need it.
           persist-credentials: false
-      - run: task ci:setup
-      # - run: task lint FIXME: re-enable
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ env.golangci-version }}
       - run: task build
+      - run: go install gotest.tools/gotestsum@${{ env.gotestsum-version }}
       - run: task test:all
         env:
           COGITO_TEST_OAUTH_TOKEN: ${{ secrets.COGITO_TEST_OAUTH_TOKEN }}

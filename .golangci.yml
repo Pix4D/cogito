@@ -1,7 +1,10 @@
-# See https://golangci-lint.run/usage/configuration/#config-file
+# See https://golangci-lint.run/docs/configuration/file/
+
+version: "2"
 
 linters:
   # NOTE: `enable` _adds_ to the default linters!
   # To see the currently enabled linters, run `golangci-lint linters`
   enable:
     - gocritic
+    # - modernize LATER

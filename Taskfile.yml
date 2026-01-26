@@ -27,7 +27,7 @@ vars:
       "version": {"ref": "pizza"}
     }
   #
-  GOLANGCI_VERSION: v1.62.2
+  GOLANGCI_VERSION: v2.8.0
   GOTESTSUM_VERSION: v1.13.0
 
 tasks:
@@ -35,7 +35,7 @@ tasks:
   install:deps:
     desc: Install tool dependencies.
     cmds:
-      # - go install github.com/golangci/golangci-lint/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - go install gotest.tools/gotestsum@{{.GOTESTSUM_VERSION}}
 
   lint:
@@ -295,14 +295,6 @@ tasks:
         msg: This target must run only on CI, not locally.
     status:
       - test -z "{{.IS_RELEASE}}"
-
-  ci:setup:
-    desc: Useful only when running under CI.
-    cmds:
-      - task: install:deps
-      # Running "go mod download" is optional, since "go build" would do it anyway.
-      # We run it explicitly to make the output of "go build" more focused.
-      - cmd: go mod download -x
 
   # When using GitHub Actions, add this snippet at the end of the workflow:
   #    - run: docker logout
