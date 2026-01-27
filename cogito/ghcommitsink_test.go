@@ -12,8 +12,8 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/github"
 	"github.com/Pix4D/cogito/testhelp"
+	"github.com/Pix4D/go-kit/github"
 )
 
 func TestSinkGitHubCommitStatusSendSuccess(t *testing.T) {
@@ -74,8 +74,7 @@ func TestSinkGitHubCommitStatusSendGhAppSuccess(t *testing.T) {
 	gitHubSpyURL, err := url.Parse(ts.URL)
 	assert.NilError(t, err, "error parsing SpyHttpServer URL: %s", err)
 
-	privateKey, err := testhelp.GeneratePrivateKey(t, 2048)
-	assert.NilError(t, err)
+	privateKey := testhelp.GeneratePrivateKey(t, 2048)
 
 	sink := cogito.GitHubCommitStatusSink{
 		Log:    testhelp.MakeTestLog(),

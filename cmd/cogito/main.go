@@ -11,7 +11,7 @@ import (
 	"path"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/sets"
+	"github.com/Pix4D/go-kit/sets"
 )
 
 func main() {

@@ -28,7 +28,7 @@ vars:
     }
   #
   GOLANGCI_VERSION: v1.62.2
-  GOTESTSUM_VERSION: v1.12.0
+  GOTESTSUM_VERSION: v1.13.0
 
 tasks:
 

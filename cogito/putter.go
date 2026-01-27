@@ -13,8 +13,8 @@ import (
 
 	"github.com/sasbury/mini"
 
-	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/sets"
+	"github.com/Pix4D/go-kit/github"
+	"github.com/Pix4D/go-kit/sets"
 )
 
 // ProdPutter is an implementation of a [Putter] for the Cogito resource.

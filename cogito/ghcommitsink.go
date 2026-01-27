@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/Pix4D/cogito/github"
-	"github.com/Pix4D/cogito/retry"
+	"github.com/Pix4D/go-kit/github"
+	"github.com/Pix4D/go-kit/retry"
 )
 
 const (

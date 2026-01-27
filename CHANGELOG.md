@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - YYYY-MM-DD
+
+## [v0.15.0] - 2026-01-27
+
+### Changed
+
+- Update to Go 1.25.
+
+### Breaking changes
+
+- The packages `sets`, `retry`, `github` have been removed, following the deprecation notice in v0.14.0.
+  This does not impact the users of the cogito Concourse resource.
+  It impacts only code using these packages directly. Such code should switch to https://github.com/Pix4D/go-kit, which contains the same packages (drop-in replacement).
+
 ## [v0.14.0] - 2026-01-26
 
 ### Deprecated
@@ -328,3 +342,5 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.12.0]: https://github.com/Pix4D/cogito/releases/tag/v0.12.0
 [v0.12.1]: https://github.com/Pix4D/cogito/releases/tag/v0.12.1
 [v0.13.0]: https://github.com/Pix4D/cogito/releases/tag/v0.13.0
+[v0.14.0]: https://github.com/Pix4D/cogito/releases/tag/v0.14.0
+[v0.15.0]: https://github.com/Pix4D/cogito/releases/tag/v0.15.0
