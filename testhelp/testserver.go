@@ -32,7 +32,11 @@ func SpyHttpServer(request any, reply any, theUrl **url.URL, successCode int,
 			dec := json.NewDecoder(req.Body)
 			if err := dec.Decode(request); err != nil {
 				w.WriteHeader(http.StatusTeapot)
-				fmt.Fprintln(w, "test: decoding request:", err)
+				if _, err := fmt.Fprintln(w, "test: decoding request:", err); err != nil {
+					// In production one would normally log this kind of error.
+					// Here we are in a test, so it is appropriate to panic.
+					panic(fmt.Errorf("writing response: %s", err))
+				}
 				return
 			}
 

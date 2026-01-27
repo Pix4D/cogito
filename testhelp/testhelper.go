@@ -113,19 +113,23 @@ func CopyDir(dst string, src string, dirRenamer Renamer, templatedata TemplateDa
 	return nil
 }
 
-func copyFile(dstPath string, srcPath string, templatedata TemplateData) error {
+func copyFile(dstPath string, srcPath string, templatedata TemplateData) (allErrs error) {
 	srcFile, err := os.Open(srcPath)
 	if err != nil {
 		return fmt.Errorf("opening src file: %w", err)
 	}
-	defer srcFile.Close()
+	defer func() {
+		allErrs = errors.Join(allErrs, srcFile.Close())
+	}()
 
 	// We want an error if the file already exists
 	dstFile, err := os.OpenFile(dstPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0o660)
 	if err != nil {
 		return fmt.Errorf("creating dst file: %w", err)
 	}
-	defer dstFile.Close()
+	defer func() {
+		allErrs = errors.Join(allErrs, dstFile.Close())
+	}()
 
 	if len(templatedata) == 0 {
 		_, err = io.Copy(dstFile, srcFile)

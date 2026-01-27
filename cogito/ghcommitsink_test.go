@@ -57,14 +57,18 @@ func TestSinkGitHubCommitStatusSendGhAppSuccess(t *testing.T) {
 			dec := json.NewDecoder(r.Body)
 			if err := dec.Decode(&ghReq); err != nil {
 				w.WriteHeader(http.StatusTeapot)
-				fmt.Fprintln(w, "test: decoding request:", err)
+				if _, err := fmt.Fprintln(w, "test: decoding request:", err); err != nil {
+					t.Fatalf("writing response: %s", err)
+				}
 				return
 			}
 		}
 
 		w.WriteHeader(http.StatusCreated)
 		if r.URL.String() == "/app/installations/12345/access_tokens" {
-			fmt.Fprintln(w, `{"token": "dummy_installation_token"}`)
+			if _, err := fmt.Fprintln(w, `{"token": "dummy_installation_token"}`); err != nil {
+				t.Fatalf("writing token: %s", err)
+			}
 			return
 		}
 	}
