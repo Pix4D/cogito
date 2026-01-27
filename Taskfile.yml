@@ -169,6 +169,7 @@ tasks:
       - task: test:acceptance:chat-message-only-simplest-possible
       - task: test:acceptance:chat-message-only-file
       - task: test:acceptance:default-log
+      - task: test:acceptance:gh-app-status
 
   test:acceptance:chat-only-summary:
     desc: Run a pipeline job to test default chat
@@ -217,6 +218,12 @@ tasks:
     cmds:
       - task: trigger-job
         vars: {JOB: default-log}
+
+  test:acceptance:gh-app-status:
+    desc: Run a pipeline job to test auth via a GitHub App
+    cmds:
+      - task: trigger-job
+        vars: {JOB: gh-app-status}
 
   browser:
     desc: "Show code coverage in browser (usage: task test:<subtarget> browser)"
