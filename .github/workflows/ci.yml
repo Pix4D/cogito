@@ -5,8 +5,8 @@ on: [push]
 name: ci
 
 env:
-  go-version: 1.25.x
-  golangci-version: v2.8.0
+  go-version: 1.26.x
+  golangci-version: v2.11.4
   gotestsum-version: v1.13.0
   task-version: v3.40.0
 
