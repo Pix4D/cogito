@@ -1,3 +1,7 @@
+// This file tests the integration of Google Chat as a Cogito sink.
+// See also file googlechat/googlechat_test.go for tests of Google Chat independently
+// from Cogito.
+
 package cogito_test
 
 import (

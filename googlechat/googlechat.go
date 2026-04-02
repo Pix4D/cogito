@@ -74,14 +74,14 @@ type MessageSpace struct {
 func TextMessage(
 	ctx context.Context,
 	log *slog.Logger,
-	theURL, threadKey, text string,
+	webHook, threadKey, text string,
 ) (MessageReply, error) {
 	body, err := json.Marshal(BasicMessage{Text: text})
 	if err != nil {
 		return MessageReply{}, fmt.Errorf("TextMessage: %s", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, theURL,
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, webHook,
 		bytes.NewBuffer(body))
 	if err != nil {
 		return MessageReply{},
