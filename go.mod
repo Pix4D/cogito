@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	dario.cat/mergo v1.0.0
-	github.com/Pix4D/go-kit v0.2.0
+	github.com/Pix4D/go-kit v0.2.1-0.20260408084514-4ad142f0682f
 	github.com/alexflint/go-arg v1.4.3
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
 	gotest.tools/v3 v3.5.1
