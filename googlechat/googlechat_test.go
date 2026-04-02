@@ -3,6 +3,8 @@ package googlechat_test
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"net/url"
 	"os"
 	"testing"
@@ -37,6 +39,20 @@ func TestTextMessageIntegration(t *testing.T) {
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Contains(reply.Text, text))
+}
+
+func TestTextMessageFailDueToStatusCode(t *testing.T) {
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.WriteHeader(http.StatusTeapot)
+		}))
+	defer ts.Close()
+	log := testhelp.MakeTestLog()
+	ctx := context.Background()
+
+	_, err := googlechat.TextMessage(ctx, log, ts.URL, "key", "bananas are ripe")
+
+	assert.ErrorContains(t, err, "TextMessage: status: 418 I'm a teapot")
 }
 
 func TestRedactURL(t *testing.T) {
