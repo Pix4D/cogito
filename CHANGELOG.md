@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Update to Go 1.26.2
+- Function `googlechat.TextMessage` now retries transient errors and client timeouts.
+
+### Breaking changes
+
+- Change signature of function `googlechat.TextMessage`; it now supports retry and per-request timeout.
+  See file `googlechat/googlechat_test.go` for how to invoke it.
 
 ## [v0.15.0] - 2026-01-27
 
