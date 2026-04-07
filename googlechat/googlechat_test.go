@@ -1,7 +1,6 @@
 package googlechat_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -32,11 +31,9 @@ func TestTextMessageIntegration(t *testing.T) {
 	threadKey := "banana-" + user
 	text := fmt.Sprintf("%s message oink! 🐷 sent to thread %s by user %s",
 		ts, threadKey, user)
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 
-	reply, err := googlechat.TextMessage(ctx, log, googlechat.DefaultRetry(log),
-		gchatUrl, threadKey, text)
+	reply, err := googlechat.TextMessage(log, googlechat.DefaultRetry(log),
+		googlechat.DefaultTimeout, gchatUrl, threadKey, text)
 
 	assert.NilError(t, err)
 	assert.Assert(t, cmp.Contains(reply.Text, text))
@@ -62,9 +59,9 @@ func TestTextMessageRetryDueToStatusCodeAndPass(t *testing.T) {
 				w.Write([]byte("{}")) //nolint:errcheck
 			}))
 		defer ts.Close()
-		fixme := context.Background()
 
-		_, err := googlechat.TextMessage(fixme, log, rtr, ts.URL, "key", "bananas are ripe")
+		_, err := googlechat.TextMessage(log, rtr, googlechat.DefaultTimeout, ts.URL,
+			"key", "bananas are ripe")
 
 		assert.NilError(t, err)
 		assert.Equal(t, sleepsCountSpy, wantSleeps)
@@ -89,9 +86,9 @@ func TestTextMessageRetryDueToStatusCodeAndFail(t *testing.T) {
 				w.WriteHeader(code)
 			}))
 		defer ts.Close()
-		fixme := context.Background()
 
-		_, err := googlechat.TextMessage(fixme, log, rtr, ts.URL, "key", "bananas are ripe")
+		_, err := googlechat.TextMessage(log, rtr, googlechat.DefaultTimeout, ts.URL,
+			"key", "bananas are ripe")
 
 		assert.ErrorContains(t, err, http.StatusText(code))
 		assert.Equal(t, sleepTimeSpy, wantSlept)
@@ -100,6 +97,38 @@ func TestTextMessageRetryDueToStatusCodeAndFail(t *testing.T) {
 	test(http.StatusForbidden, 0)                 // not retriable: fails immediately.
 	test(http.StatusTooManyRequests, rtr.UpTo)    // retriable; fails after consuming all retries.
 	test(http.StatusServiceUnavailable, rtr.UpTo) // retriable; fails after consuming all retries.
+}
+
+func TestTextMessageRetryDueToRequestTimeout(t *testing.T) {
+	log := testhelp.MakeTestLog()
+	var sleepsCountSpy int
+	rtr := googlechat.DefaultRetry(log)
+	rtr.SleepFn = func(d time.Duration) { sleepsCountSpy++ }
+	const timeout = 10 * time.Millisecond
+
+	test := func(failingReqs, wantSleeps int) {
+		t.Helper()
+		sleepsCountSpy = 0
+		ts := httptest.NewServer(
+			http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				if failingReqs > 0 {
+					failingReqs--
+					time.Sleep(10 * timeout)
+				}
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("{}")) //nolint:errcheck
+			}))
+		defer ts.Close()
+
+		_, err := googlechat.TextMessage(log, rtr, timeout, ts.URL, "key", "bananas")
+
+		assert.NilError(t, err)
+		assert.Equal(t, sleepsCountSpy, wantSleeps)
+	}
+
+	test(0, 0)
+	test(1, 1)
+	test(5, 5)
 }
 
 func TestRedactURL(t *testing.T) {

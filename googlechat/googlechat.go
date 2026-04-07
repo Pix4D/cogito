@@ -73,9 +73,15 @@ func DefaultRetry(log *slog.Logger) retry.Retry {
 	}
 }
 
+// DefaultTimeout is the recommended per-retry timeout value to be passed to [TextMessage]
+// for production. If you have special requirements, or for testing, you can override.
+const DefaultTimeout = 5 * time.Second
+
 // TextMessage sends the one-off message `text` with `threadKey` to webhook `theURL` and
 // returns an abridged response.
-// Use [DefaultRetry] for parameter 'rtr'.
+//
+//   - Use [DefaultRetry] for parameter 'rtr'.
+//   - Use [DefaultTimeout] for parameter 'timeout' (per-request timeout).
 //
 // Note that the Google Chat API encodes the secret in the webhook itself.
 //
@@ -89,9 +95,9 @@ func DefaultRetry(log *slog.Logger) retry.Retry {
 // payload: https://developers.google.com/chat/api/guides/message-formats/basic
 // threadKey: https://developers.google.com/chat/reference/rest/v1/spaces.messages/create
 func TextMessage(
-	ctx context.Context,
 	log *slog.Logger,
 	rtr retry.Retry,
+	timeout time.Duration,
 	webHook, threadKey, text string,
 ) (MessageReply, error) {
 	body, err := json.Marshal(BasicMessage{Text: text})
@@ -100,7 +106,7 @@ func TextMessage(
 	}
 
 	start := time.Now()
-	resp, err := retrySend(rtr, webHook, threadKey, body)
+	resp, err := retrySend(rtr, timeout, webHook, threadKey, body)
 	if err != nil {
 		return MessageReply{}, fmt.Errorf("TextMessage: retrySend: %s", RedactErrorURL(err))
 	}
@@ -147,12 +153,17 @@ var retryables = []int{
 	// http.StatusGatewayTimeout,      // 504
 }
 
-func retrySend(rtr retry.Retry, webHook, threadKey string, body []byte) (*http.Response, error) {
+func retrySend(rtr retry.Retry, timeout time.Duration, webHook, threadKey string,
+	body []byte,
+) (*http.Response, error) {
 	var resp *http.Response
 	client := &http.Client{}
 	workFn := func() error {
 		var err error
-		req, err := http.NewRequest(http.MethodPost, webHook, bytes.NewBuffer(body))
+		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		defer cancel()
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, webHook,
+			bytes.NewBuffer(body))
 		if err != nil {
 			return fmt.Errorf("TextMessage: new request: %w", RedactErrorURL(err))
 		}
@@ -167,6 +178,9 @@ func retrySend(rtr retry.Retry, webHook, threadKey string, body []byte) (*http.R
 		return err
 	}
 	classifierFn := func(err error) retry.Action {
+		if errors.Is(err, context.DeadlineExceeded) {
+			return retry.SoftFail
+		}
 		if err != nil {
 			return retry.HardFail
 		}
