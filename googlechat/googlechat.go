@@ -168,8 +168,7 @@ func RedactURL(theURL *url.URL) *url.URL {
 //
 // Taken from https://github.com/marco-m/lanterna
 func RedactErrorURL(err error) error {
-	var urlErr *url.Error
-	if errors.As(err, &urlErr) {
+	if urlErr, ok := errors.AsType[*url.Error](err); ok {
 		urlErr.URL = RedactURLString(urlErr.URL)
 		return urlErr
 	}

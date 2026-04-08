@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
+	"slices"
 	"strings"
 	"time"
 
@@ -66,12 +67,7 @@ func shouldSendToChat(request PutRequest) bool {
 	if request.Params.ChatMessage != "" || request.Params.ChatMessageFile != "" {
 		return true
 	}
-	for _, x := range request.Source.ChatNotifyOnStates {
-		if request.Params.State == x {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(request.Source.ChatNotifyOnStates, request.Params.State)
 }
 
 // prepareChatMessage returns a message ready to be sent to the chat sink.

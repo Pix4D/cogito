@@ -16,11 +16,12 @@ import (
 )
 
 func TestTextMessageIntegration(t *testing.T) {
-	log := testhelp.MakeTestLog()
 	gchatUrl := os.Getenv("COGITO_TEST_GCHAT_HOOK")
-	if len(gchatUrl) == 0 {
+	if gchatUrl == "" {
 		t.Skip("Skipping integration test. See CONTRIBUTING for how to enable.")
 	}
+
+	log := testhelp.MakeTestLog()
 	ts := time.Now().Format("2006-01-02 15:04:05 MST")
 	user := os.Getenv("USER")
 	if user == "" {

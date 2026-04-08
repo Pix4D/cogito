@@ -42,12 +42,12 @@ func main() {
 func makeTemplateData(keyvals []string) (testhelp.TemplateData, error) {
 	data := testhelp.TemplateData{}
 	for _, keyval := range keyvals {
-		pos := strings.Index(keyval, "=")
-		if pos == -1 {
+		before, after, ok := strings.Cut(keyval, "=")
+		if !ok {
 			return data, fmt.Errorf("missing '=' in %s", keyval)
 		}
-		key := keyval[:pos]
-		value := keyval[pos+1:]
+		key := before
+		value := after
 		data[key] = value
 	}
 	return data, nil

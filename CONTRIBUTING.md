@@ -14,7 +14,7 @@ In case of doubts about how to tackle testing something, feel free to ask.
 
 ## Required
 
-* Go, version >= 1.25
+* Go, version >= 1.26
 * Docker, version >= 28
 * [Task], version >= 3.46
 
@@ -387,7 +387,7 @@ $ task test:acceptance
 A release is performed by the GitHub Action CI, triggered by a git tag of the form `v1.2.3`.
 
 - When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
-- Run the acceptance tests (`task test:acceptance`).
+- Run the acceptance tests (`task test:acceptance`). WARNING: the acceptance tests are NOT run by the CI. You must run them now manually to ensure not to break the release.
 - Prepare the PR to also contain an updated CHANGELOG.
 - Merge the PR to master.
 - git checkout master && git pull
