@@ -19,6 +19,7 @@ func MakeTestLog() *slog.Logger {
 	return slog.New(slog.NewTextHandler(
 		out,
 		&slog.HandlerOptions{
+			Level:       slog.LevelDebug,
 			ReplaceAttr: RemoveTime,
 		}))
 }

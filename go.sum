@@ -1,7 +1,7 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/Pix4D/go-kit v0.2.0 h1:da3Ya9rKuYVOjKUDEBh5T93RSX41xZiwsfwj9js8Hhs=
-github.com/Pix4D/go-kit v0.2.0/go.mod h1:79yrn4vFsZ4x375MC8bauJdWfJeytI5f4Dde9SJUNGQ=
+github.com/Pix4D/go-kit v0.2.1-0.20260408084514-4ad142f0682f h1:53MDtG8uUG39VFSQ93FJb4kdCqr0cFhT44LXsu/vnnw=
+github.com/Pix4D/go-kit v0.2.1-0.20260408084514-4ad142f0682f/go.mod h1:Qod5jEq+d4hsMbzBXVTNpg0YRU918idXJs7EAOoPD8A=
 github.com/alexflint/go-arg v1.4.3 h1:9rwwEBpMXfKQKceuZfYcwuc/7YY7tWJbFsgG5cAU/uo=
 github.com/alexflint/go-arg v1.4.3/go.mod h1:3PZ/wp/8HuqRZMUUgu7I+e1qcpUbvmS258mRXkFH4IA=
 github.com/alexflint/go-scalar v1.1.0/go.mod h1:LoFvNMqS1CPrMVltza4LvnGKhaSpc3oyLEBUZVhhS2o=
