@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [v0.16.0] - 2026-04-09
+
+### Fixed
+
+- Do not cause the build to fail due to a transient HTTP error when pushing a message to Google Chat.
+
 ### Changed
 
 - Update to Go 1.26.2
@@ -354,3 +360,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.13.0]: https://github.com/Pix4D/cogito/releases/tag/v0.13.0
 [v0.14.0]: https://github.com/Pix4D/cogito/releases/tag/v0.14.0
 [v0.15.0]: https://github.com/Pix4D/cogito/releases/tag/v0.15.0
+[v0.16.0]: https://github.com/Pix4D/cogito/releases/tag/v0.16.0

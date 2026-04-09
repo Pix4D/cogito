@@ -157,6 +157,8 @@ tasks:
       PIPELINE: cogito-acceptance---{{.BRANCH}}
       JOB: '{{.JOB}}'
 
+  # WARNING: These tests require the corresponding cogito Docker image:
+  # task test:all docker:build docker:smoke docker:push
   test:acceptance:
     desc: Run the Cogito acceptance tests. Needs a running Concourse.
     cmds:
