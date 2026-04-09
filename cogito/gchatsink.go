@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Pix4D/cogito/googlechat"
+	"github.com/Pix4D/go-kit/googlechat"
 )
 
 // GoogleChatSink is an implementation of [Sinker] for the Cogito resource.

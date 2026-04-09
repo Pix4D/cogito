@@ -15,8 +15,8 @@ import (
 	"gotest.tools/v3/assert/cmp"
 
 	"github.com/Pix4D/cogito/cogito"
-	"github.com/Pix4D/cogito/googlechat"
 	"github.com/Pix4D/cogito/testhelp"
+	"github.com/Pix4D/go-kit/googlechat"
 )
 
 func TestSinkGoogleChatSendSuccess(t *testing.T) {

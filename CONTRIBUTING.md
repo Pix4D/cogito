@@ -356,7 +356,7 @@ Update the expired secrets as follows.
 2. Create or regenerate a token with name `test-cogito`, with scope `repo:status`. Set an expiration of 90 days.
 3. Copy the token.
 
-## Regenerate a Google Chat hook
+## Regenerate a Google Chat webhook
 
 1. Go to the space
 2. Click on Manage webhook

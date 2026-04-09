@@ -66,12 +66,12 @@ tasks:
     desc: Run the unit tests.
     cmds:
       # One day I will understand how to use -coverpkg=./... :-(
-      - gotestsum -- -short -coverprofile=coverage.out ./...
+      - gotestsum -- -short -coverprofile=coverage.out -count=1 ./...
 
   test:all:
     desc: Run all the tests (unit + integration). Use this target to get total coverage.
     cmds:
-      - gotestsum -- -coverprofile=coverage.out ./...
+      - gotestsum -- -coverprofile=coverage.out -count=1 ./...
     env: *test-env
 
   test:smoke:
