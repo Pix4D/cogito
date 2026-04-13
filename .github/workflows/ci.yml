@@ -14,12 +14,6 @@ jobs:
   all:
     runs-on: ubuntu-latest
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v6
-        with:
-          go-version: ${{ env.go-version }}
-      - name: Install Task
-        run: go install github.com/go-task/task/v3/cmd/task@${{ env.task-version }}
       - name: Checkout code
         uses: actions/checkout@v6
         with:
@@ -28,6 +22,14 @@ jobs:
           # the repo). Following the Principle of least privilege, we disable this as long
           # as we don't need it.
           persist-credentials: false
+      # Installing Go must be done AFTER checking out the code, in order to have
+      # caching working!
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: ${{ env.go-version }}
+      - name: Install Task
+        run: go install github.com/go-task/task/v3/cmd/task@${{ env.task-version }}
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
