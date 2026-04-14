@@ -54,9 +54,9 @@ func (sink GoogleChatSink) Send() error {
 		return fmt.Errorf("GoogleChatSink: %s", err)
 	}
 
+	spaceURL := reply.SpaceURL()
 	sink.Log.Info("state posted successfully to chat",
-		"state", state, "space", reply.Space.DisplayName,
-		"sender", reply.Sender.DisplayName, "text", text)
+		"state", state, "space-ID", reply.Space.Name, "space-URL", spaceURL, "text", text)
 	return nil
 }
 
