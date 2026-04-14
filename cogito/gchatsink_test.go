@@ -129,7 +129,8 @@ func TestSinkGoogleChatSendBackendFailure(t *testing.T) {
 
 	err := sink.Send()
 
-	assert.ErrorContains(t, err, "GoogleChatSink: TextMessage: status: 418 I'm a teapot")
+	assert.ErrorContains(t, err,
+		"GoogleChatSink: TextMessage: retrySend: unretriable status code: 418 I'm a teapot")
 	ts.Close()
 }
 

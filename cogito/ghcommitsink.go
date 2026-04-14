@@ -7,20 +7,6 @@ import (
 	"time"
 
 	"github.com/Pix4D/go-kit/github"
-	"github.com/Pix4D/go-kit/retry"
-)
-
-const (
-	// retryUpTo is the total maximum duration of the retries.
-	retryUpTo = 15 * time.Minute
-
-	// retryFirstDelay is duration of the first backoff.
-	retryFirstDelay = 2 * time.Second
-
-	// retryBackoffLimit is the upper bound duration of a backoff.
-	// That is, with an exponential backoff and a retryFirstDelay = 2s, the sequence will be:
-	// 2s 4s 8s 16s 32s 60s ... 60s, until reaching a cumulative delay of retryUpTo.
-	retryBackoffLimit = 1 * time.Minute
 )
 
 // GitHubCommitStatusSink is an implementation of [Sinker] for the Cogito resource.
@@ -59,12 +45,7 @@ func (sink GitHubCommitStatusSink) Send() error {
 	target := &github.Target{
 		Client: httpClient,
 		Server: server,
-		Retry: retry.Retry{
-			FirstDelay:   retryFirstDelay,
-			BackoffLimit: retryBackoffLimit,
-			UpTo:         retryUpTo,
-			Log:          sink.Log,
-		},
+		Retry:  github.DefaultRetry(sink.Log),
 	}
 	commitStatus := github.NewCommitStatus(target, token,
 		sink.Request.Source.Owner, sink.Request.Source.Repo, context, sink.Log)
