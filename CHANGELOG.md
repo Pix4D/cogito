@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Breaking changes
+
+- Migrate package `googlechat` to https://github.com/Pix4D/go-kit.
+  This does not impact the users of the cogito Concourse resource.
+  It impacts only code using this package directly. Such code should switch to https://github.com/Pix4D/go-kit, which contains the same packages (drop-in replacement).
+
 ## [v0.16.0] - 2026-04-09
 
 ### Fixed
