@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
-## Changed
+## [v0.17.0] - 2026-04-15
 
-- Update to github.com/Pix4D/go-kit@v0.4.0
+### Changed
+
+- Update to github.com/Pix4D/go-kit@v0.4.0.
+- More useful log messages.
 
 ### Breaking changes
 
@@ -371,3 +374,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.14.0]: https://github.com/Pix4D/cogito/releases/tag/v0.14.0
 [v0.15.0]: https://github.com/Pix4D/cogito/releases/tag/v0.15.0
 [v0.16.0]: https://github.com/Pix4D/cogito/releases/tag/v0.16.0
+[v0.17.0]: https://github.com/Pix4D/cogito/releases/tag/v0.17.0
