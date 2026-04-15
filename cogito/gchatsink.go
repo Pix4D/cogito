@@ -48,6 +48,7 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	threadKey := fmt.Sprintf("%s %s", sink.Request.Env.BuildPipelineName, sink.GitRef)
+	sink.Log.Debug("posting-to-chat", "text", text)
 	reply, err := googlechat.TextMessage(sink.Log, googlechat.DefaultRetry(sink.Log),
 		googlechat.DefaultTimeout, webHook, threadKey, text)
 	if err != nil {
@@ -55,8 +56,7 @@ func (sink GoogleChatSink) Send() error {
 	}
 
 	spaceURL := reply.SpaceURL()
-	sink.Log.Info("state posted successfully to chat",
-		"state", state, "space-ID", reply.Space.Name, "space-URL", spaceURL, "text", text)
+	sink.Log.Info("posted-to-chat", "state", state, "space", spaceURL)
 	return nil
 }
 

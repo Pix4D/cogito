@@ -316,8 +316,9 @@ sinks: []`
 		log.Info("log test", "source", source)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "access_token:          ***REDACTED***"))
-		assert.Assert(t, cmp.Contains(have, "gchat_webhook:         ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "access_token=***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "gchat_webhook=***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "github_app.private_key=***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }
@@ -372,7 +373,7 @@ sinks:               []`
 		log.Info("log test", "params", params)
 		have := logBuf.String()
 
-		assert.Assert(t, cmp.Contains(have, "gchat_webhook:       ***REDACTED***"))
+		assert.Assert(t, cmp.Contains(have, "gchat_webhook=***REDACTED***"))
 		assert.Assert(t, !strings.Contains(have, "sensitive"))
 	})
 }

@@ -132,7 +132,7 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 	assert.Assert(t, cmp.Contains(stderr.String(),
 		`level=INF msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 	assert.Assert(t, cmp.Contains(stderr.String(),
-		`level=INF msg="state posted successfully to chat" name=cogito.put name=gChat state=error`))
+		`level=INF msg=posted-to-chat name=cogito.put name=gChat state=error`))
 }
 
 func TestRunPutGhAppSuccessIntegration(t *testing.T) {
