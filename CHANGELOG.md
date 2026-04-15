@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+## Changed
+
+- Update to github.com/Pix4D/go-kit@v0.4.0
+
 ### Breaking changes
 
 - Migrate package `googlechat` to https://github.com/Pix4D/go-kit.

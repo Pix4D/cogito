@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"regexp"
 	"strings"
@@ -184,7 +185,31 @@ type Source struct {
 	Sinks              []string     `json:"sinks"`
 }
 
+// LogValue implements slog.LogValuer.
+// It returns a slog group, so that the fields of [Source] appear together.
+// It redacts sensitive fields.
+func (src Source) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("owner", src.Owner),
+		slog.String("repo", src.Repo),
+		slog.String("github_hostname", src.GhHostname),
+		slog.String("access_token", redact(src.AccessToken)),
+		slog.String("gchat_webhook", redact(src.GChatWebHook)),
+		slog.String("github_app.client_id", src.GitHubApp.ClientId),
+		slog.Int("github_app.installation_id", src.GitHubApp.InstallationId),
+		slog.String("github_app.private_key", redact(src.GitHubApp.PrivateKey)),
+		slog.String("log_level", src.LogLevel),
+		slog.String("context_prefix", src.ContextPrefix),
+		slog.Bool("omit_target_url", src.OmitTargetURL),
+		slog.Bool("chat_append_summary", src.ChatAppendSummary),
+		slog.String("chat_notify_on_states", fmt.Sprint(src.ChatNotifyOnStates)),
+		slog.String("sinks:", strings.Join(src.Sinks, ",")),
+	)
+}
+
 // String renders Source, redacting the sensitive fields.
+//
+// Deprecated: replaced by [Source.LogValue].
 func (src Source) String() string {
 	var bld strings.Builder
 
@@ -405,7 +430,24 @@ type PutParams struct {
 	Sinks             []string `json:"sinks"`
 }
 
+// LogValue implements slog.LogValuer.
+// It returns a slog group, so that the fields of [PutParams] appear together.
+// It redacts sensitive fields.
+func (params PutParams) LogValue() slog.Value {
+	return slog.GroupValue(
+		slog.String("state", string(params.State)),
+		slog.String("context", params.Context),
+		slog.String("chat_message", params.ChatMessage),
+		slog.String("chat_message_file", params.ChatMessageFile),
+		slog.Bool("chat_append_summary", params.ChatAppendSummary),
+		slog.String("gchat_webhook", redact(params.GChatWebHook)),
+		slog.String("sinks", strings.Join(params.Sinks, ",")),
+	)
+}
+
 // String renders PutParams, redacting the sensitive fields.
+//
+// Deprecated: replaced by [PutParams.LogValue].
 func (params PutParams) String() string {
 	var bld strings.Builder
 

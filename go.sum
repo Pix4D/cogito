@@ -1,7 +1,7 @@
 dario.cat/mergo v1.0.0 h1:AGCNq9Evsj31mOgNPcLyXc+4PNABt905YmuqPYYpBWk=
 dario.cat/mergo v1.0.0/go.mod h1:uNxQE+84aUszobStD9th8a29P2fMDhsBdgRYvZOxGmk=
-github.com/Pix4D/go-kit v0.3.0 h1:v6p1FrIS9/i0aipxJeFGY91xO/wWtXs+LJwmuZe+uvw=
-github.com/Pix4D/go-kit v0.3.0/go.mod h1:aGw8Ezrn6YJyQrT/6bwmtjJuvzKhuFJ0HsJ8GLzpOmk=
+github.com/Pix4D/go-kit v0.4.0 h1:C3x0pvlXKNtkfNtHhUD+ZOfSr7v1bXdi4fYY5hu0bdo=
+github.com/Pix4D/go-kit v0.4.0/go.mod h1:kNYgpPgIg39L4HeWfc69LRCjzdaEXZsYWtdgSHcUKJQ=
 github.com/alecthomas/repr v0.5.2 h1:SU73FTI9D1P5UNtvseffFSGmdNci/O6RsqzeXJtP0Qs=
 github.com/alecthomas/repr v0.5.2/go.mod h1:Fr0507jx4eOXV7AlPV6AVZLYrLIuIeSOWtW57eE/O/4=
 github.com/alexflint/go-arg v1.4.3 h1:9rwwEBpMXfKQKceuZfYcwuc/7YY7tWJbFsgG5cAU/uo=
@@ -16,8 +16,8 @@ github.com/golang-jwt/jwt/v5 v5.3.0 h1:pv4AsKCKKZuqlgs5sUmn4x8UlGa0kEVt/puTpKx9v
 github.com/golang-jwt/jwt/v5 v5.3.0/go.mod h1:fxCRLWMO43lRc8nhHWY6LGqRcf+1gQWArsqaEUEa5bE=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/marco-m/rosina v0.2.0 h1:6Uut96T2j1eZuzlTMw1kOLeAmMBdAoHhy2Ym+3dttE8=
-github.com/marco-m/rosina v0.2.0/go.mod h1:U1TRxF7xCF1J8lhP/OABVz5UC9UmHZdIj+o8PSlXY+U=
+github.com/marco-m/rosina v0.3.0 h1:ROuUaRoEhTUj1bJsrzrVAOZDoiEIBFXWaZn0KIf8ntg=
+github.com/marco-m/rosina v0.3.0/go.mod h1:U1TRxF7xCF1J8lhP/OABVz5UC9UmHZdIj+o8PSlXY+U=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b h1:E0nPZOFGK8IsGxpckEpr2+7AZ+0DUGbf+WNfnRugYFI=

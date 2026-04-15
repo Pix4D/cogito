@@ -130,9 +130,9 @@ func TestRunPutSuccessIntegration(t *testing.T) {
 
 	assert.NilError(t, err, "\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
 	assert.Assert(t, cmp.Contains(stderr.String(),
-		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
+		`level=INF msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 	assert.Assert(t, cmp.Contains(stderr.String(),
-		`level=INFO msg="state posted successfully to chat" name=cogito.put name=gChat state=error`))
+		`level=INF msg=posted-to-chat name=cogito.put name=gChat state=error`))
 }
 
 func TestRunPutGhAppSuccessIntegration(t *testing.T) {
@@ -172,7 +172,7 @@ func TestRunPutGhAppSuccessIntegration(t *testing.T) {
 
 	assert.NilError(t, err, "\nstdout:\n%s\nstderr:\n%s", stdout.String(), stderr.String())
 	assert.Assert(t, cmp.Contains(stderr.String(),
-		`level=INFO msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
+		`level=INF msg="commit status posted successfully" name=cogito.put name=ghCommitStatus state=error`))
 }
 
 func TestRunFailure(t *testing.T) {

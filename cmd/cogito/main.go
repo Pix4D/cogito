@@ -46,18 +46,7 @@ func mainErr(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string)
 	if err := level.UnmarshalText([]byte(logLevel)); err != nil {
 		return fmt.Errorf("%s. (valid: debug, info, warn, error)", err)
 	}
-	removeTime := func(groups []string, a slog.Attr) slog.Attr {
-		if a.Key == slog.TimeKey {
-			return slog.Attr{}
-		}
-		return a
-	}
-	log := slog.New(slog.NewTextHandler(
-		stderr,
-		&slog.HandlerOptions{
-			Level:       level,
-			ReplaceAttr: removeTime,
-		}))
+	log := makeProdLogger(stderr, level)
 	log.Info(cogito.BuildInfo())
 
 	switch cmd {
@@ -71,6 +60,57 @@ func mainErr(stdin io.Reader, stdout io.Writer, stderr io.Writer, args []string)
 	default:
 		return fmt.Errorf("cli wiring error; please report")
 	}
+}
+
+// Strings constants for maximum performance.
+const (
+	logDBG     = "DBG"
+	logINF     = "INF"
+	logWRN     = "WRN"
+	logERR     = "ERR"
+	logUNKNOWN = "UNKNOWN"
+)
+
+func makeProdLogger(stderr io.Writer, level slog.Level) *slog.Logger {
+	replaceAttrs := func(groups []string, a slog.Attr) slog.Attr {
+		// Formatting time.
+		// One can change the timezone (default: local), but the format is fixed:
+		// RFC3339 (same as ISO 8601) with millisecond precision.
+		// To change the format, the Attr.Value must implement encoding.TextMarshaler.
+		// See: https://pkg.go.dev/log/slog#TextHandler.Handle
+		// if a.Key == slog.TimeKey {
+		// 	// This has no effect, see explanation above.
+		// 	a.Value = slog.TimeValue(a.Value.Time().Round(time.Second))
+		// 	return a
+		// }
+
+		// Format log levels to have all the same length.
+		if a.Key == slog.LevelKey {
+			level := a.Value.Any().(slog.Level)
+			switch level {
+			case slog.LevelDebug:
+				a.Value = slog.StringValue(logDBG)
+			case slog.LevelInfo:
+				a.Value = slog.StringValue(logINF)
+			case slog.LevelWarn:
+				a.Value = slog.StringValue(logWRN)
+			case slog.LevelError:
+				a.Value = slog.StringValue(logERR)
+			default:
+				a.Value = slog.StringValue(logUNKNOWN)
+			}
+			return a
+		}
+
+		return a
+	}
+
+	return slog.New(slog.NewTextHandler(
+		stderr,
+		&slog.HandlerOptions{
+			Level:       level,
+			ReplaceAttr: replaceAttrs,
+		}))
 }
 
 // peekLogLevel decodes 'input' as JSON and looks for key source.log_level. If 'input'

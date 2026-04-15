@@ -30,7 +30,7 @@ func Get(log *slog.Logger, input []byte, out io.Writer, args []string) error {
 	if err != nil {
 		return err
 	}
-	log.Debug("parsed get request",
+	log.Debug("parsed-get-request",
 		"source", request.Source,
 		"version", request.Version,
 		"environment", request.Env,
