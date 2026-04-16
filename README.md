@@ -171,6 +171,14 @@ With reference to the [GitHub Commit status API], the `POST` parameters (`state`
 
 ![Screenshot of Google Chat UI](doc/cogito-gchat.png)
 
+### Finding the Gchat space from the build logs
+
+The logs for the `put` step contain a line of key/value pairs like this:
+
+    level=INF msg=posted-to-chat ... space=https://chat.google.com/u/0/app/chat/AAA...
+
+You can copy the value of the `space` key and paste it in your browser.
+
 # Source Configuration
 
 ## GitHub commit status only
