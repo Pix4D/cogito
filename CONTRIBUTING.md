@@ -106,7 +106,7 @@ $ gopass insert cogito/test_commit_sha
 
 **NOTE**: You need to follow this section only if you want to fork this repository; if you only want to provide a PR you don't strictly need this part (although in this case you will have to push by hand the docker image to use in your tests, so maybe it is time well spent anyway :-).
 
-Do not use your DockerHub password, instead create a dedicated access token, see documentation at [dockerhub access tokens](https://docs.docker.com/docker-hub/access-tokens/). This allows to:
+Do not use your DockerHub password, instead create a dedicated access token, see documentation at [DockerHub access tokens](https://docs.docker.com/docker-hub/access-tokens/). This allows to:
 
 1. Reduce exposure (principle of least privilege), since a token has fewer capabilities than an account password.
 2. Enable auditing of token usage.
@@ -262,7 +262,7 @@ Note that the workaround doesn't always succeed (especially if you have `--enabl
 
 You can follow two steps:
 
-1. `fly set-pipeline` with a check_interval for the resource type of 1m instead of the recommended 24h.
+1. `fly set-pipeline` with a check_interval for the resource type of `1m` instead of the recommended `24h`.
 2. `fly clear-version`.
 
 For example, assuming that the test pipeline is called `cogito-test`, that the resource in the pipeline is called `cogito` and that there is a job called `motormouse` (all this is true by using the sample pipeline [pipelines/cogito.yml](./pipelines/cogito.yml)).
@@ -389,7 +389,7 @@ A release is performed by the GitHub Action CI, triggered by a git tag of the fo
 - When making a release, it pays to also perform the manual tests in section [Quick iterations during development](#quick-iterations-during-development).
 - Run the acceptance tests (`task test:acceptance`). WARNING: the acceptance tests are NOT run by the CI. You must run them now manually to ensure not to break the release.
 - Prepare the PR to also contain an updated CHANGELOG.
-- Merge the PR to master.
+- Once approved, merge the PR to master.
 - git checkout master && git pull
 - Create and then push a git tag (git tag -a -m '' v0.8.0 && git push origin v0.8.0)
 - Double-check that the GitHub Action CI issues the release and that the new image appeared on [dockerhub](https://hub.docker.com/repository/docker/pix4d/cogito).
