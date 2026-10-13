@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [v0.17.2] - 2026-10-13
+
+### Changed
+
+- Update to Go 1.27.2 to address security vulnerabilities in the Go stdlib.
+
 ## [v0.17.1] - 2026-09-30
 
 ### Changed
@@ -382,3 +388,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.16.0]: https://github.com/Pix4D/cogito/releases/tag/v0.16.0
 [v0.17.0]: https://github.com/Pix4D/cogito/releases/tag/v0.17.0
 [v0.17.1]: https://github.com/Pix4D/cogito/releases/tag/v0.17.1
+[v0.17.2]: https://github.com/Pix4D/cogito/releases/tag/v0.17.2
