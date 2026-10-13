@@ -5,8 +5,10 @@ on: [push]
 name: ci
 
 env:
-  go-version: 1.26.x
-  golangci-version: v2.12.2
+  # WARNING When you update the Go version, update also golangci-version to the latest version.
+  # Failing to do so can cause the linter to report false positives.
+  go-version: 1.27.x
+  golangci-version: v2.14.0
   gotestsum-version: v1.13.0
   task-version: v3.52.0
 
