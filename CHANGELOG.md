@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+
+- Update to Go 1.27.3 to address the eMudhra CA compromise.
+
 ## [v0.17.2] - 2026-10-13
 
 ### Changed
