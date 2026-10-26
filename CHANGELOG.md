@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+## [v0.17.3] - 2026-10-26
+
 ### Changed
 
 - Update to Go 1.27.3 to address the eMudhra CA compromise.
@@ -393,3 +395,4 @@ This release allows to use cogito for the vast majority of chat notifications wh
 [v0.17.0]: https://github.com/Pix4D/cogito/releases/tag/v0.17.0
 [v0.17.1]: https://github.com/Pix4D/cogito/releases/tag/v0.17.1
 [v0.17.2]: https://github.com/Pix4D/cogito/releases/tag/v0.17.2
+[v0.17.3]: https://github.com/Pix4D/cogito/releases/tag/v0.17.3
