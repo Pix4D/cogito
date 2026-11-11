@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased] - YYYY-MM-DD
 
+### Changed
+
+- Update to Go 1.27.4 to address Go stdlib security vulnerabilities.
+
 ## [v0.17.3] - 2026-10-26
 
 ### Changed
